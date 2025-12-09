@@ -1,10 +1,19 @@
 // src/modules/auth/auth.controller.js
+const authService = require('./auth.service');
 
 // Register a new user
 async function register(req, res, next) {
   try {
-    // TODO: validate body, hash password, save user, generate JWT
-    return res.status(201).json({ message: 'User registered (stub)' });
+    const { fullName, email, mobile, password } = req.body;
+
+    const result = await authService.registerUser({
+      fullName,
+      email,
+      mobile,
+      password,
+    });
+
+    return res.status(201).json(result);
   } catch (err) {
     next(err);
   }
@@ -13,8 +22,14 @@ async function register(req, res, next) {
 // Login user
 async function login(req, res, next) {
   try {
-    // TODO: validate body, check credentials, return JWT
-    return res.json({ message: 'Login success (stub)' });
+    const { mobile, password } = req.body;
+
+    const result = await authService.loginUser({
+      mobile,
+      password,
+    });
+
+    return res.json(result);
   } catch (err) {
     next(err);
   }
@@ -23,8 +38,11 @@ async function login(req, res, next) {
 // Send OTP for forgot password
 async function sendForgotPasswordOtp(req, res, next) {
   try {
-    // TODO: generate OTP, save, send via SMS provider / log
-    return res.json({ message: 'OTP sent (stub)' });
+    const { mobile } = req.body;
+
+    const result = await authService.sendForgotPasswordOtp({ mobile });
+
+    return res.json(result);
   } catch (err) {
     next(err);
   }
@@ -33,8 +51,15 @@ async function sendForgotPasswordOtp(req, res, next) {
 // Verify OTP & reset password
 async function verifyForgotPasswordOtp(req, res, next) {
   try {
-    // TODO: check OTP, update password
-    return res.json({ message: 'Password reset success (stub)' });
+    const { mobile, otp, newPassword } = req.body;
+
+    const result = await authService.verifyForgotPasswordOtp({
+      mobile,
+      otp,
+      newPassword,
+    });
+
+    return res.json(result);
   } catch (err) {
     next(err);
   }
