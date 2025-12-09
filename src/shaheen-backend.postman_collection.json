@@ -1,0 +1,420 @@
+{
+  "info": {
+    "_postman_id": "b9a64d2c-5d73-4f1d-8a7d-123456789abc",
+    "name": "Shaheen Insurance Backend (Node + MySQL)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "shaheen-dev"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"mobile\": \"03001234567\",\n  \"password\": \"Password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"03001234567\",\n  \"password\": \"Password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password - Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"03001234567\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password/otp",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgot-password", "otp"]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password - Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobile\": \"03001234567\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewSecret123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password/verify",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgot-password", "verify"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/user/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Test User Updated\",\n  \"email\": \"updated@example.com\",\n  \"address\": \"Gulshan-e-Iqbal Block 5\",\n  \"cityId\": 1,\n  \"cnic\": \"42101-1234567-1\",\n  \"cnicExpiry\": \"2030-12-31\",\n  \"dob\": \"1995-05-10\",\n  \"nationality\": \"Pakistani\",\n  \"gender\": \"male\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Data (Dropdowns)",
+      "item": [
+        {
+          "name": "Get Cities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/data/cities",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "cities"]
+            }
+          }
+        },
+        {
+          "name": "Get Vehicle Makes",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/data/vehicle-makes",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "vehicle-makes"]
+            }
+          }
+        },
+        {
+          "name": "Get Vehicle Submakes by Make",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/data/vehicle-submakes/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "vehicle-submakes", "1"]
+            }
+          }
+        },
+        {
+          "name": "Get Tracker Companies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/data/tracker-companies",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "tracker-companies"]
+            }
+          }
+        },
+        {
+          "name": "Get Travel Destinations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/data/travel-destinations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "travel-destinations"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Motor",
+      "item": [
+        {
+          "name": "Calculate Premium",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleValue\": 2500000,\n  \"year\": 2020,\n  \"tracker\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/calculate-premium",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "motor", "calculate-premium"]
+            }
+          }
+        },
+        {
+          "name": "Get Market Value",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"makeId\": 1,\n  \"submakeId\": 5,\n  \"year\": 2019\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/market-value",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "motor", "market-value"]
+            }
+          }
+        },
+        {
+          "name": "Submit Proposal (multipart)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "personalDetails",
+                  "value": "{\n  \"name\": \"Ali Khan\",\n  \"address\": \"Gulshan-e-Iqbal Block 5\",\n  \"cityId\": 1,\n  \"cnic\": \"42101-1234567-1\",\n  \"cnicExpiry\": \"2030-12-31\",\n  \"dob\": \"1995-05-10\",\n  \"nationality\": \"Pakistani\",\n  \"gender\": \"male\"\n}",
+                  "type": "text"
+                },
+                {
+                  "key": "vehicleDetails",
+                  "value": "{\n  \"productType\": \"private\",\n  \"registrationNumber\": \"ABC-123\",\n  \"appliedFor\": true,\n  \"engineNumber\": \"ENG1234567\",\n  \"chassisNumber\": \"CHS1234567\",\n  \"makeId\": 1,\n  \"submakeId\": 5,\n  \"modelYear\": 2021,\n  \"colour\": \"White\",\n  \"trackerCompanyId\": 2,\n  \"accessoriesValue\": 50000,\n  \"vehicleValue\": 2800000\n}",
+                  "type": "text"
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": "",
+                  "description": "Upload one or more files with fieldname 'images'. In code we use file.fieldname as image_type, so set this key to e.g. front_side when you test manually."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/submit-proposal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "motor", "submit-proposal"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payment (Stubbed)",
+      "item": [
+        {
+          "name": "Initiate Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 44000,\n  \"orderId\": \"TEST-ORDER-001\",\n  \"customerEmail\": \"test@example.com\",\n  \"applicationType\": \"MOTOR\",\n  \"applicationId\": 1\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/initiate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "initiate"]
+            }
+          }
+        },
+        {
+          "name": "Webhook (Manual test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"m_payment_id\": \"TEST-ORDER-001\",\n  \"pf_payment_id\": \"GATEWAY-TXID-123\",\n  \"payment_status\": \"COMPLETE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/webhook",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "payment", "webhook"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Policies (Stubbed)",
+      "item": [
+        {
+          "name": "Get My Policies",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/policies/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "policies", "list"]
+            }
+          }
+        },
+        {
+          "name": "Get Policy by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/policies/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "policies", "1"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Claims (Stubbed)",
+      "item": [
+        {
+          "name": "Get My Claims",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/claims/list",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "claims", "list"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "authToken",
+      "value": ""
+    }
+  ]
+}
