@@ -1,14 +1,21 @@
 // src/modules/motor/motor.controller.js
+const {
+  calculatePremiumService,
+  getMarketValueService,
+  submitProposalService,
+} = require('./motor.service');
 
 async function calculatePremium(req, res, next) {
   try {
-    const { vehicleValue, make, year, tracker } = req.body;
-    // TODO: implement premium & sum insured calc
-    return res.json({
-      sumInsured: null,
-      premium: null,
-      message: 'Motor premium calculation (stub)',
+    const { vehicleValue, year, tracker } = req.body;
+
+    const result = await calculatePremiumService({
+      vehicleValue,
+      year,
+      tracker,
     });
+
+    return res.json(result);
   } catch (err) {
     next(err);
   }
@@ -16,12 +23,15 @@ async function calculatePremium(req, res, next) {
 
 async function getMarketValue(req, res, next) {
   try {
-    const { make, model, year } = req.body;
-    // TODO: implement market value logic
-    return res.json({
-      marketValue: null,
-      message: 'Market value (stub)',
+    const { makeId, submakeId, year } = req.body;
+
+    const result = await getMarketValueService({
+      makeId,
+      submakeId,
+      year,
     });
+
+    return res.json(result);
   } catch (err) {
     next(err);
   }
@@ -29,12 +39,39 @@ async function getMarketValue(req, res, next) {
 
 async function submitProposal(req, res, next) {
   try {
-    const { personalDetails, vehicleDetails } = req.body;
-    const images = req.files;
-    // TODO: parse JSON, validate, save proposal + images
+    const userId = req.user.id;
+
+    // In multipart/form-data, these will arrive as strings
+    let personalDetails = req.body.personalDetails;
+    let vehicleDetails = req.body.vehicleDetails;
+
+    try {
+      if (typeof personalDetails === 'string') {
+        personalDetails = JSON.parse(personalDetails);
+      }
+      if (typeof vehicleDetails === 'string') {
+        vehicleDetails = JSON.parse(vehicleDetails);
+      }
+    } catch (parseErr) {
+      return next(
+        Object.assign(new Error('Invalid JSON in personalDetails or vehicleDetails'), {
+          status: 400,
+        })
+      );
+    }
+
+    const files = req.files || [];
+
+    const result = await submitProposalService(
+      userId,
+      personalDetails,
+      vehicleDetails,
+      files
+    );
+
     return res.status(201).json({
-      proposalId: null,
-      message: 'Motor proposal submitted (stub)',
+      message: 'Motor proposal submitted successfully',
+      ...result,
     });
   } catch (err) {
     next(err);
