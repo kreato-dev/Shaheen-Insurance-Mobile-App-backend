@@ -1,9 +1,11 @@
 // src/modules/claim/claim.controller.js
+const { getClaimsForUser } = require('./claim.service');
 
 async function getClaims(req, res, next) {
   try {
-    // TODO: fetch claim history from core API or cache
-    return res.json({ data: [] });
+    const userId = req.user.id;
+    const claims = await getClaimsForUser(userId);
+    return res.json({ data: claims });
   } catch (err) {
     next(err);
   }

@@ -1,9 +1,14 @@
 // src/modules/policy/policy.controller.js
+const {
+  getPoliciesForUser,
+  getPolicyByIdForUser,
+} = require('./policy.service');
 
 async function getPolicies(req, res, next) {
   try {
-    // TODO: get user CNIC/phone from req.user, call core API, or cache DB
-    return res.json({ data: [] });
+    const userId = req.user.id;
+    const policies = await getPoliciesForUser(userId);
+    return res.json({ data: policies });
   } catch (err) {
     next(err);
   }
@@ -11,13 +16,15 @@ async function getPolicies(req, res, next) {
 
 async function getPolicyById(req, res, next) {
   try {
+    const userId = req.user.id;
     const { id } = req.params;
-    // TODO: fetch single policy detail (pdfUrl, coverageDetails, vehicleInfo)
-    return res.json({
-      pdfUrl: null,
-      coverageDetails: null,
-      vehicleInfo: null,
-    });
+    const numericId = Number(id);
+    if (!numericId || Number.isNaN(numericId)) {
+      return res.status(400).json({ message: 'Invalid policy id' });
+    }
+
+    const policy = await getPolicyByIdForUser(userId, numericId);
+    return res.json({ data: policy });
   } catch (err) {
     next(err);
   }
