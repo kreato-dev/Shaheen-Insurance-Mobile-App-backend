@@ -13,8 +13,12 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/health",
-          "host": ["{{baseUrl}}"],
-          "path": ["health"]
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health"
+          ]
         }
       }
     },
@@ -26,7 +30,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -34,8 +41,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/register",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "register"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
             }
           }
         },
@@ -44,7 +57,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -52,8 +68,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/login",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "login"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
             }
           }
         },
@@ -62,7 +84,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -70,8 +95,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/forgot-password/otp",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "forgot-password", "otp"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password",
+                "otp"
+              ]
             }
           }
         },
@@ -80,7 +112,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -88,8 +123,15 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/forgot-password/verify",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "auth", "forgot-password", "verify"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password",
+                "verify"
+              ]
             }
           }
         }
@@ -111,8 +153,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/user/profile",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "user", "profile"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ]
             }
           }
         },
@@ -126,7 +174,10 @@
                 "value": "Bearer {{authToken}}",
                 "type": "text"
               },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -134,8 +185,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/user/profile",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "user", "profile"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile"
+              ]
             }
           }
         }
@@ -151,8 +208,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/cities",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "data", "cities"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "data",
+                "cities"
+              ]
             }
           }
         },
@@ -163,8 +226,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/vehicle-makes",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "data", "vehicle-makes"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "data",
+                "vehicle-makes"
+              ]
             }
           }
         },
@@ -175,8 +244,15 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/vehicle-submakes/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "data", "vehicle-submakes", "1"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "data",
+                "vehicle-submakes",
+                "1"
+              ]
             }
           }
         },
@@ -187,8 +263,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/tracker-companies",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "data", "tracker-companies"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "data",
+                "tracker-companies"
+              ]
             }
           }
         },
@@ -199,8 +281,14 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/travel-destinations",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "data", "travel-destinations"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "data",
+                "travel-destinations"
+              ]
             }
           }
         }
@@ -219,7 +307,10 @@
                 "value": "Bearer {{authToken}}",
                 "type": "text"
               },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -227,8 +318,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/motor/calculate-premium",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "motor", "calculate-premium"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "calculate-premium"
+              ]
             }
           }
         },
@@ -242,7 +339,10 @@
                 "value": "Bearer {{authToken}}",
                 "type": "text"
               },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -250,8 +350,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/motor/market-value",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "motor", "market-value"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "market-value"
+              ]
             }
           }
         },
@@ -289,8 +395,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/motor/submit-proposal",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "motor", "submit-proposal"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "submit-proposal"
+              ]
             }
           }
         }
@@ -309,7 +421,10 @@
                 "value": "Bearer {{authToken}}",
                 "type": "text"
               },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -317,8 +432,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/payment/initiate",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "initiate"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment",
+                "initiate"
+              ]
             }
           }
         },
@@ -327,7 +448,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -335,8 +459,14 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/payment/webhook",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "payment", "webhook"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment",
+                "webhook"
+              ]
             }
           }
         }
@@ -358,8 +488,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/policies/list",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "policies", "list"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "policies",
+                "list"
+              ]
             }
           }
         },
@@ -376,8 +512,14 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/policies/1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "policies", "1"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "policies",
+                "1"
+              ]
             }
           }
         }
@@ -399,8 +541,83 @@
             ],
             "url": {
               "raw": "{{baseUrl}}/api/claims/list",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "claims", "list"]
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "claims",
+                "list"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Travel",
+      "item": [
+        {
+          "name": "Calculate Premium",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"packageType\": \"Worldwide\",\n  \"coverageType\": \"individual\",\n  \"startDate\": \"2025-01-10\",\n  \"endDate\": \"2025-01-25\",\n  \"dob\": \"1995-05-10\",\n  \"addOns\": [\"hijacking\", \"luggageDelay\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/calculate-premium",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "travel",
+                "calculate-premium"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Proposal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripDetails\": {\n    \"packageType\": \"Student Travel\",\n    \"coverageType\": \"individual\",\n    \"productPlan\": \"Student-Plan-1\",\n    \"startDate\": \"2025-02-01\",\n    \"endDate\": \"2025-02-21\",\n    \"destinationIds\": [1, 2],\n    \"addOns\": [\"hijacking\", \"luggageDelay\"]\n  },\n  \"applicantInfo\": {\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Khan\",\n    \"address\": \"Gulshan-e-Iqbal Block 5\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-1234567-1\",\n    \"passportNumber\": \"AB1234567\",\n    \"mobile\": \"03001234567\",\n    \"email\": \"ali@example.com\",\n    \"dob\": \"2000-01-10\",\n    \"universityName\": \"XYZ University\"\n  },\n  \"beneficiary\": {\n    \"beneficiaryName\": \"Danish Khan\",\n    \"beneficiaryAddress\": \"North Nazimabad\",\n    \"beneficiaryCnic\": \"42101-7654321-1\",\n    \"beneficiaryCnicIssueDate\": \"2015-05-01\",\n    \"beneficiaryRelation\": \"Brother\"\n  },\n  \"parentInfo\": {\n    \"parentName\": \"Muhammad Khan\",\n    \"parentAddress\": \"North Nazimabad\",\n    \"parentCnic\": \"42101-1111111-1\",\n    \"parentCnicIssueDate\": \"2010-01-01\",\n    \"parentRelation\": \"Father\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/submit-proposal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "travel",
+                "submit-proposal"
+              ]
             }
           }
         }
