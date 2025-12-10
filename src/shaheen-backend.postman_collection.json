@@ -428,7 +428,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": 44000,\n  \"orderId\": \"TEST-ORDER-001\",\n  \"customerEmail\": \"test@example.com\",\n  \"applicationType\": \"MOTOR\",\n  \"applicationId\": 1\n}"
+              "raw": "{\n  \"amount\": 44000,\n  \"orderId\": \"MOTOR-TEST-001\",\n  \"customerEmail\": \"test@example.com\",\n  \"applicationType\": \"MOTOR\",\n  \"applicationId\": 1\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/payment/initiate",
