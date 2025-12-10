@@ -14,8 +14,9 @@ const paymentRoutes = require('./modules/payment/payment.routes');
 const policyRoutes = require('./modules/policy/policy.routes');
 const claimRoutes = require('./modules/claim/claim.routes');
 
+const adminRoutes = require('./modules/admin/admin.routes');
 const { errorHandler } = require('./middleware/errorHandler');
-const { authMiddleware } = require('./middleware/auth');
+const { authMiddleware, adminMiddleware } = require('./middleware/auth');
 
 const app = express();
 
@@ -29,13 +30,21 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/data', dataRoutes);
 
-// Protected routes (example, you can apply per-route instead)
+// Protected customer routes (example, you can apply per-route instead)
 app.use('/api/user', authMiddleware, userRoutes);
 app.use('/api/motor', authMiddleware, motorRoutes);
 app.use('/api/travel', authMiddleware, travelRoutes);
 app.use('/api/payment', authMiddleware, paymentRoutes);
 app.use('/api/policies', authMiddleware, policyRoutes);
 app.use('/api/claims', authMiddleware, claimRoutes);
+
+// Admin routes (auth + admin)
+app.use(
+  '/api/admin',
+  authMiddleware,
+  adminMiddleware,
+  adminRoutes
+);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
