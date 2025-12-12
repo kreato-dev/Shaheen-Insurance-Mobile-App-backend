@@ -59,6 +59,7 @@ CREATE TABLE users (
   nationality VARCHAR(100) NULL,
   gender ENUM('male','female','other') NULL,
   status ENUM('active','inactive') DEFAULT 'active',
+  role ENUM('customer','admin') NOT NULL DEFAULT 'customer',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_mobile (mobile),

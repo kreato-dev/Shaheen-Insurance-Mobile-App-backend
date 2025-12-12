@@ -1,4 +1,5 @@
 // src/app.js
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -26,6 +27,9 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files (HTML, CSS, JS from /public)
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
 // Public routes
 app.use('/api/auth', authRoutes);
 app.use('/api/data', dataRoutes);
@@ -45,6 +49,11 @@ app.use(
   adminMiddleware,
   adminRoutes
 );
+
+// Shortcut route to open the API playground
+app.get('/playground', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'playground.html'));
+});
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });

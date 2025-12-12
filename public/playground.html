@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Shaheen API Playground</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f172a;
+      color: #e5e7eb;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #fbbf24;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: #020617;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid #1e293b;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.35);
+    }
+    label {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 4px;
+      color: #9ca3af;
+    }
+    input, textarea, select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 8px;
+      border: 1px solid #1f2937;
+      background: #020617;
+      color: #e5e7eb;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+    button {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      background: #2563eb;
+      color: white;
+      margin-right: 4px;
+      margin-top: 4px;
+    }
+    button.secondary {
+      background: #111827;
+      border: 1px solid #374151;
+    }
+    .small {
+      font-size: 12px;
+      color: #9ca3af;
+    }
+    #tokenDisplay {
+      font-size: 11px;
+      word-break: break-all;
+      background: #020617;
+      border-radius: 8px;
+      padding: 8px;
+      border: 1px solid #1f2937;
+      min-height: 32px;
+    }
+    pre {
+      background: #020617;
+      border-radius: 8px;
+      padding: 8px;
+      border: 1px solid #1f2937;
+      font-size: 12px;
+      max-height: 260px;
+      overflow: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Shaheen Insurance – API Playground</h1>
+  <p class="small">
+    Base URL: <code id="baseUrlLabel"></code> |
+    Token: <span id="tokenStatus">None</span>
+  </p>
+
+  <div class="grid">
+    <!-- Auth Card -->
+    <div class="card">
+      <h2>Auth</h2>
+      <label>Mobile</label>
+      <input id="authMobile" placeholder="03001234567" />
+      <label>Password</label>
+      <input id="authPassword" type="password" value="Password123" />
+
+      <label>Full Name (for register)</label>
+      <input id="authFullName" placeholder="Test User" />
+      <label>Email (for register)</label>
+      <input id="authEmail" placeholder="test@example.com" />
+
+      <button id="btnRegister">Register</button>
+      <button id="btnLogin">Login</button>
+
+      <p class="small">JWT:</p>
+      <div id="tokenDisplay"></div>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="card">
+      <h2>Profile</h2>
+      <button id="btnGetProfile">GET /user/profile</button>
+      <button id="btnUpdateProfile" class="secondary">PUT /user/profile (demo)</button>
+      <p class="small">This will update CNIC etc. needed for policies/claims mock.</p>
+    </div>
+
+    <!-- Motor Card -->
+    <div class="card">
+      <h2>Motor</h2>
+      <button id="btnMotorCalc">POST /motor/calculate-premium</button>
+      <button id="btnMotorMarket" class="secondary">POST /motor/market-value</button>
+      <p class="small">Proposal with images you can test from Postman for now.</p>
+    </div>
+
+    <!-- Travel Card -->
+    <div class="card">
+      <h2>Travel</h2>
+      <button id="btnTravelCalc">POST /travel/calculate-premium</button>
+      <button id="btnTravelProposal" class="secondary">POST /travel/submit-proposal</button>
+      <p class="small">Submit proposal uses simple JSON payload.</p>
+    </div>
+
+    <!-- Policy & Claims -->
+    <div class="card">
+      <h2>My Policy & Claims</h2>
+      <button id="btnPolicies">GET /policies/list</button>
+      <button id="btnClaims" class="secondary">GET /claims/list</button>
+      <p class="small">Make sure profile has CNIC set first.</p>
+    </div>
+
+    <!-- Payments -->
+    <div class="card">
+      <h2>Payments</h2>
+      <label>Application Type</label>
+      <select id="payAppType">
+        <option value="MOTOR">MOTOR</option>
+        <option value="TRAVEL">TRAVEL</option>
+      </select>
+      <label>Application ID (proposalId)</label>
+      <input id="payAppId" type="number" placeholder="1" />
+      <label>Amount</label>
+      <input id="payAmount" type="number" placeholder="44000" />
+      <label>Customer Email</label>
+      <input id="payEmail" placeholder="test@example.com" />
+      <button id="btnPay">POST /payment/initiate</button>
+      <p class="small">It will open PayFast URL in a new tab.</p>
+    </div>
+  </div>
+
+  <h2>Response</h2>
+  <pre id="responseBox">// responses will appear here</pre>
+
+  <!-- External script instead of inline (CSP-friendly) -->
+  <script src="/playground.js"></script>
+</body>
+</html>
