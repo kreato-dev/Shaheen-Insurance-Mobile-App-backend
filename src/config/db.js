@@ -30,8 +30,18 @@ async function getConnection() {
   return pool.getConnection();
 }
 
+// Log pool stats on every request
+function logPoolStats() {
+  console.log({
+    totalConnections: pool.pool._allConnections.length,
+    freeConnections: pool.pool._freeConnections.length,
+    waitingRequests: pool.pool._connectionQueue.length,
+  });
+}
+
 module.exports = {
   pool,
   query,
   getConnection,
+  logPoolStats,
 };
