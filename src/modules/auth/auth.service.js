@@ -37,8 +37,8 @@ function sanitizeUser(user) {
  * Register new user
  */
 async function registerUser({ fullName, email, mobile, password }) {
-  if (!fullName || !mobile || !password) {
-    throw httpError(400, 'fullName, mobile and password are required');
+  if (!fullName || !mobile || !password || !email) {
+    throw httpError(400, 'All fields are required');
   }
 
   // Check if mobile or email already exists
@@ -144,7 +144,7 @@ async function sendForgotPasswordOtp({ mobile }) {
  */
 async function verifyForgotPasswordOtp({ mobile, otp, newPassword }) {
   if (!mobile || !otp || !newPassword) {
-    throw httpError(400, 'mobile, otp and newPassword are required');
+    throw httpError(400, 'mobile, otp and New Password are required');
   }
 
   const otpRows = await query(
