@@ -12,8 +12,8 @@ function httpError(status, message) {
  * Very simple sample logic:
  *  - sumInsured = vehicleValue
  *  - baseRate = 2% of sumInsured
- *  - if tracker: 10% discount
- *  - if vehicle age > 5 years: +15% loading
+ *  - if tracker: 10% discount <- not included rightnow
+ *  - if vehicle age > 5 years: +15% loading <- not included rightnow
  */
 async function calculatePremiumService({ vehicleValue, year, tracker }) {
   if (!vehicleValue || !year) {
@@ -38,14 +38,14 @@ async function calculatePremiumService({ vehicleValue, year, tracker }) {
   const hasTracker = tracker === true || tracker === 'true' || tracker === 1 || tracker === '1';
 
   // Tracker discount 10%
-  if (hasTracker) {
-    premium = premium * 0.9;
-  }
+  // if (hasTracker) {
+  //   premium = premium * 0.9;
+  // }
 
   // Older than 5 years → +15% loading
-  if (vehicleAge > 5) {
-    premium = premium * 1.15;
-  }
+  // if (vehicleAge > 5) {
+  //   premium = premium * 1.15;
+  // }
 
   return {
     sumInsured: Number(sumInsured.toFixed(2)),
