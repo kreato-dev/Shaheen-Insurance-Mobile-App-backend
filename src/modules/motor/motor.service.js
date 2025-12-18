@@ -10,20 +10,24 @@ function httpError(status, message) {
 /**
  * Calculate motor premium and sum insured
  * Very simple sample logic:
- *  - sumInsured = vehicleValue
+ *  - sumInsured = vehicleValue + accessoriesValue (default = 0 from frontend)
  *  - baseRate = 2% of sumInsured
  *  - if tracker: 10% discount <- not included rightnow
  *  - if vehicle age > 5 years: +15% loading <- not included rightnow
  */
-async function calculatePremiumService({ vehicleValue, year, tracker }) {
+async function calculatePremiumService({ vehicleValue, year, tracker, accessoriesValue }) {
   if (!vehicleValue || !year) {
     throw httpError(400, 'vehicleValue and year are required');
   }
 
   const numericValue = Number(vehicleValue);
+  const numericaccessoriesValue = Number(accessoriesValue);
   const numericYear = Number(year);
   if (Number.isNaN(numericValue) || numericValue <= 0) {
     throw httpError(400, 'vehicleValue must be a positive number');
+  }
+  if (Number.isNaN(numericaccessoriesValue) || numericaccessoriesValue < 0) {
+    throw httpError(400, 'accessoriesValue must be a positive number');
   }
   if (Number.isNaN(numericYear) || numericYear < 2015) {
     throw httpError(400, 'year must be a valid year');
@@ -32,7 +36,7 @@ async function calculatePremiumService({ vehicleValue, year, tracker }) {
   const nowYear = new Date().getFullYear();
   const vehicleAge = nowYear - numericYear;
 
-  let sumInsured = numericValue;
+  let sumInsured = numericValue + numericaccessoriesValue;
   let premium = sumInsured * 0.02; // 2%
 
   const hasTracker = tracker === true || tracker === 'true' || tracker === 1 || tracker === '1';
@@ -206,7 +210,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails, fi
     modelYear,
     colour,
     trackerCompanyId = null,
-    accessoriesValue = 0,
+    accessoriesValue,
     vehicleValue, // for premium calc
   } = vehicleDetails;
 
@@ -224,6 +228,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails, fi
   if (vehicleValue) {
     const prem = await calculatePremiumService({
       vehicleValue,
+      accessoriesValue,
       year: modelYear,
       tracker: !!trackerCompanyId,
     });
