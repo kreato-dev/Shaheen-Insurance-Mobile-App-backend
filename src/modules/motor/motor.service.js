@@ -25,7 +25,7 @@ async function calculatePremiumService({ vehicleValue, year, tracker }) {
   if (Number.isNaN(numericValue) || numericValue <= 0) {
     throw httpError(400, 'vehicleValue must be a positive number');
   }
-  if (Number.isNaN(numericYear) || numericYear < 1980) {
+  if (Number.isNaN(numericYear) || numericYear < 2015) {
     throw httpError(400, 'year must be a valid year');
   }
 
@@ -65,7 +65,7 @@ async function getMarketValueService({ makeId, submakeId, year }) {
   }
 
   const numericYear = Number(year);
-  if (Number.isNaN(numericYear) || numericYear < 1980) {
+  if (Number.isNaN(numericYear) || numericYear < 2015) {
     throw httpError(400, 'year must be a valid year');
   }
 
