@@ -201,6 +201,47 @@ function validateApplicantInfo(applicantInfo) {
 }
 
 /**
+ * Validate family members if needed (Step 4)
+ */
+function validateFamilyMembersIfNeeded(coverageType, familyMembers) {
+  const cov = (coverageType || '').toLowerCase();
+  if (cov !== 'family') return;
+
+  if (!Array.isArray(familyMembers) || familyMembers.length === 0) {
+    throw httpError(400, 'familyMembers (non-empty array) is required when coverageType is family');
+  }
+
+  if (familyMembers.length > 10) {
+    throw httpError(400, 'Maximum 10 family members allowed');
+  }
+
+  for (let i = 0; i < familyMembers.length; i++) {
+    const m = familyMembers[i];
+    const required = ['firstName', 'lastName', 'dob', 'memberType'];
+
+    for (const field of required) {
+      if (!m[field]) {
+        throw httpError(400, `familyMembers[${i}].${field} is required`);
+      }
+    }
+
+    const dob = new Date(m.dob);
+    if (Number.isNaN(dob.getTime())) {
+      throw httpError(400, `familyMembers[${i}].dob is invalid date`);
+    }
+    if (dob >= new Date()) {
+      throw httpError(400, `familyMembers[${i}].dob must be in the past`);
+    }
+
+    const mt = String(m.memberType).toLowerCase();
+    const allowed = ['spouse', 'child', 'parent', 'other'];
+    if (!allowed.includes(mt)) {
+      throw httpError(400, `familyMembers[${i}].memberType must be one of: ${allowed.join(', ')}`);
+    }
+  }
+}
+
+/**
  * Validate beneficiary (Step 5)
  */
 function validateBeneficiary(beneficiary) {
@@ -292,7 +333,7 @@ async function validateDestinations(packageType, destinationIds) {
 /**
  * Create travel proposal + multi-destination rows in transaction
  */
-async function submitProposalService(userId, tripDetails, applicantInfo, beneficiary, parentInfo) {
+async function submitProposalService(userId, tripDetails, applicantInfo, beneficiary, parentInfo, familyMembers) {
   if (!userId) {
     throw httpError(401, 'User is required');
   }
@@ -301,6 +342,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
   validateApplicantInfo(applicantInfo);
   validateBeneficiary(beneficiary);
   validateParentInfoIfNeeded(tripDetails.packageType, parentInfo);
+  validateFamilyMembersIfNeeded(tripDetails.coverageType, familyMembers);
 
   const {
     packageType,
@@ -413,6 +455,28 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       );
     }
 
+    // insert family members if coverageType = family
+    if ((coverageType || '').toLowerCase() === 'family') {
+      for (const m of familyMembers) {
+        await conn.execute(
+          `INSERT INTO travel_family_members
+           (proposal_id, member_type, first_name, last_name, dob, gender, cnic, passport_number, relation, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+          [
+            proposalId,
+            (m.memberType || 'other').toLowerCase(),
+            m.firstName,
+            m.lastName,
+            m.dob,
+            m.gender || null,
+            m.cnic || null,
+            m.passportNumber || null,
+            m.relation || null,
+          ]
+        );
+      }
+    }
+    
     await conn.commit();
 
     return {

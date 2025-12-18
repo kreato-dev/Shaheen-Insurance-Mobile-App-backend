@@ -208,6 +208,26 @@ CREATE TABLE travel_proposals (
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+  -- Applicant Family info (for coverageType= family i.e spouse/child(s))
+CREATE TABLE travel_family_members (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  member_type ENUM('spouse','child','parent','other') NOT NULL DEFAULT 'other',
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  dob DATE NOT NULL,
+  gender ENUM('male','female','other') NULL,
+  cnic VARCHAR(25) NULL,
+  passport_number VARCHAR(50) NULL,
+  relation VARCHAR(100) NULL, -- optional free text ("Wife", "Son", etc.)
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_travel_family_members_proposal
+    FOREIGN KEY (proposal_id) REFERENCES travel_proposals(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  INDEX idx_travel_family_members_proposal (proposal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
 CREATE TABLE travel_destinations_selected (
   id INT AUTO_INCREMENT PRIMARY KEY,
   proposal_id INT NOT NULL,

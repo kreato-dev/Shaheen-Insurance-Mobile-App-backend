@@ -35,9 +35,9 @@ async function calculatePremium(req, res, next) {
 async function submitProposal(req, res, next) {
   try {
     const userId = req.user.id;
-    let { tripDetails, applicantInfo, beneficiary, parentInfo } = req.body;
+    let { tripDetails, applicantInfo, beneficiary, parentInfo, familyMembers } = req.body;
 
-    // If client sends JSON string (e.g. when using multipart later), handle that:
+    // If client sends JSON string (e.g. multipart), handle that:
     try {
       if (typeof tripDetails === 'string') tripDetails = JSON.parse(tripDetails);
       if (typeof applicantInfo === 'string')
@@ -46,11 +46,12 @@ async function submitProposal(req, res, next) {
         beneficiary = JSON.parse(beneficiary);
       if (typeof parentInfo === 'string' && parentInfo)
         parentInfo = JSON.parse(parentInfo);
+      if (typeof familyMembers === 'string' && familyMembers) familyMembers = JSON.parse(familyMembers);
     } catch (parseErr) {
       return next(
         Object.assign(
           new Error(
-            'Invalid JSON in tripDetails/applicantInfo/beneficiary/parentInfo'
+            'Invalid JSON in tripDetails/applicantInfo/beneficiary/parentInfo/familyMembers'
           ),
           { status: 400 }
         )
@@ -62,7 +63,8 @@ async function submitProposal(req, res, next) {
       tripDetails,
       applicantInfo,
       beneficiary,
-      parentInfo
+      parentInfo,
+      familyMembers
     );
 
     return res.status(201).json({
