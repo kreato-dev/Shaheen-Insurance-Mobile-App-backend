@@ -13,8 +13,6 @@ router.post('/submit-proposal', travelController.submitProposal);
 // GET /api/travel/destinations
 // GET /api/travel/destinations?region=Europe
 // GET /api/travel/destinations?search=United
-
-
 router.get('/destinations', getTravelDestinations);
 
 module.exports = router;
