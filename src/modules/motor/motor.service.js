@@ -138,6 +138,50 @@ function validateVehicleDetails(vehicle) {
   if (Number.isNaN(yearNum) || yearNum < 1980) {
     throw httpError(400, 'vehicleDetails.modelYear is invalid');
   }
+
+  // Ownership rule:
+  // if applicant is not the vehicle owner, then it must be registered under the blood relation of the owner 
+  const rawIsOwner = vehicle.isOwner;
+
+  const isOwner =
+    rawIsOwner === true ||
+    rawIsOwner === 1 ||
+    rawIsOwner === '1' ||
+    rawIsOwner === 'true';
+
+  if (!isOwner) {
+    if (!vehicle.ownerRelation) {
+      throw httpError(
+        400,
+        'vehicleDetails.ownerRelation is required when vehicleDetails.isOwner is false'
+      );
+    }
+
+    const allowedRelations = [
+      'father',
+      'mother',
+      'brother',
+      'sister',
+      'spouse',
+      'son',
+      'daughter',
+    ];
+
+    const rel = String(vehicle.ownerRelation).toLowerCase();
+
+    if (!allowedRelations.includes(rel)) {
+      throw httpError(
+        400,
+        `vehicleDetails.ownerRelation must be one of: ${allowedRelations.join(', ')}`
+      );
+    }
+
+    // normalize value (optional but nice)
+    vehicle.ownerRelation = rel;
+  }
+
+  // normalize isOwner (optional but nice)
+  vehicle.isOwner = isOwner ? 1 : 0;
 }
 
 /**
@@ -203,6 +247,8 @@ async function submitProposalService(userId, personalDetails, vehicleDetails, fi
     productType,
     registrationNumber = null,
     appliedFor = false,
+    isOwner,
+    ownerRelation,
     engineNumber,
     chassisNumber,
     makeId,
@@ -244,10 +290,10 @@ async function submitProposalService(userId, personalDetails, vehicleDetails, fi
     const [result] = await conn.execute(
       `INSERT INTO motor_proposals
        (user_id, name, address, city_id, cnic, cnic_expiry, dob, nationality, gender,
-        product_type, registration_number, applied_for, engine_number, chassis_number,
+        product_type, registration_number, applied_for, is_owner, owner_relation, engine_number, chassis_number,
         make_id, submake_id, model_year, colour, tracker_company_id, accessories_value,
         sum_insured, premium, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW(), NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW(), NOW())`,
       [
         userId,
         name,
@@ -261,6 +307,8 @@ async function submitProposalService(userId, personalDetails, vehicleDetails, fi
         productType,
         registrationNumber,
         appliedFor ? 1 : 0,
+        isOwner ? 1 : 0,
+        isOwner ? null : ownerRelation,
         engineNumber,
         chassisNumber,
         makeId,

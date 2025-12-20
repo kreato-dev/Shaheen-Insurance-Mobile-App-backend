@@ -99,6 +99,8 @@ CREATE TABLE motor_proposals (
   product_type ENUM('private','commercial') NOT NULL,
   registration_number VARCHAR(50) NULL,
   applied_for TINYINT(1) DEFAULT 0,
+  is_owner TINYINT(1) NOT NULL,
+  owner_relation ENUM('father', 'mother', 'brother', 'sister', 'spouse', 'son', 'daughter') NULL,
   engine_number VARCHAR(100) NOT NULL,
   chassis_number VARCHAR(100) NOT NULL,
   make_id INT NOT NULL,
