@@ -16,6 +16,8 @@ router.get('/vehicle-submakes/:makeId', dataController.getVehicleSubmakes);
 router.get('/tracker-companies', dataController.getTrackerCompanies);
 
 // GET /api/data/travel-destinations
+// GET /api/data/travel-destinations?region=Europe
+// GET /api/data/travel-destinations?search=United
 router.get('/travel-destinations', dataController.getTravelDestinations);
 
 module.exports = router;

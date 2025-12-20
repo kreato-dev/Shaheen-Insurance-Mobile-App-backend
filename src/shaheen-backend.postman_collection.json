@@ -620,34 +620,6 @@
               ]
             }
           }
-        },
-        {
-          "name": "Get all Destinations",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/destinations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "destinations"
-              ]
-            }
-          }
         }
       ]
     }
