@@ -135,6 +135,21 @@ CREATE TABLE motor_proposals (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+  -- motor proposal documnent images
+CREATE TABLE motor_documents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  doc_type ENUM('CNIC','DRIVING_LICENSE','REGISTRATION_BOOK') NOT NULL,
+  side ENUM('front','back') NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_motor_documents_proposal
+    FOREIGN KEY (proposal_id) REFERENCES motor_proposals(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  UNIQUE KEY uq_motor_doc_unique (proposal_id, doc_type, side)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+  -- motor vehicle images
 CREATE TABLE motor_vehicle_images (
   id INT AUTO_INCREMENT PRIMARY KEY,
   proposal_id INT NOT NULL,

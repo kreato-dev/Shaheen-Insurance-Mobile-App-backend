@@ -362,7 +362,55 @@
           }
         },
         {
-          "name": "Submit Proposal (multipart)",
+          "name": "Submit Proposal (NO files now)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  if (json && json.proposalId) {",
+                  "    pm.collectionVariables.set('motorProposalId', String(json.proposalId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"personalDetails\": {\n    \"name\": \"Ali Khan\",\n    \"address\": \"Gulshan-e-Iqbal Block 5\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-1234567-1\",\n    \"cnicExpiry\": \"2030-12-31\",\n    \"dob\": \"1995-05-10\",\n    \"nationality\": \"Pakistani\",\n    \"gender\": \"male\"\n  },\n  \"vehicleDetails\": {\n    \"productType\": \"private\",\n    \"registrationNumber\": \"ABC-123\",\n    \"appliedFor\": true,\n    \"isOwner\": false,\n    \"ownerRelation\": \"father\",\n    \"engineNumber\": \"ENG1234567\",\n    \"chassisNumber\": \"CHS1234567\",\n    \"makeId\": 2,\n    \"submakeId\": 4,\n    \"modelYear\": 2021,\n    \"colour\": \"White\",\n    \"trackerCompanyId\": 2,\n    \"accessoriesValue\": 50000,\n    \"vehicleValue\": 2800000\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/submit-proposal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "submit-proposal"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload CNIC (front + back) - step=cnic",
           "request": {
             "method": "POST",
             "header": [
@@ -376,32 +424,175 @@
               "mode": "formdata",
               "formdata": [
                 {
-                  "key": "personalDetails",
-                  "value": "{\n  \"name\": \"Ali Khan\",\n  \"address\": \"Gulshan-e-Iqbal Block 5\",\n  \"cityId\": 1,\n  \"cnic\": \"42101-1234567-1\",\n  \"cnicExpiry\": \"2030-12-31\",\n  \"dob\": \"1995-05-10\",\n  \"nationality\": \"Pakistani\",\n  \"gender\": \"male\"\n}",
-                  "type": "text"
-                },
-                {
-                  "key": "vehicleDetails",
-                  "value": "{\n  \"productType\": \"private\",\n  \"registrationNumber\": \"ABC-123\",\n  \"appliedFor\": true,\n  \"isOwner\": false,\n  \"ownerRelation\": \"father\",\n  \"engineNumber\": \"ENG1234567\",\n  \"chassisNumber\": \"CHS1234567\",\n  \"makeId\": 1,\n  \"submakeId\": 5,\n  \"modelYear\": 2021,\n  \"colour\": \"White\",\n  \"trackerCompanyId\": 2,\n  \"accessoriesValue\": 50000,\n  \"vehicleValue\": 2800000\n}",
-                  "type": "text"
-                },
-                {
-                  "key": "images",
+                  "key": "cnic_front",
                   "type": "file",
-                  "src": "",
-                  "description": "Upload one or more files with fieldname 'images'. In code we use file.fieldname as image_type, so set this key to e.g. front_side when you test manually."
+                  "src": ""
+                },
+                {
+                  "key": "cnic_back",
+                  "type": "file",
+                  "src": ""
                 }
               ]
             },
             "url": {
-              "raw": "{{baseUrl}}/api/motor/submit-proposal",
+              "raw": "{{baseUrl}}/api/motor/{{motorProposalId}}/uploads?step=cnic",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "motor",
-                "submit-proposal"
+                "{{motorProposalId}}",
+                "uploads"
+              ],
+              "query": [
+                {
+                  "key": "step",
+                  "value": "cnic"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Driving License (front + back) - step=license",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "license_front",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "license_back",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/{{motorProposalId}}/uploads?step=license",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "{{motorProposalId}}",
+                "uploads"
+              ],
+              "query": [
+                {
+                  "key": "step",
+                  "value": "license"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Vehicle Images + Reg Book (front + back) - step=vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "front_side",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "back_side",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "right_side",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "left_side",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "dashboard",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "engine_bay",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "boot",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "engine_number",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "registration_front",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "registration_back",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "regbook_front",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "regbook_back",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/{{motorProposalId}}/uploads?step=vehicle",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "{{motorProposalId}}",
+                "uploads"
+              ],
+              "query": [
+                {
+                  "key": "step",
+                  "value": "vehicle"
+                }
               ]
             }
           }
@@ -606,7 +797,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripDetails\": {\n    \"packageType\": \"Worldwide\",\n    \"coverageType\": \"family\",\n    \"productPlan\": \"WW-Premium\",\n    \"startDate\": \"2026-01-05\",\n    \"endDate\": \"2026-01-20\",\n    \"destinationIds\": [1, 5],\n    \"addOns\": [true]\n  },\n  \"applicantInfo\": {\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Khan\",\n    \"address\": \"Gulshan Karachi\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-2222222-2\",\n    \"passportNumber\": \"AB1234567\",\n    \"mobile\": \"03009998888\",\n    \"email\": \"ali@example.com\",\n    \"dob\": \"1996-04-15\"\n  },\n  \"beneficiary\": {\n    \"beneficiaryName\": \"Danish Ahmed\",\n    \"beneficiaryAddress\": \"DHA Lahore\",\n    \"beneficiaryCnic\": \"42101-3333333-3\",\n    \"beneficiaryCnicIssueDate\": \"2012-03-15\",\n    \"beneficiaryRelation\": \"Brother\"\n  },\n  \"familyMembers\": [\n    {\n      \"memberType\": \"spouse\",\n      \"firstName\": \"Ayesha\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"1998-08-08\",\n      \"gender\": \"female\",\n      \"cnic\": \"42101-9999999-9\",\n      \"passportNumber\": \"SP1231231\",\n      \"relation\": \"Wife\"\n    },\n    {\n      \"memberType\": \"child\",\n      \"firstName\": \"Hadi\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"2018-05-10\",\n      \"gender\": \"male\",\n      \"relation\": \"Son\"\n    },\n    {\n      \"memberType\": \"child\",\n      \"firstName\": \"Yaseen\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"2018-05-10\",\n      \"gender\": \"male\",\n      \"relation\": \"Son\"\n    },\n    {\n      \"memberType\": \"child\",\n      \"firstName\": \"Saad\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"2018-05-10\",\n      \"gender\": \"male\",\n      \"relation\": \"Son\"\n    },\n    {\n      \"memberType\": \"child\",\n      \"firstName\": \"Laiba\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"2018-05-10\",\n      \"gender\": \"female\",\n      \"relation\": \"Daughter\"\n    },\n    {\n      \"memberType\": \"child\",\n      \"firstName\": \"Ahad\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"2018-05-10\",\n      \"gender\": \"male\",\n      \"relation\": \"Son\"\n    }\n  ]\n}"
+              "raw": "{\n  \"tripDetails\": {\n    \"packageType\": \"Worldwide\",\n    \"coverageType\": \"family\",\n    \"productPlan\": \"WW-Premium\",\n    \"startDate\": \"2026-01-05\",\n    \"endDate\": \"2026-01-20\",\n    \"destinationIds\": [1, 5],\n    \"addOns\": [true]\n  },\n  \"applicantInfo\": {\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Khan\",\n    \"address\": \"Gulshan Karachi\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-2222222-2\",\n    \"passportNumber\": \"AB1234567\",\n    \"mobile\": \"03009998888\",\n    \"email\": \"ali@example.com\",\n    \"dob\": \"1996-04-15\"\n  },\n  \"beneficiary\": {\n    \"beneficiaryName\": \"Danish Ahmed\",\n    \"beneficiaryAddress\": \"DHA Lahore\",\n    \"beneficiaryCnic\": \"42101-3333333-3\",\n    \"beneficiaryCnicIssueDate\": \"2012-03-15\",\n    \"beneficiaryRelation\": \"Brother\"\n  },\n  \"familyMembers\": [\n    {\n      \"memberType\": \"spouse\",\n      \"firstName\": \"Ayesha\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"1998-08-08\",\n      \"gender\": \"female\",\n      \"cnic\": \"42101-9999999-9\",\n      \"passportNumber\": \"SP1231231\",\n      \"relation\": \"Wife\"\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/travel/submit-proposal",
@@ -631,6 +822,10 @@
     },
     {
       "key": "authToken",
+      "value": ""
+    },
+    {
+      "key": "motorProposalId",
       "value": ""
     }
   ]

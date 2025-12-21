@@ -118,6 +118,7 @@ function validatePersonalDetails(personal) {
   }
 }
 
+/*** Validate vehicle details*/
 function validateVehicleDetails(vehicle) {
   const required = [
     'productType',
@@ -222,9 +223,8 @@ async function validateForeignKeys({ cityId, makeId, submakeId, trackerCompanyId
 /**
  * Create motor proposal + store images in a transaction
  * personalDetails, vehicleDetails: JS objects
- * files: array from multer
  */
-async function submitProposalService(userId, personalDetails, vehicleDetails, files) {
+async function submitProposalService(userId, personalDetails, vehicleDetails) {
   if (!userId) {
     throw httpError(401, 'User is required');
   }
@@ -324,36 +324,6 @@ async function submitProposalService(userId, personalDetails, vehicleDetails, fi
 
     const proposalId = result.insertId;
 
-    // map file.fieldname -> image_type used in DB ENUM
-    const supportedTypes = new Set([
-      'front_side',
-      'back_side',
-      'right_side',
-      'left_side',
-      'dashboard',
-      'engine_bay',
-      'boot',
-      'engine_number',
-      'registration_front',
-      'registration_back',
-    ]);
-
-    if (Array.isArray(files) && files.length > 0) {
-      for (const file of files) {
-        const field = file.fieldname;
-        if (!supportedTypes.has(field)) {
-          // you can ignore unknown or throw
-          continue;
-        }
-        await conn.execute(
-          `INSERT INTO motor_vehicle_images
-           (proposal_id, image_type, file_path, created_at)
-           VALUES (?, ?, ?, NOW())`,
-          [proposalId, field, file.path]
-        );
-      }
-    }
-
     await conn.commit();
 
     return {
@@ -369,8 +339,165 @@ async function submitProposalService(userId, personalDetails, vehicleDetails, fi
   }
 }
 
+/**
+ * Helpers for upload API
+ */
+function requireFiles(filesObj, requiredFields) {
+  const missing = [];
+  for (const f of requiredFields) {
+    if (!filesObj || !filesObj[f] || !filesObj[f][0]) missing.push(f);
+  }
+  if (missing.length) {
+    throw httpError(400, `Missing required files: ${missing.join(', ')}`);
+  }
+}
+
+async function assertProposalOwnership(conn, proposalId, userId) {
+  const [rows] = await conn.execute(
+    `SELECT id FROM motor_proposals WHERE id = ? AND user_id = ? LIMIT 1`,
+    [proposalId, userId]
+  );
+  if (!rows.length) {
+    throw httpError(404, 'Motor proposal not found for this user');
+  }
+}
+
+async function assertUploadOrder(conn, proposalId, step) {
+  const [docs] = await conn.execute(
+    `SELECT doc_type, side FROM motor_documents WHERE proposal_id = ?`,
+    [proposalId]
+  );
+
+  const has = (type, side) => docs.some((d) => d.doc_type === type && d.side === side);
+
+  const cnicDone = has('CNIC', 'front') && has('CNIC', 'back');
+  const licenseDone = has('DRIVING_LICENSE', 'front') && has('DRIVING_LICENSE', 'back');
+
+  if (step === 'license' && !cnicDone) {
+    throw httpError(400, 'Upload CNIC (front/back) before driving license.');
+  }
+  if (step === 'vehicle' && (!cnicDone || !licenseDone)) {
+    throw httpError(400, 'Upload CNIC + driving license before vehicle uploads.');
+  }
+}
+
+async function upsertDocument(conn, proposalId, docType, side, filePath) {
+  await conn.execute(
+    `INSERT INTO motor_documents (proposal_id, doc_type, side, file_path, created_at)
+     VALUES (?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE file_path = VALUES(file_path)`,
+    [proposalId, docType, side, filePath]
+  );
+}
+
+/**
+ * Upload assets by step:
+ * - step=cnic: cnic_front + cnic_back => motor_documents (CNIC)
+ * - step=license: license_front + license_back => motor_documents (DRIVING_LICENSE)
+ * - step=vehicle: vehicle images => motor_vehicle_images AND regbook_front/back => motor_documents (REGISTRATION_BOOK)
+ */
+async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
+  if (!userId) throw httpError(401, 'User is required');
+  if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
+  if (!step) throw httpError(400, 'step is required');
+
+  const conn = await getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    await assertProposalOwnership(conn, proposalId, userId);
+
+    const stepLower = String(step).toLowerCase();
+    await assertUploadOrder(conn, proposalId, stepLower);
+
+    // STEP 1: CNIC
+    if (stepLower === 'cnic') {
+      requireFiles(files, ['cnic_front', 'cnic_back']);
+
+      await upsertDocument(conn, proposalId, 'CNIC', 'front', files.cnic_front[0].path);
+      await upsertDocument(conn, proposalId, 'CNIC', 'back', files.cnic_back[0].path);
+
+      await conn.commit();
+      return { proposalId, step: 'cnic', saved: ['cnic_front', 'cnic_back'] };
+    }
+
+    // STEP 2: LICENSE
+    if (stepLower === 'license') {
+      requireFiles(files, ['license_front', 'license_back']);
+
+      await upsertDocument(conn, proposalId, 'DRIVING_LICENSE', 'front', files.license_front[0].path);
+      await upsertDocument(conn, proposalId, 'DRIVING_LICENSE', 'back', files.license_back[0].path);
+
+      await conn.commit();
+      return { proposalId, step: 'license', saved: ['license_front', 'license_back'] };
+    }
+
+    // STEP 3: VEHICLE + REG BOOK
+    if (stepLower === 'vehicle') {
+      // You said reg book/card images must be uploaded at the end of vehicle step
+      requireFiles(files, ['regbook_front', 'regbook_back']);
+
+      // save reg book docs
+      await upsertDocument(conn, proposalId, 'REGISTRATION_BOOK', 'front', files.regbook_front[0].path);
+      await upsertDocument(conn, proposalId, 'REGISTRATION_BOOK', 'back', files.regbook_back[0].path);
+
+      // save vehicle images (optional but controlled)
+      const supportedTypes = new Set([
+        'front_side',
+        'back_side',
+        'right_side',
+        'left_side',
+        'dashboard',
+        'engine_bay',
+        'boot',
+        'engine_number',
+        // 'registration_front',
+        // 'registration_back',
+      ]);
+
+      const savedVehicleImages = [];
+
+      for (const [field, arr] of Object.entries(files || {})) {
+        if (!supportedTypes.has(field)) continue;
+        if (!arr || !arr[0]) continue;
+
+        const file = arr[0];
+
+        await conn.execute(
+          `INSERT INTO motor_vehicle_images
+           (proposal_id, image_type, file_path, created_at)
+           VALUES (?, ?, ?, NOW())`,
+          [proposalId, field, file.path]
+        );
+
+        savedVehicleImages.push(field);
+      }
+
+      await conn.commit();
+
+      return {
+        proposalId,
+        step: 'vehicle',
+        saved: {
+          regbook: ['regbook_front', 'regbook_back'],
+          vehicleImages: savedVehicleImages,
+        },
+      };
+    }
+
+    throw httpError(400, 'Invalid step. Use: cnic, license, vehicle');
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   calculatePremiumService,
   getMarketValueService,
   submitProposalService,
+  uploadMotorAssetsService,
 };

@@ -3,6 +3,7 @@ const {
   calculatePremiumService,
   getMarketValueService,
   submitProposalService,
+  uploadMotorAssetsService, // ✅ new service function (we’ll add in motor.service.js next)
 } = require('./motor.service');
 
 async function calculatePremium(req, res, next) {
@@ -60,14 +61,11 @@ async function submitProposal(req, res, next) {
         })
       );
     }
-
-    const files = req.files || [];
-
+    
     const result = await submitProposalService(
-      userId,
+      userId, 
       personalDetails,
       vehicleDetails,
-      files
     );
 
     return res.status(201).json({
@@ -79,8 +77,36 @@ async function submitProposal(req, res, next) {
   }
 }
 
+// upload documents/images by proposalId and step
+async function uploadMotorAssets(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const proposalId = Number(req.params.proposalId);
+    const step = String(req.query.step || '').toLowerCase();
+
+    // multer.fields => req.files is an object
+    // { cnic_front: [..], cnic_back: [..] }
+    const files = req.files || {};
+
+    const result = await uploadMotorAssetsService({
+      userId,
+      proposalId,
+      step,
+      files,
+    });
+
+    return res.json({
+      message: 'Motor uploads saved successfully',
+      ...result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   calculatePremium,
   getMarketValue,
   submitProposal,
+  uploadMotorAssets,
 };
