@@ -314,7 +314,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"vehicleValue\": 2500000,\n  \"year\": 2020,\n  \"tracker\": true\n}"
+              "raw": "{\n  \"vehicleValue\": 2500000,\n  \"accessoriesValue\": 0,\n  \"year\": 2020,\n  \"tracker\": true\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/motor/calculate-premium",
@@ -749,9 +749,9 @@
       "name": "Travel",
       "item": [
         {
-          "name": "Calculate Premium",
+          "name": "Catalog - Packages",
           "request": {
-            "method": "POST",
+            "method": "GET",
             "header": [
               {
                 "key": "Authorization",
@@ -763,25 +763,156 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"packageType\": \"Worldwide\",\n  \"coverageType\": \"individual\",\n  \"startDate\": \"2025-01-10\",\n  \"endDate\": \"2025-01-25\",\n  \"dob\": \"1995-05-10\",\n  \"addOns\": [\"hijacking\", \"luggageDelay\"]\n}"
-            },
             "url": {
-              "raw": "{{baseUrl}}/api/travel/calculate-premium",
+              "raw": "{{baseUrl}}/api/travel/catalog/packages",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "travel",
-                "calculate-premium"
+                "catalog",
+                "packages"
               ]
             }
           }
         },
         {
-          "name": "Submit Proposal",
+          "name": "Catalog - Coverages (package=INTERNATIONAL)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/catalog/coverages?package={{travelPackageCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "travel",
+                "catalog",
+                "coverages"
+              ],
+              "query": [
+                {
+                  "key": "package",
+                  "value": "{{travelPackageCode}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Catalog - Plans (package=INTERNATIONAL&coverage=INDIVIDUAL) (Sets travelPlanId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Plans ok', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Auto-pick GOLD plan id and store in env var travelPlanId",
+                  "try {",
+                  "  const rows = pm.response.json();",
+                  "  const gold = rows.find(r => (r.code || '').toUpperCase() === 'GOLD');",
+                  "  if (gold?.id) pm.environment.set('travelPlanId', String(gold.id));",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/catalog/plans?package={{travelPackageCode}}&coverage={{travelCoverageCode}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "travel",
+                "catalog",
+                "plans"
+              ],
+              "query": [
+                {
+                  "key": "package",
+                  "value": "{{travelPackageCode}}"
+                },
+                {
+                  "key": "coverage",
+                  "value": "{{travelCoverageCode}}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Catalog - Slabs (planId={{travelPlanId}})",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/catalog/slabs?planId={{travelPlanId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "travel",
+                "catalog",
+                "slabs"
+              ],
+              "query": [
+                {
+                  "key": "planId",
+                  "value": "{{travelPlanId}}"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Travel (DB Pricing)",
+      "item": [
+        {
+          "name": "Quote Premium (POST /api/travel/quote-premium)",
           "request": {
             "method": "POST",
             "header": [
@@ -797,7 +928,71 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"tripDetails\": {\n    \"packageType\": \"Worldwide\",\n    \"coverageType\": \"family\",\n    \"productPlan\": \"WW-Premium\",\n    \"startDate\": \"2026-01-05\",\n    \"endDate\": \"2026-01-20\",\n    \"destinationIds\": [1, 5],\n    \"addOns\": [true]\n  },\n  \"applicantInfo\": {\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Khan\",\n    \"address\": \"Gulshan Karachi\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-2222222-2\",\n    \"passportNumber\": \"AB1234567\",\n    \"mobile\": \"03009998888\",\n    \"email\": \"ali@example.com\",\n    \"dob\": \"1996-04-15\"\n  },\n  \"beneficiary\": {\n    \"beneficiaryName\": \"Danish Ahmed\",\n    \"beneficiaryAddress\": \"DHA Lahore\",\n    \"beneficiaryCnic\": \"42101-3333333-3\",\n    \"beneficiaryCnicIssueDate\": \"2012-03-15\",\n    \"beneficiaryRelation\": \"Brother\"\n  },\n  \"familyMembers\": [\n    {\n      \"memberType\": \"spouse\",\n      \"firstName\": \"Ayesha\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"1998-08-08\",\n      \"gender\": \"female\",\n      \"cnic\": \"42101-9999999-9\",\n      \"passportNumber\": \"SP1231231\",\n      \"relation\": \"Wife\"\n    }\n  ]\n}"
+              "raw": "{\n  \"packageType\": \"International\",\n  \"coverageType\": \"individual\",\n  \"productPlan\": \"Gold\",\n  \"startDate\": \"2026-02-01\",\n  \"endDate\": \"2026-02-22\",\n  \"dob\": \"1995-05-10\",\n  \"isMultiTrip\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/quote-premium",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "travel",
+                "quote-premium"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Proposal (International Individual Gold - 3 week)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripDetails\": {\n    \"packageType\": \"International\",\n    \"coverageType\": \"individual\",\n    \"productPlan\": \"Gold\",\n    \"startDate\": \"2026-02-01\",\n    \"endDate\": \"2026-02-22\",\n    \"destinationIds\": [1],\n    \"isMultiTrip\": false\n  },\n  \"applicantInfo\": {\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Khan\",\n    \"address\": \"Gulshan Karachi\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-2222222-2\",\n    \"passportNumber\": \"AB1234567\",\n    \"mobile\": \"03009998888\",\n    \"email\": \"ali@example.com\",\n    \"dob\": \"1995-05-10\"\n  },\n  \"beneficiary\": {\n    \"beneficiaryName\": \"Danish Ahmed\",\n    \"beneficiaryAddress\": \"DHA Lahore\",\n    \"beneficiaryCnic\": \"42101-3333333-3\",\n    \"beneficiaryCnicIssueDate\": \"2012-03-15\",\n    \"beneficiaryRelation\": \"Brother\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/submit-proposal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "travel",
+                "submit-proposal"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Proposal (International Family Gold - 3 week)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tripDetails\": {\n    \"packageType\": \"International\",\n    \"coverageType\": \"family\",\n    \"productPlan\": \"Gold\",\n    \"startDate\": \"2026-02-01\",\n    \"endDate\": \"2026-02-22\",\n    \"destinationIds\": [1],\n    \"isMultiTrip\": false\n  },\n  \"applicantInfo\": {\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Khan\",\n    \"address\": \"Gulshan Karachi\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-2222222-2\",\n    \"passportNumber\": \"AB1234567\",\n    \"mobile\": \"03009998888\",\n    \"email\": \"ali@example.com\",\n    \"dob\": \"1995-05-10\"\n  },\n  \"beneficiary\": {\n    \"beneficiaryName\": \"Danish Ahmed\",\n    \"beneficiaryAddress\": \"DHA Lahore\",\n    \"beneficiaryCnic\": \"42101-3333333-3\",\n    \"beneficiaryCnicIssueDate\": \"2012-03-15\",\n    \"beneficiaryRelation\": \"Brother\"\n  },\n  \"familyMembers\": [\n    {\n      \"memberType\": \"spouse\",\n      \"firstName\": \"Ayesha\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"1998-08-08\",\n      \"gender\": \"female\",\n      \"cnic\": \"42101-9999999-9\",\n      \"passportNumber\": \"SP1231231\",\n      \"relation\": \"Wife\"\n    }\n  ]\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/travel/submit-proposal",

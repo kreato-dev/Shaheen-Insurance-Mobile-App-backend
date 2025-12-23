@@ -167,21 +167,110 @@ CREATE TABLE motor_vehicle_images (
 
 -- 4. Travel Insurance
 
-CREATE TABLE travel_proposals (
+/* ==============================================================
+   TRAVEL PRICING CATALOG (Normalized) a/c to TPL travel brochure
+   ============================================================== */
+
+CREATE TABLE travel_packages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  code ENUM('DOMESTIC','HAJJ_UMRAH_ZIARAT','INTERNATIONAL','STUDENT_GUARD') NOT NULL UNIQUE,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE travel_coverages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  package_id INT NOT NULL,
+  code ENUM('INDIVIDUAL','FAMILY','WITH_TUITION','WITHOUT_TUITION') NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_pkg_cov (package_id, code),
+  CONSTRAINT fk_travel_coverages_package
+    FOREIGN KEY (package_id) REFERENCES travel_packages(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE travel_plans (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  package_id INT NOT NULL,
+  coverage_id INT NOT NULL,
+  code ENUM('BASIC','SILVER','GOLD','PLATINUM','DIAMOND') NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  currency CHAR(3) NOT NULL DEFAULT 'PKR',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_plan_unique (package_id, coverage_id, code),
+  CONSTRAINT fk_travel_plans_package
+    FOREIGN KEY (package_id) REFERENCES travel_packages(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_travel_plans_coverage
+    FOREIGN KEY (coverage_id) REFERENCES travel_coverages(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE travel_plan_pricing_slabs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  plan_id INT NOT NULL,
+
+  slab_label VARCHAR(50) NOT NULL,
+  min_days INT NOT NULL,
+  max_days INT NOT NULL,
+
+  is_multi_trip TINYINT(1) DEFAULT 0,
+  max_trip_days INT NULL,
+
+  premium DECIMAL(14,2) NOT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_plan_days (plan_id, min_days, max_days, is_multi_trip),
+  CONSTRAINT fk_pricing_plan
+    FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+/* =========================================================
+   RULES
+   ========================================================= */
+
+CREATE TABLE travel_package_rules (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  package_id INT NOT NULL UNIQUE,
+  max_age INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_rules_package
+    FOREIGN KEY (package_id) REFERENCES travel_packages(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE travel_age_loadings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  package_id INT NOT NULL,
+  min_age INT NOT NULL,
+  max_age INT NOT NULL,
+  loading_percent INT NOT NULL, -- 100 / 150 / 200 etc
+  max_trip_days INT NULL,       -- for the 90-day-per-trip restriction on multi-trip
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_age_band (package_id, min_age, max_age),
+  CONSTRAINT fk_age_loadings_package
+    FOREIGN KEY (package_id) REFERENCES travel_packages(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+/* =========================================================
+   PROPOSALS (4 TABLES) + CHILD TABLES
+   ========================================================= */
+
+/* --------------------------
+   1) DOMESTIC
+-------------------------- */
+CREATE TABLE travel_domestic_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
+  plan_id INT NOT NULL,
 
-  -- Plan / trip details
-  package_type VARCHAR(50) NOT NULL, -- Worldwide / Student / Domestic etc.
-  product_plan VARCHAR(100) NULL,
-  coverage_type ENUM('individual','family') NOT NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   tenure_days INT NOT NULL,
-  sum_insured DECIMAL(14,2) NULL,
-  add_ons_selected TINYINT(1) DEFAULT 0,
 
-  -- Applicant info
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
   address VARCHAR(255) NOT NULL,
@@ -191,42 +280,29 @@ CREATE TABLE travel_proposals (
   mobile VARCHAR(30) NOT NULL,
   email VARCHAR(150) NOT NULL,
   dob DATE NOT NULL,
-  is_student TINYINT(1) DEFAULT 0,
-  university_name VARCHAR(255) NULL,
 
-  -- Parent info (for student)
-  parent_name VARCHAR(150) NULL,
-  parent_address VARCHAR(255) NULL,
-  parent_cnic VARCHAR(25) NULL,
-  parent_cnic_issue_date DATE NULL,
-  parent_relation VARCHAR(100) NULL,
-
-  -- Beneficiary info
   beneficiary_name VARCHAR(150) NOT NULL,
   beneficiary_address VARCHAR(255) NOT NULL,
   beneficiary_cnic VARCHAR(25) NOT NULL,
   beneficiary_cnic_issue_date DATE NOT NULL,
   beneficiary_relation VARCHAR(100) NOT NULL,
 
-  -- Premiums
-  base_premium DECIMAL(14,2) NULL,
-  add_ons_premium DECIMAL(14,2) NULL,
-  final_premium DECIMAL(14,2) NULL,
+  base_premium DECIMAL(14,2) NOT NULL,
+  final_premium DECIMAL(14,2) NOT NULL,
 
   status ENUM('draft','submitted','paid','cancelled') DEFAULT 'submitted',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
-  CONSTRAINT fk_travel_proposals_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
+  CONSTRAINT fk_domestic_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_travel_proposals_city
-    FOREIGN KEY (city_id) REFERENCES cities(id)
+  CONSTRAINT fk_domestic_city FOREIGN KEY (city_id) REFERENCES cities(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_domestic_plan FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-  -- Applicant Family info (for coverageType= family i.e spouse/child(s))
-CREATE TABLE travel_family_members (
+CREATE TABLE travel_domestic_family_members (
   id INT AUTO_INCREMENT PRIMARY KEY,
   proposal_id INT NOT NULL,
   member_type ENUM('spouse','child','parent','other') NOT NULL DEFAULT 'other',
@@ -236,27 +312,237 @@ CREATE TABLE travel_family_members (
   gender ENUM('male','female','other') NULL,
   cnic VARCHAR(25) NULL,
   passport_number VARCHAR(50) NULL,
-  relation VARCHAR(100) NULL, -- optional free text ("Wife", "Son", etc.)
+  relation VARCHAR(100) NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_travel_family_members_proposal
-    FOREIGN KEY (proposal_id) REFERENCES travel_proposals(id)
+  CONSTRAINT fk_domestic_fm_proposal FOREIGN KEY (proposal_id) REFERENCES travel_domestic_proposals(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
-  INDEX idx_travel_family_members_proposal (proposal_id)
+  INDEX idx_domestic_fm_proposal (proposal_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-
-CREATE TABLE travel_destinations_selected (
+CREATE TABLE travel_domestic_destinations_selected (
   id INT AUTO_INCREMENT PRIMARY KEY,
   proposal_id INT NOT NULL,
   destination_id INT NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_travel_dest_sel_proposal
-    FOREIGN KEY (proposal_id) REFERENCES travel_proposals(id)
+  CONSTRAINT fk_domestic_dest_proposal FOREIGN KEY (proposal_id) REFERENCES travel_domestic_proposals(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT fk_travel_dest_sel_destination
-    FOREIGN KEY (destination_id) REFERENCES travel_destinations(id)
+  CONSTRAINT fk_domestic_dest_destination FOREIGN KEY (destination_id) REFERENCES travel_destinations(id)
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+/* --------------------------
+   2) HAJJ / UMRAH / ZIARAT
+-------------------------- */
+CREATE TABLE travel_huj_proposals (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  plan_id INT NOT NULL,
+
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  tenure_days INT NOT NULL,
+
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  address VARCHAR(255) NOT NULL,
+  city_id INT NOT NULL,
+  cnic VARCHAR(25) NOT NULL,
+  passport_number VARCHAR(50) NULL,
+  mobile VARCHAR(30) NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  dob DATE NOT NULL,
+
+  beneficiary_name VARCHAR(150) NOT NULL,
+  beneficiary_address VARCHAR(255) NOT NULL,
+  beneficiary_cnic VARCHAR(25) NOT NULL,
+  beneficiary_cnic_issue_date DATE NOT NULL,
+  beneficiary_relation VARCHAR(100) NOT NULL,
+
+  base_premium DECIMAL(14,2) NOT NULL,
+  final_premium DECIMAL(14,2) NOT NULL,
+
+  status ENUM('draft','submitted','paid','cancelled') DEFAULT 'submitted',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_huj_user FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_huj_city FOREIGN KEY (city_id) REFERENCES cities(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_huj_plan FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE travel_huj_family_members (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  member_type ENUM('spouse','child','parent','other') NOT NULL DEFAULT 'other',
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  dob DATE NOT NULL,
+  gender ENUM('male','female','other') NULL,
+  cnic VARCHAR(25) NULL,
+  passport_number VARCHAR(50) NULL,
+  relation VARCHAR(100) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_huj_fm_proposal FOREIGN KEY (proposal_id) REFERENCES travel_huj_proposals(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  INDEX idx_huj_fm_proposal (proposal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE travel_huj_destinations_selected (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  destination_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_huj_dest_proposal FOREIGN KEY (proposal_id) REFERENCES travel_huj_proposals(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_huj_dest_destination FOREIGN KEY (destination_id) REFERENCES travel_destinations(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+/* --------------------------
+   3) INTERNATIONAL
+-------------------------- */
+CREATE TABLE travel_international_proposals (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  plan_id INT NOT NULL,
+
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  tenure_days INT NOT NULL,
+
+  is_multi_trip TINYINT(1) DEFAULT 0,
+  max_trip_days_applied INT NULL,
+
+  age_loading_percent INT DEFAULT 0,
+
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  address VARCHAR(255) NOT NULL,
+  city_id INT NOT NULL,
+  cnic VARCHAR(25) NOT NULL,
+  passport_number VARCHAR(50) NULL,
+  mobile VARCHAR(30) NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  dob DATE NOT NULL,
+
+  beneficiary_name VARCHAR(150) NOT NULL,
+  beneficiary_address VARCHAR(255) NOT NULL,
+  beneficiary_cnic VARCHAR(25) NOT NULL,
+  beneficiary_cnic_issue_date DATE NOT NULL,
+  beneficiary_relation VARCHAR(100) NOT NULL,
+
+  base_premium DECIMAL(14,2) NOT NULL,
+  final_premium DECIMAL(14,2) NOT NULL,
+
+  status ENUM('draft','submitted','paid','cancelled') DEFAULT 'submitted',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_int_user FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_int_city FOREIGN KEY (city_id) REFERENCES cities(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_int_plan FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE travel_international_family_members (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  member_type ENUM('spouse','child','parent','other') NOT NULL DEFAULT 'other',
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  dob DATE NOT NULL,
+  gender ENUM('male','female','other') NULL,
+  cnic VARCHAR(25) NULL,
+  passport_number VARCHAR(50) NULL,
+  relation VARCHAR(100) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_int_fm_proposal FOREIGN KEY (proposal_id) REFERENCES travel_international_proposals(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  INDEX idx_int_fm_proposal (proposal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE travel_international_destinations_selected (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  destination_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_int_dest_proposal FOREIGN KEY (proposal_id) REFERENCES travel_international_proposals(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_int_dest_destination FOREIGN KEY (destination_id) REFERENCES travel_destinations(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+/* --------------------------
+   4) STUDENT GUARD
+-------------------------- */
+CREATE TABLE travel_student_proposals (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  plan_id INT NOT NULL,
+
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  tenure_days INT NOT NULL,
+
+  university_name VARCHAR(255) NULL,
+
+  -- parent / guardian info (optional, keep for later)
+  parent_name VARCHAR(150) NULL,
+  parent_address VARCHAR(255) NULL,
+  parent_cnic VARCHAR(25) NULL,
+  parent_cnic_issue_date DATE NULL,
+  parent_relation VARCHAR(100) NULL,
+
+  first_name VARCHAR(100) NOT NULL,
+  last_name VARCHAR(100) NOT NULL,
+  address VARCHAR(255) NOT NULL,
+  city_id INT NOT NULL,
+  cnic VARCHAR(25) NOT NULL,
+  passport_number VARCHAR(50) NULL,
+  mobile VARCHAR(30) NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  dob DATE NOT NULL,
+
+  beneficiary_name VARCHAR(150) NOT NULL,
+  beneficiary_address VARCHAR(255) NOT NULL,
+  beneficiary_cnic VARCHAR(25) NOT NULL,
+  beneficiary_cnic_issue_date DATE NOT NULL,
+  beneficiary_relation VARCHAR(100) NOT NULL,
+
+  base_premium DECIMAL(14,2) NOT NULL,
+  final_premium DECIMAL(14,2) NOT NULL,
+
+  status ENUM('draft','submitted','paid','cancelled') DEFAULT 'submitted',
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_std_user FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_std_city FOREIGN KEY (city_id) REFERENCES cities(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_std_plan FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE travel_student_destinations_selected (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  destination_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_std_dest_proposal FOREIGN KEY (proposal_id) REFERENCES travel_student_proposals(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_std_dest_destination FOREIGN KEY (destination_id) REFERENCES travel_destinations(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+/* Student coverages are WITH_TUITION / WITHOUT_TUITION, so no family members table by default.
+   If later you need it, we can add travel_student_family_members similarly. */
+
 
 -- 5. Payments
 

@@ -1,6 +1,10 @@
 // src/modules/travel/travel.service.js
 const { query, getConnection } = require('../../config/db');
 
+/**
+ * Small helper to throw HTTP-like errors from service layer
+ * Your global error middleware should read err.status
+ */
 function httpError(status, message) {
   const err = new Error(message);
   err.status = status;
@@ -8,7 +12,8 @@ function httpError(status, message) {
 }
 
 /**
- * Helper: calculate age from DOB (YYYY-MM-DD)
+ * Calculate age from DOB.
+ * Returns null if dob is invalid.
  */
 function calculateAge(dobStr) {
   const dob = new Date(dobStr);
@@ -17,14 +22,13 @@ function calculateAge(dobStr) {
   const today = new Date();
   let age = today.getFullYear() - dob.getFullYear();
   const m = today.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
-    age--;
-  }
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
   return age;
 }
 
 /**
- * Helper: calculate tenure in days from start & end
+ * Calculates tenure days from startDate & endDate.
+ * We treat endDate as after startDate. (endDate must be > startDate)
  */
 function calculateTenureDays(startDateStr, endDateStr) {
   const start = new Date(startDateStr);
@@ -33,292 +37,77 @@ function calculateTenureDays(startDateStr, endDateStr) {
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
     throw httpError(400, 'Invalid startDate or endDate');
   }
-  if (end <= start) {
-    throw httpError(400, 'endDate must be after startDate');
-  }
+  if (end <= start) throw httpError(400, 'endDate must be after startDate');
 
   const diffMs = end.getTime() - start.getTime();
-  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  return days;
+  return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
 
 /**
- * Base rate logic (very simple stub based on packageType + coverageType + tenureDays)
- * In real project you can move this to DB/config tables.
+ * Normalize frontend packageType string to DB enum code.
+ * This makes your API tolerant to "Worldwide", "International", etc.
  */
-function getBaseRatePerDay(packageType, coverageType, tenureDays) {
-  const pkg = (packageType || '').toLowerCase();  // worldwide/student/domestic etc.
-  const cov = (coverageType || '').toLowerCase(); // individual/family
+function normalizePackageCode(packageType) {
+  const s = String(packageType || '').toLowerCase().trim();
 
-  let rate = 500; // default per day
+  if (s.includes('domestic')) return 'DOMESTIC';
 
-  // Example: worldwide more expensive, domestic cheaper
-  if (pkg.includes('world')) rate = 800;
-  if (pkg.includes('domestic')) rate = 300;
-  if (pkg.includes('student')) rate = 400;
-  if (pkg.includes('schengen')) rate = 700;
+  // includes both "ziarat" and "ziyarat"
+  if (s.includes('hajj') || s.includes('umrah') || s.includes('ziarat') || s.includes('ziyarat')) {
+    return 'HAJJ_UMRAH_ZIARAT';
+  }
 
-  // Family plans slightly more
-  if (cov === 'family') rate = rate * 1.5;
+  // Worldwide / International
+  if (s.includes('international') || s.includes('world') || s.includes('schengen')) {
+    return 'INTERNATIONAL';
+  }
 
-  // Longer trips maybe slightly discounted (just demo)
-  if (tenureDays > 30) rate = rate * 0.9;
+  if (s.includes('student')) return 'STUDENT_GUARD';
 
-  return rate;
+  throw httpError(400, 'Invalid packageType');
 }
 
 /**
- * Calculate Travel premium according to FRD-style rules:
- * - basePremium = ratePerDay * tenureDays
- * - if addOns: +10%
- * - if age > 70: COVID not allowed (we just send message)
+ * Normalize coverageType to DB enum code.
+ * - For Student Guard: With/Without tuition
+ * - For others: individual/family
  */
-async function calculatePremiumService(data) {
-  const {
-    packageType,
-    coverageType,
-    startDate,
-    endDate,
-    tenureDays: tenureDaysInput,
-    dob,
-    addOns, // boolean or array
-  } = data;
+function normalizeCoverageCode(packageCode, coverageType) {
+  const s = String(coverageType || '').toLowerCase().trim();
 
-  if (!packageType || !coverageType) {
-    throw httpError(400, 'packageType and coverageType are required');
+  if (packageCode === 'STUDENT_GUARD') {
+    if (s === 'without' || s === 'without_tuition' || s === 'without tuition fee') return 'WITHOUT_TUITION';
+    if (s === 'with' || s === 'with_tuition' || s === 'with tuition fee') return 'WITH_TUITION';
+    throw httpError(400, 'Invalid coverageType for Student Guard');
   }
 
-  let tenureDays = tenureDaysInput;
-  if (!tenureDays) {
-    if (!startDate || !endDate) {
-      throw httpError(
-        400,
-        'Either tenureDays or (startDate & endDate) are required'
-      );
-    }
-    tenureDays = calculateTenureDays(startDate, endDate);
-  }
+  if (s === 'individual') return 'INDIVIDUAL';
+  if (s === 'family') return 'FAMILY';
 
-  if (tenureDays <= 0) {
-    throw httpError(400, 'tenureDays must be positive');
-  }
-
-  const age = dob ? calculateAge(dob) : null;
-  const messages = [];
-
-  let covidAllowed = true;
-  if (age !== null && age > 70) {
-    covidAllowed = false;
-    messages.push('COVID coverage is not applicable for age above 70');
-  }
-
-  const ratePerDay = getBaseRatePerDay(packageType, coverageType, tenureDays);
-  let basePremium = ratePerDay * tenureDays;
-
-  let addOnsPremium = 0;
-  let hasAddOns = false;
-
-  // Interpret addOns: could be boolean, or list/array like ['hijacking', 'luggageDelay']
-  if (Array.isArray(addOns) && addOns.length > 0) {
-    hasAddOns = true;
-  } else if (addOns === true || addOns === 'true' || addOns === 1 || addOns === '1') {
-    hasAddOns = true;
-  }
-
-  if (hasAddOns) {
-    addOnsPremium = basePremium * 0.1; // +10%
-    messages.push('Add-ons premium (+10%) applied');
-  }
-
-  const finalPremium = basePremium + addOnsPremium;
-
-  // placeholder sumInsured
-  const sumInsured = 50000 * (coverageType === 'family' ? 2 : 1);
-
-  return {
-    tenureDays,
-    age,
-    covidAllowed,
-    basePremium: Number(basePremium.toFixed(2)),
-    addOnsPremium: Number(addOnsPremium.toFixed(2)),
-    finalPremium: Number(finalPremium.toFixed(2)),
-    sumInsured: Number(sumInsured.toFixed(2)),
-    messages,
-  };
+  throw httpError(400, 'Invalid coverageType');
 }
 
 /**
- * Validate trip details (Step 1-2 style)
+ * Normalize plan name -> plan code
  */
-function validateTripDetails(tripDetails) {
-  const required = ['packageType', 'coverageType'];
-
-  for (const field of required) {
-    if (!tripDetails[field]) {
-      throw httpError(400, `tripDetails.${field} is required`);
-    }
-  }
-
-  // Either tenureDays OR startDate + endDate
-  if (!tripDetails.tenureDays) {
-    if (!tripDetails.startDate || !tripDetails.endDate) {
-      throw httpError(
-        400,
-        'Either tripDetails.tenureDays or (tripDetails.startDate & tripDetails.endDate) are required'
-      );
-    }
-  }
+function normalizePlanCode(plan) {
+  const s = String(plan || '').toLowerCase().trim();
+  if (s === 'basic') return 'BASIC';
+  if (s === 'silver') return 'SILVER';
+  if (s === 'gold') return 'GOLD';
+  if (s === 'platinum') return 'PLATINUM';
+  if (s === 'diamond') return 'DIAMOND';
+  throw httpError(400, 'Invalid productPlan');
 }
 
 /**
- * Validate applicant (Step 3)
+ * Validate destination IDs exist (FK safety)
  */
-function validateApplicantInfo(applicantInfo) {
-  const required = [
-    'firstName',
-    'lastName',
-    'address',
-    'cityId',
-    'cnic',
-    'mobile',
-    'email',
-    'dob',
-  ];
-
-  for (const field of required) {
-    if (!applicantInfo[field]) {
-      throw httpError(400, `applicantInfo.${field} is required`);
-    }
-  }
-
-  const dob = new Date(applicantInfo.dob);
-  if (Number.isNaN(dob.getTime())) {
-    throw httpError(400, 'applicantInfo.dob is invalid date');
-  }
-  if (dob >= new Date()) {
-    throw httpError(400, 'Date of birth must be in the past');
-  }
-}
-
-/**
- * Validate family members if needed (Step 4)
- */
-function validateFamilyMembersIfNeeded(coverageType, familyMembers) {
-  const cov = (coverageType || '').toLowerCase();
-  if (cov !== 'family') return;
-
-  if (!Array.isArray(familyMembers) || familyMembers.length === 0) {
-    throw httpError(400, 'familyMembers (non-empty array) is required when coverageType is family');
-  }
-
-  if (familyMembers.length > 10) {
-    throw httpError(400, 'Maximum 10 family members allowed');
-  }
-
-  for (let i = 0; i < familyMembers.length; i++) {
-    const m = familyMembers[i];
-    const required = ['firstName', 'lastName', 'dob', 'memberType'];
-
-    for (const field of required) {
-      if (!m[field]) {
-        throw httpError(400, `familyMembers[${i}].${field} is required`);
-      }
-    }
-
-    const dob = new Date(m.dob);
-    if (Number.isNaN(dob.getTime())) {
-      throw httpError(400, `familyMembers[${i}].dob is invalid date`);
-    }
-    if (dob >= new Date()) {
-      throw httpError(400, `familyMembers[${i}].dob must be in the past`);
-    }
-
-    const mt = String(m.memberType).toLowerCase();
-    const allowed = ['spouse', 'child', 'parent', 'other'];
-    if (!allowed.includes(mt)) {
-      throw httpError(400, `familyMembers[${i}].memberType must be one of: ${allowed.join(', ')}`);
-    }
-  }
-}
-
-/**
- * Validate beneficiary (Step 5)
- */
-function validateBeneficiary(beneficiary) {
-  const required = [
-    'beneficiaryName',
-    'beneficiaryAddress',
-    'beneficiaryCnic',
-    'beneficiaryCnicIssueDate',
-    'beneficiaryRelation',
-  ];
-
-  for (const field of required) {
-    if (!beneficiary[field]) {
-      throw httpError(400, `beneficiary.${field} is required`);
-    }
-  }
-
-  const issueDate = new Date(beneficiary.beneficiaryCnicIssueDate);
-  if (Number.isNaN(issueDate.getTime())) {
-    throw httpError(400, 'beneficiary.beneficiaryCnicIssueDate is invalid date');
-  }
-}
-
-/**
- * Validate parent info if Student plan (extra step)
- */
-function validateParentInfoIfNeeded(packageType, parentInfo) {
-  const pkg = (packageType || '').toLowerCase();
-
-  const isStudentPlan =
-    pkg.includes('student') || pkg.includes('study') || pkg === 'student';
-
-  if (!isStudentPlan) return;
-
-  if (!parentInfo) {
-    throw httpError(400, 'parentInfo is required for student plans');
-  }
-
-  const required = [
-    'parentName',
-    'parentAddress',
-    'parentCnic',
-    'parentCnicIssueDate',
-    'parentRelation',
-  ];
-
-  for (const field of required) {
-    if (!parentInfo[field]) {
-      throw httpError(400, `parentInfo.${field} is required`);
-    }
-  }
-
-  const issueDate = new Date(parentInfo.parentCnicIssueDate);
-  if (Number.isNaN(issueDate.getTime())) {
-    throw httpError(400, 'parentInfo.parentCnicIssueDate is invalid date');
-  }
-}
-
-/**
- * Validate that destination IDs exist, handle Umrah/special rules if needed
- */
-async function validateDestinations(packageType, destinationIds) {
+async function validateDestinations(destinationIds) {
   if (!Array.isArray(destinationIds) || destinationIds.length === 0) {
     throw httpError(400, 'tripDetails.destinationIds (non-empty array) is required');
   }
 
-  // Example rule: Umrah / Ziyarat single destination
-  const pkg = (packageType || '').toLowerCase();
-  const isUmrah = pkg.includes('umrah') || pkg.includes('ziyarat');
-  if (isUmrah && destinationIds.length > 1) {
-    throw httpError(
-      400,
-      'Only one destination is allowed for Umrah/Ziyarat plans'
-    );
-  }
-
-  // Validate they exist in DB
   const placeholders = destinationIds.map(() => '?').join(', ');
   const rows = await query(
     `SELECT id FROM travel_destinations WHERE id IN (${placeholders})`,
@@ -331,88 +120,341 @@ async function validateDestinations(packageType, destinationIds) {
 }
 
 /**
- * Create travel proposal + multi-destination rows in transaction
+ * Find Plan + correct pricing slab by tenureDays and isMultiTrip
+ *
+ * How it works:
+ * 1) Get package_id by packageCode
+ * 2) Get coverage_id for that package
+ * 3) Get plan_id for (package, coverage, planCode)
+ * 4) Get pricing slab where tenureDays is inside min_days/max_days and matches is_multi_trip
  */
-async function submitProposalService(userId, tripDetails, applicantInfo, beneficiary, parentInfo, familyMembers) {
-  if (!userId) {
-    throw httpError(401, 'User is required');
+async function getPlanAndSlab({ packageCode, coverageCode, planCode, tenureDays, isMultiTrip }) {
+  const pkg = await query(`SELECT id FROM travel_packages WHERE code = ? LIMIT 1`, [packageCode]);
+  if (!pkg.length) throw httpError(500, 'Package not seeded in DB');
+  const packageId = pkg[0].id;
+
+  const cov = await query(
+    `SELECT id FROM travel_coverages WHERE package_id = ? AND code = ? LIMIT 1`,
+    [packageId, coverageCode]
+  );
+  if (!cov.length) throw httpError(400, 'Invalid coverage for this package');
+  const coverageId = cov[0].id;
+
+  const plan = await query(
+    `SELECT id FROM travel_plans WHERE package_id = ? AND coverage_id = ? AND code = ? LIMIT 1`,
+    [packageId, coverageId, planCode]
+  );
+  if (!plan.length) throw httpError(400, 'Invalid productPlan for package/coverage');
+  const planId = plan[0].id;
+
+  const slabRows = await query(
+    `SELECT id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium
+     FROM travel_plan_pricing_slabs
+     WHERE plan_id = ?
+       AND ? BETWEEN min_days AND max_days
+       AND is_multi_trip = ?
+     ORDER BY min_days ASC
+     LIMIT 1`,
+    [planId, tenureDays, isMultiTrip ? 1 : 0]
+  );
+
+  if (!slabRows.length) {
+    throw httpError(400, 'No pricing slab found for selected plan and tenureDays');
   }
 
-  validateTripDetails(tripDetails);
-  validateApplicantInfo(applicantInfo);
-  validateBeneficiary(beneficiary);
-  validateParentInfoIfNeeded(tripDetails.packageType, parentInfo);
-  validateFamilyMembersIfNeeded(tripDetails.coverageType, familyMembers);
+  return { packageId, coverageId, planId, slab: slabRows[0] };
+}
+
+/**
+ * Apply package rules:
+ * - max age limits (Domestic 60, HUJ 69, International 80, Student 65)
+ * - International loadings (66-70 => +100%, 71-75 => +150%, 76-80 => +200%)
+ * - International multi-trip restriction: max 90 days per trip in those age bands
+ */
+async function applyRulesAndLoading({ packageId, packageCode, age, isMultiTrip }) {
+  const ruleRows = await query(
+    `SELECT max_age FROM travel_package_rules WHERE package_id = ? LIMIT 1`,
+    [packageId]
+  );
+
+  if (ruleRows.length && ruleRows[0].max_age !== null && age !== null) {
+    const maxAge = Number(ruleRows[0].max_age);
+    if (age > maxAge) {
+      throw httpError(400, `Maximum age limit exceeded for this package (max ${maxAge})`);
+    }
+  }
+
+  let loadingPercent = 0;
+  let maxTripDaysApplied = null;
+
+  // Only international package has age-based loadings
+  if (packageCode === 'INTERNATIONAL' && age !== null) {
+    const band = await query(
+      `SELECT loading_percent, max_trip_days
+       FROM travel_age_loadings
+       WHERE package_id = ?
+         AND ? BETWEEN min_age AND max_age
+       LIMIT 1`,
+      [packageId, age]
+    );
+
+    if (band.length) {
+      loadingPercent = Number(band[0].loading_percent || 0);
+
+      // Only meaningful if policy is multi-trip
+      if (isMultiTrip) {
+        maxTripDaysApplied = band[0].max_trip_days ? Number(band[0].max_trip_days) : null;
+      }
+    }
+  }
+
+  return { loadingPercent, maxTripDaysApplied };
+}
+
+/**
+ * POST /api/travel/quote-premium
+ *
+ * Quote response is purely derived from DB slabs + rules (no hardcoding in code).
+ * - tenureDays can be provided, otherwise derived from startDate/endDate.
+ */
+async function quoteTravelPremiumService(data) {
+  const {
+    packageType,
+    coverageType,
+    productPlan,
+    startDate,
+    endDate,
+    tenureDays: tenureDaysInput,
+    dob,
+    isMultiTrip = false,
+  } = data;
+
+  if (!packageType || !coverageType || !productPlan) {
+    throw httpError(400, 'packageType, coverageType, and productPlan are required');
+  }
+
+  let tenureDays = tenureDaysInput;
+
+  // If tenureDays not provided, we calculate it
+  if (!tenureDays) {
+    if (!startDate || !endDate) {
+      throw httpError(400, 'Either tenureDays or (startDate & endDate) are required');
+    }
+    tenureDays = calculateTenureDays(startDate, endDate);
+  }
+
+  if (tenureDays <= 0) throw httpError(400, 'tenureDays must be positive');
+
+  const age = dob ? calculateAge(dob) : null;
+
+  const packageCode = normalizePackageCode(packageType);
+  const coverageCode = normalizeCoverageCode(packageCode, coverageType);
+  const planCode = normalizePlanCode(productPlan);
+
+  const { packageId, planId, slab } = await getPlanAndSlab({
+    packageCode,
+    coverageCode,
+    planCode,
+    tenureDays,
+    isMultiTrip: !!isMultiTrip,
+  });
+
+  const { loadingPercent, maxTripDaysApplied } = await applyRulesAndLoading({
+    packageId,
+    packageCode,
+    age,
+    isMultiTrip: !!isMultiTrip,
+  });
+
+  // Base premium comes from slab
+  const basePremium = Number(slab.premium);
+
+  // Final premium includes possible age loading for international
+  const finalPremium = Number((basePremium * (1 + loadingPercent / 100)).toFixed(2));
+
+  return {
+    packageCode,
+    coverageCode,
+    planCode,
+    planId,
+    tenureDays,
+    age,
+    slab: {
+      label: slab.slab_label,
+      minDays: slab.min_days,
+      maxDays: slab.max_days,
+      isMultiTrip: slab.is_multi_trip === 1,
+      maxTripDays: slab.max_trip_days,
+    },
+    basePremium,
+    loadingPercent,
+    finalPremium,
+    maxTripDaysApplied,
+  };
+}
+
+/* -----------------------------
+   Submit validations
+------------------------------ */
+function validateApplicantInfo(applicantInfo) {
+  const required = ['firstName','lastName','address','cityId','cnic','mobile','email','dob'];
+  for (const field of required) {
+    if (!applicantInfo?.[field]) throw httpError(400, `applicantInfo.${field} is required`);
+  }
+
+  const dob = new Date(applicantInfo.dob);
+  if (Number.isNaN(dob.getTime())) throw httpError(400, 'applicantInfo.dob is invalid date');
+  if (dob >= new Date()) throw httpError(400, 'Date of birth must be in the past');
+}
+
+function validateBeneficiary(beneficiary) {
+  const required = [
+    'beneficiaryName','beneficiaryAddress','beneficiaryCnic','beneficiaryCnicIssueDate','beneficiaryRelation'
+  ];
+  for (const field of required) {
+    if (!beneficiary?.[field]) throw httpError(400, `beneficiary.${field} is required`);
+  }
+
+  const issueDate = new Date(beneficiary.beneficiaryCnicIssueDate);
+  if (Number.isNaN(issueDate.getTime())) {
+    throw httpError(400, 'beneficiary.beneficiaryCnicIssueDate is invalid date');
+  }
+}
+
+function validateFamilyMembersIfNeeded(coverageCode, familyMembers) {
+  if (coverageCode !== 'FAMILY') return;
+
+  if (!Array.isArray(familyMembers) || familyMembers.length === 0) {
+    throw httpError(400, 'familyMembers is required for family coverage');
+  }
+
+  for (const [i, m] of familyMembers.entries()) {
+    const required = ['memberType','firstName','lastName','dob'];
+    for (const field of required) {
+      if (!m?.[field]) throw httpError(400, `familyMembers[${i}].${field} is required`);
+    }
+    const d = new Date(m.dob);
+    if (Number.isNaN(d.getTime())) throw httpError(400, `familyMembers[${i}].dob is invalid date`);
+  }
+}
+
+/**
+ * Decide proposal table by packageCode.
+ * This matches your requirement: proposals stored separately per package.
+ */
+function resolveProposalTable(packageCode) {
+  if (packageCode === 'DOMESTIC') return 'travel_domestic_proposals';
+  if (packageCode === 'HAJJ_UMRAH_ZIARAT') return 'travel_huj_proposals';
+  if (packageCode === 'INTERNATIONAL') return 'travel_international_proposals';
+  if (packageCode === 'STUDENT_GUARD') return 'travel_student_proposals';
+  throw httpError(400, 'Invalid packageType');
+}
+
+function resolveDestTable(packageCode) {
+  if (packageCode === 'DOMESTIC') return 'travel_domestic_destinations_selected';
+  if (packageCode === 'HAJJ_UMRAH_ZIARAT') return 'travel_huj_destinations_selected';
+  if (packageCode === 'INTERNATIONAL') return 'travel_international_destinations_selected';
+  if (packageCode === 'STUDENT_GUARD') return 'travel_student_destinations_selected';
+  throw httpError(400, 'Invalid packageType');
+}
+
+function resolveFamilyTable(packageCode) {
+  if (packageCode === 'DOMESTIC') return 'travel_domestic_family_members';
+  if (packageCode === 'HAJJ_UMRAH_ZIARAT') return 'travel_huj_family_members';
+  if (packageCode === 'INTERNATIONAL') return 'travel_international_family_members';
+  return null; // Student has no family table by default
+}
+
+/**
+ * POST /api/travel/submit-proposal
+ *
+ * Steps:
+ * 1) Validate payload
+ * 2) Calculate tenureDays
+ * 3) Quote using DB slabs + rules
+ * 4) Insert proposal into correct table
+ * 5) Insert destinations
+ * 6) Insert family members (if coverage is FAMILY)
+ */
+async function submitProposalService(userId, tripDetails, applicantInfo, beneficiary, parentInfo, familyMembers) {
+  if (!userId) throw httpError(401, 'User is required');
+  if (!tripDetails) throw httpError(400, 'tripDetails is required');
 
   const {
     packageType,
     coverageType,
+    productPlan,
     startDate,
     endDate,
-    tenureDays: tenureDaysInput,
-    addOns,
     destinationIds,
+    isMultiTrip = false,
+    universityName,
   } = tripDetails;
 
-  if (!destinationIds || !Array.isArray(destinationIds) || destinationIds.length === 0) {
-    throw httpError(400, 'tripDetails.destinationIds must be a non-empty array');
+  if (!packageType || !coverageType || !productPlan) {
+    throw httpError(400, 'tripDetails.packageType, tripDetails.coverageType, tripDetails.productPlan are required');
   }
 
-  await validateDestinations(packageType, destinationIds);
+  validateApplicantInfo(applicantInfo);
+  validateBeneficiary(beneficiary);
 
-  const tenureDays =
-    tenureDaysInput ||
-    calculateTenureDays(startDate, endDate);
+  const packageCode = normalizePackageCode(packageType);
+  const coverageCode = normalizeCoverageCode(packageCode, coverageType);
 
-  const age = calculateAge(applicantInfo.dob);
+  validateFamilyMembersIfNeeded(coverageCode, familyMembers);
+  await validateDestinations(destinationIds);
 
-  // Calculate premium (reuse service)
-  const premiumData = await calculatePremiumService({
+  const tenureDays = calculateTenureDays(startDate, endDate);
+
+  // Quote from DB (this ensures submit always uses DB pricing)
+  const quote = await quoteTravelPremiumService({
     packageType,
     coverageType,
+    productPlan,
     startDate,
     endDate,
     tenureDays,
     dob: applicantInfo.dob,
-    addOns,
+    isMultiTrip,
   });
 
-  const {
-    basePremium,
-    addOnsPremium,
-    finalPremium,
-    sumInsured,
-    messages,
-    covidAllowed,
-  } = premiumData;
+  const proposalTable = resolveProposalTable(packageCode);
+  const destTable = resolveDestTable(packageCode);
+  const familyTable = resolveFamilyTable(packageCode);
 
   const conn = await getConnection();
 
   try {
     await conn.beginTransaction();
 
-    const [result] = await conn.execute(
-      `INSERT INTO travel_proposals
-       (user_id, package_type, product_plan, coverage_type,
-        start_date, end_date, tenure_days, sum_insured, add_ons_selected,
-        first_name, last_name, address, city_id, cnic, passport_number,
-        mobile, email, dob, is_student, university_name,
-        parent_name, parent_address, parent_cnic, parent_cnic_issue_date, parent_relation,
-        beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date,
-        beneficiary_relation,
-        base_premium, add_ons_premium, final_premium,
-        status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW(), NOW())`,
-      [
+    let insertSql;
+    let insertParams;
+
+    // International has extra fields for age loading + multi-trip
+    if (packageCode === 'INTERNATIONAL') {
+      insertSql = `
+        INSERT INTO ${proposalTable}
+        (user_id, plan_id, start_date, end_date, tenure_days,
+         is_multi_trip, max_trip_days_applied, age_loading_percent,
+         first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
+         beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
+         base_premium, final_premium, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?,
+                ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, 'submitted', NOW(), NOW())
+      `;
+      insertParams = [
         userId,
-        packageType,
-        tripDetails.productPlan || null,
-        coverageType,
-        startDate || null,
-        endDate || null,
+        quote.planId,
+        startDate,
+        endDate,
         tenureDays,
-        sumInsured,
-        Array.isArray(addOns) && addOns.length > 0 ? 1 : 0,
+        quote.slab.isMultiTrip ? 1 : 0,
+        quote.maxTripDaysApplied,
+        quote.loadingPercent,
+
         applicantInfo.firstName,
         applicantInfo.lastName,
         applicantInfo.address,
@@ -422,49 +464,133 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         applicantInfo.mobile,
         applicantInfo.email,
         applicantInfo.dob,
-        tripDetails.packageType &&
-          tripDetails.packageType.toLowerCase().includes('student')
-          ? 1
-          : 0,
-        applicantInfo.universityName || null,
-        parentInfo ? parentInfo.parentName || null : null,
-        parentInfo ? parentInfo.parentAddress || null : null,
-        parentInfo ? parentInfo.parentCnic || null : null,
-        parentInfo ? parentInfo.parentCnicIssueDate || null : null,
-        parentInfo ? parentInfo.parentRelation || null : null,
+
         beneficiary.beneficiaryName,
         beneficiary.beneficiaryAddress,
         beneficiary.beneficiaryCnic,
         beneficiary.beneficiaryCnicIssueDate,
         beneficiary.beneficiaryRelation,
-        basePremium,
-        addOnsPremium,
-        finalPremium,
-      ]
-    );
 
+        quote.basePremium,
+        quote.finalPremium,
+      ];
+    } else if (packageCode === 'STUDENT_GUARD') {
+      // Student has optional parent info + university name
+      insertSql = `
+        INSERT INTO ${proposalTable}
+        (user_id, plan_id, start_date, end_date, tenure_days,
+         university_name,
+         parent_name, parent_address, parent_cnic, parent_cnic_issue_date, parent_relation,
+         first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
+         beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
+         base_premium, final_premium, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?,
+                ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, 'submitted', NOW(), NOW())
+      `;
+      insertParams = [
+        userId,
+        quote.planId,
+        startDate,
+        endDate,
+        tenureDays,
+
+        universityName || applicantInfo.universityName || null,
+
+        parentInfo?.parentName || null,
+        parentInfo?.parentAddress || null,
+        parentInfo?.parentCnic || null,
+        parentInfo?.parentCnicIssueDate || null,
+        parentInfo?.parentRelation || null,
+
+        applicantInfo.firstName,
+        applicantInfo.lastName,
+        applicantInfo.address,
+        applicantInfo.cityId,
+        applicantInfo.cnic,
+        applicantInfo.passportNumber || null,
+        applicantInfo.mobile,
+        applicantInfo.email,
+        applicantInfo.dob,
+
+        beneficiary.beneficiaryName,
+        beneficiary.beneficiaryAddress,
+        beneficiary.beneficiaryCnic,
+        beneficiary.beneficiaryCnicIssueDate,
+        beneficiary.beneficiaryRelation,
+
+        quote.basePremium,
+        quote.finalPremium,
+      ];
+    } else {
+      // Domestic / HUJ (common structure)
+      insertSql = `
+        INSERT INTO ${proposalTable}
+        (user_id, plan_id, start_date, end_date, tenure_days,
+         first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
+         beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
+         base_premium, final_premium, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?, ?, ?,
+                ?, ?, 'submitted', NOW(), NOW())
+      `;
+      insertParams = [
+        userId,
+        quote.planId,
+        startDate,
+        endDate,
+        tenureDays,
+
+        applicantInfo.firstName,
+        applicantInfo.lastName,
+        applicantInfo.address,
+        applicantInfo.cityId,
+        applicantInfo.cnic,
+        applicantInfo.passportNumber || null,
+        applicantInfo.mobile,
+        applicantInfo.email,
+        applicantInfo.dob,
+
+        beneficiary.beneficiaryName,
+        beneficiary.beneficiaryAddress,
+        beneficiary.beneficiaryCnic,
+        beneficiary.beneficiaryCnicIssueDate,
+        beneficiary.beneficiaryRelation,
+
+        quote.basePremium,
+        quote.finalPremium,
+      ];
+    }
+
+    // Insert proposal row
+    const [result] = await conn.execute(insertSql, insertParams);
     const proposalId = result.insertId;
 
-    // insert selected destinations
+    // Insert destinations (same logic for all packages)
     for (const destId of destinationIds) {
       await conn.execute(
-        `INSERT INTO travel_destinations_selected
-         (proposal_id, destination_id, created_at)
+        `INSERT INTO ${destTable} (proposal_id, destination_id, created_at)
          VALUES (?, ?, NOW())`,
         [proposalId, destId]
       );
     }
 
-    // insert family members if coverageType = family
-    if ((coverageType || '').toLowerCase() === 'family') {
+    // Insert family members ONLY if:
+    // - coverage is FAMILY
+    // - package supports family member table (Student doesn't)
+    if (coverageCode === 'FAMILY' && familyTable) {
       for (const m of familyMembers) {
         await conn.execute(
-          `INSERT INTO travel_family_members
+          `INSERT INTO ${familyTable}
            (proposal_id, member_type, first_name, last_name, dob, gender, cnic, passport_number, relation, created_at)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
           [
             proposalId,
-            (m.memberType || 'other').toLowerCase(),
+            m.memberType || 'other',
             m.firstName,
             m.lastName,
             m.dob,
@@ -476,19 +602,21 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         );
       }
     }
-    
+
     await conn.commit();
 
+    // Return important computed values for frontend confirmation screen
     return {
       proposalId,
+      packageCode,
+      coverageCode,
+      planCode: quote.planCode,
       tenureDays,
-      age,
-      covidAllowed,
-      basePremium,
-      addOnsPremium,
-      finalPremium,
-      sumInsured,
-      messages,
+      basePremium: quote.basePremium,
+      loadingPercent: quote.loadingPercent,
+      finalPremium: quote.finalPremium,
+      maxTripDaysApplied: quote.maxTripDaysApplied,
+      slab: quote.slab,
     };
   } catch (err) {
     await conn.rollback();
@@ -498,7 +626,101 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
   }
 }
 
+/* =========================================================
+   CATALOG (Dropdown APIs)
+   ========================================================= */
+
+/**
+ * GET /api/travel/catalog/packages
+ * Returns available travel packages (Domestic, International, etc.)
+ */
+async function listPackagesService() {
+  const rows = await query(
+    `SELECT id, code, name FROM travel_packages ORDER BY id ASC`
+  );
+  return rows;
+}
+
+/**
+ * GET /api/travel/catalog/coverages?package=INTERNATIONAL
+ * Returns coverages for a package (INDIVIDUAL/FAMILY, etc.)
+ */
+async function listCoveragesService(packageCode) {
+  if (!packageCode) throw httpError(400, 'package query param is required');
+
+  const pkgRows = await query(`SELECT id FROM travel_packages WHERE code = ? LIMIT 1`, [packageCode]);
+  if (!pkgRows.length) throw httpError(400, 'Invalid package');
+
+  const rows = await query(
+    `SELECT id, code, name
+     FROM travel_coverages
+     WHERE package_id = ?
+     ORDER BY id ASC`,
+    [pkgRows[0].id]
+  );
+  return rows;
+}
+
+/**
+ * GET /api/travel/catalog/plans?package=...&coverage=...
+ * Returns plans for a given package+coverage (Gold/Platinum etc.)
+ */
+async function listPlansService(packageCode, coverageCode) {
+  if (!packageCode) throw httpError(400, 'package query param is required');
+  if (!coverageCode) throw httpError(400, 'coverage query param is required');
+
+  const pkgRows = await query(`SELECT id FROM travel_packages WHERE code = ? LIMIT 1`, [packageCode]);
+  if (!pkgRows.length) throw httpError(400, 'Invalid package');
+  const packageId = pkgRows[0].id;
+
+  const covRows = await query(
+    `SELECT id FROM travel_coverages WHERE package_id = ? AND code = ? LIMIT 1`,
+    [packageId, coverageCode]
+  );
+  if (!covRows.length) throw httpError(400, 'Invalid coverage for this package');
+
+  const rows = await query(
+    `SELECT id, code, name, currency
+     FROM travel_plans
+     WHERE package_id = ? AND coverage_id = ?
+     ORDER BY FIELD(code,'BASIC','SILVER','GOLD','PLATINUM','DIAMOND'), id ASC`,
+    [packageId, covRows[0].id]
+  );
+
+  return rows;
+}
+
+/**
+ * GET /api/travel/catalog/slabs?planId=...
+ * Returns pricing slabs for a plan (min/max days + premium)
+ */
+async function listSlabsService(planId) {
+  if (!planId) throw httpError(400, 'planId query param is required');
+
+  const rows = await query(
+    `SELECT id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium
+     FROM travel_plan_pricing_slabs
+     WHERE plan_id = ?
+     ORDER BY is_multi_trip ASC, min_days ASC`,
+    [planId]
+  );
+
+  if (!rows.length) {
+    // Not necessarily an error, but usually means planId is invalid
+    throw httpError(400, 'No slabs found for this planId');
+  }
+
+  return rows;
+}
+
 module.exports = {
-  calculatePremiumService,
+  // existing main functions
+  quoteTravelPremiumService,
   submitProposalService,
+
+  // catalog APIs
+  listPackagesService,
+  listCoveragesService,
+  listPlansService,
+  listSlabsService,
 };

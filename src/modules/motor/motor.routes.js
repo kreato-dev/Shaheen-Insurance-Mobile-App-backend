@@ -87,8 +87,8 @@ router.post(
         { name: 'engine_bay', maxCount: 1 },
         { name: 'boot', maxCount: 1 },
         { name: 'engine_number', maxCount: 1 },
-        { name: 'registration_front', maxCount: 1 },
-        { name: 'registration_back', maxCount: 1 },
+        // { name: 'registration_front', maxCount: 1 },
+        // { name: 'registration_back', maxCount: 1 },
 
         // registration book/card
         { name: 'regbook_front', maxCount: 1 },

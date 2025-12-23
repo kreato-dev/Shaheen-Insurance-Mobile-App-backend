@@ -1,61 +1,51 @@
 // src/modules/travel/travel.controller.js
 const {
-  calculatePremiumService,
+  quoteTravelPremiumService,
   submitProposalService,
+  listPackagesService,
+  listCoveragesService,
+  listPlansService,
+  listSlabsService,
 } = require('./travel.service');
 
-async function calculatePremium(req, res, next) {
+/**
+ * POST /api/travel/quote-premium
+ * Body: { packageType, coverageType, productPlan, startDate, endDate, dob, isMultiTrip }
+ */
+async function quotePremium(req, res, next) {
   try {
-    const {
-      packageType,
-      coverageType,
-      startDate,
-      endDate,
-      tenureDays,
-      dob,
-      addOns,
-    } = req.body;
-
-    const result = await calculatePremiumService({
-      packageType,
-      coverageType,
-      startDate,
-      endDate,
-      tenureDays,
-      dob,
-      addOns,
-    });
-
+    const result = await quoteTravelPremiumService(req.body);
     return res.json(result);
   } catch (err) {
     next(err);
   }
 }
 
+/**
+ * POST /api/travel/submit-proposal
+ * Saves proposal into correct package table (Domestic/HUJ/International/Student)
+ */
 async function submitProposal(req, res, next) {
   try {
+    // Assumes auth middleware sets req.user
     const userId = req.user.id;
+
     let { tripDetails, applicantInfo, beneficiary, parentInfo, familyMembers } = req.body;
 
-    // If client sends JSON string (e.g. multipart), handle that:
+    /**
+     * Note:
+     * If later you send multipart/form-data from frontend,
+     * these fields might arrive as JSON strings.
+     * So we safely parse if string.
+     */
     try {
       if (typeof tripDetails === 'string') tripDetails = JSON.parse(tripDetails);
-      if (typeof applicantInfo === 'string')
-        applicantInfo = JSON.parse(applicantInfo);
-      if (typeof beneficiary === 'string')
-        beneficiary = JSON.parse(beneficiary);
-      if (typeof parentInfo === 'string' && parentInfo)
-        parentInfo = JSON.parse(parentInfo);
+      if (typeof applicantInfo === 'string') applicantInfo = JSON.parse(applicantInfo);
+      if (typeof beneficiary === 'string') beneficiary = JSON.parse(beneficiary);
+      if (typeof parentInfo === 'string' && parentInfo) parentInfo = JSON.parse(parentInfo);
       if (typeof familyMembers === 'string' && familyMembers) familyMembers = JSON.parse(familyMembers);
-    } catch (parseErr) {
-      return next(
-        Object.assign(
-          new Error(
-            'Invalid JSON in tripDetails/applicantInfo/beneficiary/parentInfo/familyMembers'
-          ),
-          { status: 400 }
-        )
-      );
+    } catch (e) {
+      return next(Object.assign(new Error('Invalid JSON in payload fields'), { status: 400 }));
     }
 
     const result = await submitProposalService(
@@ -76,4 +66,70 @@ async function submitProposal(req, res, next) {
   }
 }
 
-module.exports = { calculatePremium, submitProposal };
+/* =========================================================
+   Catalog controllers (Dropdown APIs)
+   ========================================================= */
+
+/**
+ * GET /api/travel/catalog/packages
+ */
+async function listPackages(req, res, next) {
+  try {
+    const rows = await listPackagesService();
+    return res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/travel/catalog/coverages?package=INTERNATIONAL
+ */
+async function listCoverages(req, res, next) {
+  try {
+    const packageCode = req.query.package;
+    const rows = await listCoveragesService(packageCode);
+    return res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/travel/catalog/plans?package=INTERNATIONAL&coverage=FAMILY
+ */
+async function listPlans(req, res, next) {
+  try {
+    const packageCode = req.query.package;
+    const coverageCode = req.query.coverage;
+    const rows = await listPlansService(packageCode, coverageCode);
+    return res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/travel/catalog/slabs?planId=123
+ */
+async function listSlabs(req, res, next) {
+  try {
+    const planId = req.query.planId;
+    const rows = await listSlabsService(planId);
+    return res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  // main
+  quotePremium,
+  submitProposal,
+
+  // catalog
+  listPackages,
+  listCoverages,
+  listPlans,
+  listSlabs,
+};

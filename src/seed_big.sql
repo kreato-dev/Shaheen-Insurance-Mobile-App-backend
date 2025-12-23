@@ -100,8 +100,6 @@ DELETE FROM claims_cache;
 DELETE FROM payments;
 DELETE FROM motor_vehicle_images;
 DELETE FROM motor_proposals;
-DELETE FROM travel_destinations_selected;
-DELETE FROM travel_proposals;
 
 DELETE FROM users;
 
@@ -170,97 +168,7 @@ INSERT INTO motor_vehicle_images (proposal_id, image_type, file_path, created_at
 (15,'front_side','uploads/motor/15_front.jpg',NOW()), (15,'registration_front','uploads/motor/15_regf.jpg',NOW());
 
 -- =========================
--- 4) TRAVEL PROPOSALS (12) + DESTINATIONS_SELECTED (24)
--- =========================
-
-INSERT INTO travel_proposals
-(id, user_id,
- package_type, product_plan, coverage_type, start_date, end_date, tenure_days, sum_insured, add_ons_selected,
- first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob, is_student, university_name,
- parent_name, parent_address, parent_cnic, parent_cnic_issue_date, parent_relation,
- beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
- base_premium, add_ons_premium, final_premium,
- status, created_at, updated_at)
-VALUES
-(1,2,'Worldwide','WW-Standard','individual','2025-02-10','2025-03-05',23,50000.00,1,'Ali','Khan','Gulshan Karachi',1,'42101-2222222-2','AB1234567','03009998888','ali@example.com','1996-04-15',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Danish Ahmed','DHA Lahore','42101-3333333-3','2012-03-15','Brother',
- 7000.00,1200.00,8200.00,'submitted',NOW(),NOW()),
-
-(2,3,'Schengen','SCH-A','individual','2025-01-20','2025-01-30',10,35000.00,0,'Danish','Ahmed','DHA Lahore',2,'42101-3333333-3','CD7654321','03005553333','danish@example.com','1998-09-22',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Ali Khan','Gulshan Karachi','42101-2222222-2','2010-06-10','Friend',
- 4500.00,500.00,5000.00,'paid',NOW(),NOW()),
-
-(3,4,'Worldwide','WW-Premium','family','2025-03-01','2025-03-14',13,80000.00,1,'Ayesha','Noor','F-11 Islamabad',3,'37405-1234567-1','EF1112223','03112223344','ayesha@example.com','1997-11-02',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Sara Iqbal','Cantt Rawalpindi','37406-1122334-5','2011-05-01','Sister',
- 9000.00,1500.00,10500.00,'submitted',NOW(),NOW()),
-
-(4,5,'Domestic','DOM-1','individual','2025-04-05','2025-04-12',7,20000.00,0,'Hassan','Raza','Gulberg Lahore',2,'35202-7654321-9',NULL,'03221112233','hassan@example.com','1995-06-18',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Ali Khan','Gulshan Karachi','42101-2222222-2','2010-06-10','Friend',
- 1800.00,0.00,1800.00,'submitted',NOW(),NOW()),
-
-(5,6,'Student Travel','STU-Plan-1','individual','2025-05-01','2025-08-01',92,100000.00,1,'Sara','Iqbal','Cantt Rawalpindi',4,'37406-1122334-5','ST009988','03334445566','sara@example.com','2000-01-10',1,'NUST',
- 'Muhammad Iqbal','Cantt Rawalpindi','37406-0000000-0','2010-01-01','Father',
- 'Ayesha Noor','F-11 Islamabad','37405-1234567-1','2012-03-15','Sister',
- 12000.00,3000.00,15000.00,'submitted',NOW(),NOW()),
-
-(6,7,'Middle East','ME-1','individual','2025-02-01','2025-02-09',8,30000.00,1,'Usman','Tariq','Peshawar Saddar',5,'17301-1112233-4','GH555666','03445556677','usman@example.com','1994-09-09',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Maryam Shah','Quetta','51201-9988776-5','2011-05-01','Wife',
- 2600.00,700.00,3300.00,'paid',NOW(),NOW()),
-
-(7,8,'Worldwide','WW-Standard','individual','2025-06-01','2025-06-20',19,45000.00,0,'Maryam','Shah','Quetta',6,'51201-9988776-5','IJ111999','03017778899','maryam@example.com','2000-12-20',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Usman Tariq','Peshawar Saddar','17301-1112233-4','2011-05-01','Husband',
- 6500.00,0.00,6500.00,'submitted',NOW(),NOW()),
-
-(8,9,'Schengen','SCH-B','individual','2025-07-10','2025-07-25',15,60000.00,1,'Bilal','Khan','Faisalabad',7,'34101-1231231-7','KL222333','03118889900','bilal@example.com','1993-03-12',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Noor Fatima','Hyderabad','41201-1113335-2','2012-03-15','Sister',
- 8000.00,1800.00,9800.00,'submitted',NOW(),NOW()),
-
-(9,10,'Asia','AS-1','individual','2025-08-01','2025-08-12',11,40000.00,0,'Zain','Ali','Multan',8,'36102-5556667-8','MN777888','03226667788','zain@example.com','1992-05-25',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Hamza Saeed','Sialkot','33104-7778889-1','2010-06-10','Friend',
- 3200.00,0.00,3200.00,'cancelled',NOW(),NOW()),
-
-(10,11,'Domestic','DOM-2','family','2025-01-05','2025-01-15',10,25000.00,1,'Noor','Fatima','Hyderabad',9,'41201-1113335-2',NULL,'03339990011','noor@example.com','1998-08-08',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Bilal Khan','Faisalabad','34101-1231231-7','2012-03-15','Brother',
- 2100.00,400.00,2500.00,'paid',NOW(),NOW()),
-
-(11,12,'Worldwide','WW-Premium','individual','2025-09-01','2025-09-18',17,90000.00,1,'Hamza','Saeed','Sialkot',10,'33104-7778889-1','OP111222','03440001122','hamza@example.com','1997-01-19',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Ali Khan','Gulshan Karachi','42101-2222222-2','2010-06-10','Friend',
- 9500.00,2500.00,12000.00,'submitted',NOW(),NOW()),
-
-(12,2,'Middle East','ME-2','individual','2025-10-01','2025-10-08',7,35000.00,1,'Ali','Khan','Gulshan Karachi',1,'42101-2222222-2','AB1239999','03009998888','ali@example.com','1996-04-15',0,NULL,
- NULL,NULL,NULL,NULL,NULL,
- 'Danish Ahmed','DHA Lahore','42101-3333333-3','2012-03-15','Brother',
- 2400.00,600.00,3000.00,'submitted',NOW(),NOW());
-
-ALTER TABLE travel_proposals AUTO_INCREMENT = 13;
-
--- 2 destinations per proposal = 24 rows
-INSERT INTO travel_destinations_selected (proposal_id, destination_id, created_at) VALUES
-(1,1,NOW()), (1,5,NOW()),
-(2,5,NOW()), (2,6,NOW()),
-(3,10,NOW()), (3,11,NOW()),
-(4,15,NOW()), (4,12,NOW()),
-(5,5,NOW()), (5,6,NOW()),
-(6,1,NOW()), (6,2,NOW()),
-(7,4,NOW()), (7,12,NOW()),
-(8,6,NOW()), (8,7,NOW()),
-(9,12,NOW()), (9,13,NOW()),
-(10,15,NOW()), (10,1,NOW()),
-(11,10,NOW()), (11,5,NOW()),
-(12,1,NOW()), (12,3,NOW());
-
--- =========================
--- 5) PAYMENTS (20)
+-- 4) PAYMENTS (20)
 -- =========================
 
 INSERT INTO payments
@@ -289,7 +197,7 @@ VALUES
 (12,'TRAVEL',11,12000.00,'PENDING','PayFast','ORD-TRV-2011',NULL,JSON_OBJECT('msg','Awaiting'),NOW(),NOW());
 
 -- =========================
--- 6) NOTIFICATIONS (12)
+-- 5) NOTIFICATIONS (12)
 -- =========================
 
 INSERT INTO notifications (user_id, title, body, type, is_read, sent_at, created_at) VALUES
@@ -307,7 +215,7 @@ INSERT INTO notifications (user_id, title, body, type, is_read, sent_at, created
 (2,'Reminder','Complete pending payment.','payment',0,NOW(),NOW());
 
 -- =========================
--- 7) FAQS (10)
+-- 6) FAQS (10)
 -- =========================
 
 DELETE FROM faqs;
@@ -324,7 +232,7 @@ INSERT INTO faqs (category, question, answer, is_active, created_at, updated_at)
 ('Support','How to contact support?','Use in-app support request form.',1,NOW(),NOW());
 
 -- =========================
--- 8) SUPPORT REQUESTS (8)
+-- 7) SUPPORT REQUESTS (8)
 -- =========================
 
 INSERT INTO support_requests (user_id, name, email, phone, message, status, created_at, updated_at) VALUES
@@ -338,7 +246,7 @@ INSERT INTO support_requests (user_id, name, email, phone, message, status, crea
 (7,'Usman Tariq','usman@example.com','03445556677','Motor proposal stuck on submitted.','open',NOW(),NOW());
 
 -- =========================
--- 9) POLICIES / CLAIMS CACHE (10 each)
+-- 8) POLICIES / CLAIMS CACHE (10 each)
 -- =========================
 
 DELETE FROM policies_cache;
