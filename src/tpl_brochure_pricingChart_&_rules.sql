@@ -182,7 +182,7 @@ ON DUPLICATE KEY UPDATE loading_percent=VALUES(loading_percent), max_trip_days=V
    - min_days/max_days mapping based on brochure labels.
    - For "Up to 7 days" => 6-7 (assuming 1-2 and 3-5 already cover earlier days).
    - International: week/month mapped to day ranges.
-   - Student 6/12 months mapped to ranges (180-184) and (360-370) to tolerate real date variance.
+   - Student 6/12 months mapped to ranges (1-184) and (185-366) to tolerate real date variance.
    ========================================================= */
 
 -- Helper concept:
@@ -995,14 +995,14 @@ WHERE tp.code='DIAMOND';
 -- WITH_TUITION (6 months & 12 months)
 -- SILVER
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 180, 184, 0, NULL, 14450
+SELECT tp.id, '6 months', 1, 184, 0, NULL, 14450
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITH_TUITION'
 WHERE tp.code='SILVER';
 
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '12 months', 360, 370, 0, NULL, 22335
+SELECT tp.id, '12 months', 185, 366, 0, NULL, 22335
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITH_TUITION'
@@ -1010,14 +1010,14 @@ WHERE tp.code='SILVER';
 
 -- GOLD
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 180, 184, 0, NULL, 19050
+SELECT tp.id, '6 months', 1, 184, 0, NULL, 19050
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITH_TUITION'
 WHERE tp.code='GOLD';
 
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '12 months', 360, 370, 0, NULL, 29565
+SELECT tp.id, '12 months', 185, 366, 0, NULL, 29565
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITH_TUITION'
@@ -1025,14 +1025,14 @@ WHERE tp.code='GOLD';
 
 -- DIAMOND
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 180, 184, 0, NULL, 29890
+SELECT tp.id, '6 months', 1, 184, 0, NULL, 29890
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITH_TUITION'
 WHERE tp.code='DIAMOND';
 
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '12 months', 360, 370, 0, NULL, 45660
+SELECT tp.id, '12 months', 185, 366, 0, NULL, 45660
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITH_TUITION'
@@ -1047,7 +1047,7 @@ JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITH_TUITION'
 WHERE tp.code='PLATINUM';
 
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '12 months', 360, 370, 0, NULL, 70300
+SELECT tp.id, '12 months', 185, 366, 0, NULL, 70300
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITH_TUITION'
@@ -1057,14 +1057,14 @@ WHERE tp.code='PLATINUM';
 -- WITHOUT_TUITION (6 months & 12 months)
 -- SILVER
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 180, 184, 0, NULL, 12480
+SELECT tp.id, '6 months', 1, 184, 0, NULL, 12480
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITHOUT_TUITION'
 WHERE tp.code='SILVER';
 
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '12 months', 360, 370, 0, NULL, 19380
+SELECT tp.id, '12 months', 185, 366, 0, NULL, 19380
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITHOUT_TUITION'
@@ -1072,14 +1072,14 @@ WHERE tp.code='SILVER';
 
 -- GOLD
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 180, 184, 0, NULL, 15765
+SELECT tp.id, '6 months', 1, 184, 0, NULL, 15765
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITHOUT_TUITION'
 WHERE tp.code='GOLD';
 
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '12 months', 360, 370, 0, NULL, 24965
+SELECT tp.id, '12 months', 185, 366, 0, NULL, 24965
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITHOUT_TUITION'
@@ -1087,14 +1087,14 @@ WHERE tp.code='GOLD';
 
 -- DIAMOND
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 180, 184, 0, NULL, 24635
+SELECT tp.id, '6 months', 1, 184, 0, NULL, 24635
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITHOUT_TUITION'
 WHERE tp.code='DIAMOND';
 
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '12 months', 360, 370, 0, NULL, 38760
+SELECT tp.id, '12 months', 185, 366, 0, NULL, 38760
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITHOUT_TUITION'
@@ -1102,14 +1102,14 @@ WHERE tp.code='DIAMOND';
 
 -- PLATINUM
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 180, 184, 0, NULL, 44020
+SELECT tp.id, '6 months', 1, 184, 0, NULL, 44020
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITHOUT_TUITION'
 WHERE tp.code='PLATINUM';
 
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '12 months', 360, 370, 0, NULL, 59785
+SELECT tp.id, '12 months', 185, 366, 0, NULL, 59785
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITHOUT_TUITION'
