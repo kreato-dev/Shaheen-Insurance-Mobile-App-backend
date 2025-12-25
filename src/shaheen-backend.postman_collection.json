@@ -667,7 +667,7 @@
       "name": "Policies (Stubbed)",
       "item": [
         {
-          "name": "List All proposals (draft,submitted,approved,rejected,paid,cancelled)",
+          "name": "List All Proposals Motor+Travel (draft,submitted,approved,rejected,paid,cancelled)",
           "request": {
             "method": "GET",
             "header": [
@@ -682,14 +682,14 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/motor/my-proposals?status=submitted&page=1&limit=20",
+              "raw": "{{baseUrl}}/api/proposals/my?status=submitted&page=1&limit=20",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
-                "motor",
-                "my-proposals"
+                "proposals",
+                "my"
               ],
               "query": [
                 {
@@ -698,7 +698,7 @@
                   "description": "draft,submitted,approved,rejected,paid,cancelled"
                 },
                 {
-                   "key": "page",
+                  "key": "page",
                   "value": "1"
                 },
                 {
@@ -710,7 +710,7 @@
           }
         },
         {
-          "name": "Get Proposal Detail by Id",
+          "name": "Get Motor Proposal Detail by Id",
           "request": {
             "method": "GET",
             "header": [
@@ -725,7 +725,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/motor/my-proposals/{{proposal-id}}",
+              "raw": "{{baseUrl}}/api/motor/my-proposals/",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -733,12 +733,34 @@
                 "api",
                 "motor",
                 "my-proposals"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Travel Proposal Detail by Id and Package Name",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/my-proposals/",
+              "host": [
+                "{{baseUrl}}"
               ],
-              "query": [
-                {
-                  "key": "Proposal ID",
-                  "value": "{{proposal-id}}"
-                }
+              "path": [
+                "api",
+                "travel",
+                "my-proposals"
               ]
             }
           }

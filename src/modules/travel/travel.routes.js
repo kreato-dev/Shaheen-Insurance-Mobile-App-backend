@@ -15,4 +15,10 @@ router.get('/catalog/coverages', travelController.listCoverages);
 router.get('/catalog/plans', travelController.listPlans);
 router.get('/catalog/slabs', travelController.listSlabs);
 
+/*
+*Get travel proposal by id
+*/
+// GET /api/travel/my-proposals/{proposalId}?package={packageCode}
+router.get('/my-proposals/:id', travelController.getMyProposalById);
+
 module.exports = router;

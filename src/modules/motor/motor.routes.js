@@ -101,9 +101,6 @@ router.post(
   motorController.uploadMotorAssets
 );
 
-// GET /api/motor/my-proposals
-router.get('/my-proposals', motorController.getMyProposals);
-
 // GET /api/motor/my-proposals/:id
 router.get('/my-proposals/:id', motorController.getMyProposalById);
 module.exports = router;

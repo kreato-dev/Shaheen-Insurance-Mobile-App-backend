@@ -4,7 +4,6 @@ const {
   getMarketValueService,
   submitProposalService,
   uploadMotorAssetsService,
-  getMotorProposalsForUser,
   getMotorProposalByIdForUser,
 } = require('./motor.service');
 
@@ -106,25 +105,6 @@ async function uploadMotorAssets(req, res, next) {
   }
 }
 
-/**
- * Returns a list of logged-in user's motor proposals
- */
-async function getMyProposals(req, res, next) {
-  try {
-    const userId = req.user.id;
-    const { status, page = 1, limit = 20 } = req.query;
-
-    const result = await getMotorProposalsForUser(userId, {
-      status,
-      page: Number(page),
-      limit: Number(limit),
-    });
-
-    return res.json({ data: result });
-  } catch (err) {
-    next(err);
-  }
-}
 
 /**
  * Returns full proposal details for the logged-in user
@@ -150,6 +130,5 @@ module.exports = {
   getMarketValue,
   submitProposal,
   uploadMotorAssets,
-  getMyProposals,
   getMyProposalById
 };

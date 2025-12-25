@@ -6,6 +6,7 @@ const {
   listCoveragesService,
   listPlansService,
   listSlabsService,
+  getTravelProposalByIdForUser,
 } = require('./travel.service');
 
 /**
@@ -122,6 +123,38 @@ async function listSlabs(req, res, next) {
   }
 }
 
+/**
+ * GET /api/travel/my-proposals/:id?package=INTERNATIONAL
+ * Detail proposal (package is required because IDs can overlap across package tables)
+ */
+async function getMyProposalById(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const numericId = Number(req.params.id);
+    const { package: packageCode } = req.query;
+
+    if (!numericId || Number.isNaN(numericId)) {
+      return res.status(400).json({ message: 'Invalid proposal id' });
+    }
+    if (!packageCode) {
+      return res.status(400).json({
+        message:
+          'package query param is required (e.g. ?package=INTERNATIONAL)',
+      });
+    }
+
+    const result = await getTravelProposalByIdForUser(
+      userId,
+      String(packageCode),
+      numericId
+    );
+
+    return res.json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   // main
   quotePremium,
@@ -132,4 +165,7 @@ module.exports = {
   listCoverages,
   listPlans,
   listSlabs,
+  
+  //get proposals
+  getMyProposalById,
 };

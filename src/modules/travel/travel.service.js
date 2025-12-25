@@ -12,6 +12,32 @@ function httpError(status, message) {
 }
 
 /**
+ * Map packageCode -> table names
+ */
+const PACKAGE_TABLES = {
+  DOMESTIC: {
+    proposals: 'travel_domestic_proposals',
+    destinations: 'travel_domestic_destinations_selected',
+    family: 'travel_domestic_family_members',
+  },
+  HAJJ_UMRAH_ZIARAT: {
+    proposals: 'travel_huj_proposals',
+    destinations: 'travel_huj_destinations_selected',
+    family: 'travel_huj_family_members',
+  },
+  INTERNATIONAL: {
+    proposals: 'travel_international_proposals',
+    destinations: 'travel_international_destinations_selected',
+    family: 'travel_international_family_members',
+  },
+  STUDENT_GUARD: {
+    proposals: 'travel_student_proposals',
+    destinations: 'travel_student_destinations_selected',
+  },
+};
+
+
+/**
  * Calculate age from DOB.
  * Returns null if dob is invalid.
  */
@@ -42,11 +68,31 @@ function calculateTenureDays(startDateStr, endDateStr) {
   const diffMs = end.getTime() - start.getTime();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
+/*
+* Duplcate function 
+*/
+// /**
+//  * Normalize incoming package values
+//  * e.g. "International" -> INTERNATIONAL
+//  */
+// function normalizePackageCode(input) {
+//   const s = String(input || '').trim().toUpperCase();
+//   if (s === 'HAJJ' || s === 'UMRAH' || s === 'ZIARAT') return 'HAJJ_UMRAH_ZIARAT';
+//   if (s.includes('HAJJ') || s.includes('UMRAH') || s.includes('ZIARAT')) return 'HAJJ_UMRAH_ZIARAT';
+//   if (s.includes('DOMESTIC')) return 'DOMESTIC';
+//   if (s.includes('INTERNATIONAL')) return 'INTERNATIONAL';
+//   if (s.includes('STUDENT')) return 'STUDENT_GUARD';
+
+//   // also accept already-normalized codes
+//   if (PACKAGE_TABLES[s]) return s;
+
+//   return s;
+// }
 
 /**
  * Normalize frontend packageType string to DB enum code.
  * This makes your API tolerant to "Worldwide", "International", etc.
- */
+*/
 function normalizePackageCode(packageType) {
   const s = String(packageType || '').toLowerCase().trim();
 
@@ -297,7 +343,7 @@ async function quoteTravelPremiumService(data) {
    Submit validations
 ------------------------------ */
 function validateApplicantInfo(applicantInfo) {
-  const required = ['firstName','lastName','address','cityId','cnic','mobile','email','dob'];
+  const required = ['firstName', 'lastName', 'address', 'cityId', 'cnic', 'mobile', 'email', 'dob'];
   for (const field of required) {
     if (!applicantInfo?.[field]) throw httpError(400, `applicantInfo.${field} is required`);
   }
@@ -309,7 +355,7 @@ function validateApplicantInfo(applicantInfo) {
 
 function validateBeneficiary(beneficiary) {
   const required = [
-    'beneficiaryName','beneficiaryAddress','beneficiaryCnic','beneficiaryCnicIssueDate','beneficiaryRelation'
+    'beneficiaryName', 'beneficiaryAddress', 'beneficiaryCnic', 'beneficiaryCnicIssueDate', 'beneficiaryRelation'
   ];
   for (const field of required) {
     if (!beneficiary?.[field]) throw httpError(400, `beneficiary.${field} is required`);
@@ -329,7 +375,7 @@ function validateFamilyMembersIfNeeded(coverageCode, familyMembers) {
   }
 
   for (const [i, m] of familyMembers.entries()) {
-    const required = ['memberType','firstName','lastName','dob'];
+    const required = ['memberType', 'firstName', 'lastName', 'dob'];
     for (const field of required) {
       if (!m?.[field]) throw httpError(400, `familyMembers[${i}].${field} is required`);
     }
@@ -713,6 +759,148 @@ async function listSlabsService(planId) {
   return rows;
 }
 
+
+/**
+ * ✅ GET full proposal detail (requires packageCode)
+ * Also returns:
+ * - destinations selected (joined with travel_destinations)
+ * - family members (if any)
+ */
+async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId) {
+  if (!userId) throw httpError(401, 'User is required');
+
+  const packageCode = normalizePackageCode(packageCodeInput);
+  const tables = PACKAGE_TABLES[packageCode];
+
+  if (!tables) {
+    throw httpError(400, `Invalid package. Allowed: ${Object.keys(PACKAGE_TABLES).join(', ')}`);
+  }
+
+  // Proposal row (must belong to this user)
+  const rows = await query(
+    `SELECT p.*, c.name AS cityName
+       FROM ${tables.proposals} p
+       LEFT JOIN cities c ON c.id = p.city_id
+      WHERE p.id = ? AND p.user_id = ?
+      LIMIT 1`,
+    [proposalId, userId]
+  );
+
+  if (!rows.length) {
+    throw httpError(404, 'Travel proposal not found for this user');
+  }
+
+  const p = rows[0];
+
+  // Destinations
+  const destinations = await query(
+    `SELECT
+        ds.destination_id AS destinationId,
+        d.name AS name,
+        d.region AS region
+     FROM ${tables.destinations} ds
+     INNER JOIN travel_destinations d ON d.id = ds.destination_id
+     WHERE ds.proposal_id = ?
+     ORDER BY ds.id ASC`,
+    [proposalId]
+  );
+
+  // Family members (only if you have family tables for these packages)
+  const familyMembers = await query(
+    `SELECT
+        id,
+        member_type AS memberType,
+        first_name AS firstName,
+        last_name AS lastName,
+        dob,
+        gender,
+        cnic,
+        passport_number AS passportNumber,
+        relation,
+        created_at AS createdAt
+     FROM ${tables.family}
+     WHERE proposal_id = ?
+     ORDER BY id ASC`,
+    [proposalId]
+  ).catch(() => []); // if a package doesn't use family table yet, keep safe
+
+  return {
+    packageCode,
+    proposalId: p.id,
+    status: p.status,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+
+    tripDetails: {
+      packageType: p.package_type || packageCode, // depends on your schema
+      coverageType: p.coverage_type,
+      productPlan: p.product_plan,
+      startDate: p.start_date,
+      endDate: p.end_date,
+      tenureDays: p.tenure_days,
+      sumInsured: p.sum_insured ?? null,
+      addOnsSelected: p.add_ons_selected ?? null,
+      isMultiTrip: p.is_multi_trip ?? null,
+    },
+
+    applicantInfo: {
+      firstName: p.first_name,
+      lastName: p.last_name,
+      address: p.address,
+      cityId: p.city_id,
+      cityName: p.cityName,
+      cnic: p.cnic,
+      passportNumber: p.passport_number,
+      mobile: p.mobile,
+      email: p.email,
+      dob: p.dob,
+      universityName: p.university_name ?? null,
+    },
+
+    parentInfo: {
+      parentName: p.parent_name ?? null,
+      parentAddress: p.parent_address ?? null,
+      parentCnic: p.parent_cnic ?? null,
+      parentCnicIssueDate: p.parent_cnic_issue_date ?? null,
+      parentRelation: p.parent_relation ?? null,
+    },
+
+    beneficiary: {
+      beneficiaryName: p.beneficiary_name,
+      beneficiaryAddress: p.beneficiary_address,
+      beneficiaryCnic: p.beneficiary_cnic,
+      beneficiaryCnicIssueDate: p.beneficiary_cnic_issue_date,
+      beneficiaryRelation: p.beneficiary_relation,
+    },
+
+    pricing: {
+      basePremium: p.base_premium ?? null,
+      addOnsPremium: p.add_ons_premium ?? null,
+      finalPremium: p.final_premium ?? null,
+      ageLoadingPercent: p.age_loading_percent ?? null,
+    },
+
+    destinations: destinations.map((d) => ({
+      destinationId: d.destinationId,
+      name: d.name,
+      region: d.region,
+    })),
+
+    familyMembers: (familyMembers || []).map((m) => ({
+      id: m.id,
+      memberType: m.memberType,
+      firstName: m.firstName,
+      lastName: m.lastName,
+      dob: m.dob,
+      gender: m.gender,
+      cnic: m.cnic,
+      passportNumber: m.passportNumber,
+      relation: m.relation,
+      createdAt: m.createdAt,
+    })),
+  };
+}
+
 module.exports = {
   // existing main functions
   quoteTravelPremiumService,
@@ -723,4 +911,7 @@ module.exports = {
   listCoveragesService,
   listPlansService,
   listSlabsService,
+
+  // get travel proposals
+  getTravelProposalByIdForUser,
 };

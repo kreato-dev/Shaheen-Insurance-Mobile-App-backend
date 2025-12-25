@@ -14,7 +14,7 @@ const travelRoutes = require('./modules/travel/travel.routes');
 const paymentRoutes = require('./modules/payment/payment.routes');
 const policyRoutes = require('./modules/policy/policy.routes');
 const claimRoutes = require('./modules/claim/claim.routes');
-
+const proposalsRoutes = require('./modules/proposals/proposals.routes');
 const adminRoutes = require('./modules/admin/admin.routes');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authMiddleware, adminMiddleware } = require('./middleware/auth');
@@ -41,6 +41,7 @@ app.use('/api/travel', authMiddleware, travelRoutes);
 app.use('/api/payment', authMiddleware, paymentRoutes);
 app.use('/api/policies', authMiddleware, policyRoutes);
 app.use('/api/claims', authMiddleware, claimRoutes);
+app.use('/api/proposals', authMiddleware, proposalsRoutes);
 
 // Admin routes (auth + admin)
 app.use(

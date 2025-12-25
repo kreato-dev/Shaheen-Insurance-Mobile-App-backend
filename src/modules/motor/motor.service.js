@@ -496,81 +496,6 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
 }
 
 /**
- * Get motor proposals list for logged-in user
- * Supports optional status + pagination
- */
-async function getMotorProposalsForUser(userId, opts = {}) {
-  if (!userId) throw httpError(401, 'User is required');
-
-  const page = Number(opts.page || 1);
-  const limit = Math.min(Math.max(Number(opts.limit || 20), 1), 100);
-  const offset = (page - 1) * limit;
-
-  const where = ['mp.user_id = ?'];
-  const params = [userId];
-
-  // Optional filter for “waiting” proposals etc.
-  if (opts.status) {
-    where.push('mp.status = ?');
-    params.push(opts.status);
-  }
-
-  const whereSql = `WHERE ${where.join(' AND ')}`;
-
-  // Total count (for frontend pagination)
-  const countRows = await query(
-    `SELECT COUNT(*) AS total
-       FROM motor_proposals mp
-       ${whereSql}`,
-    params
-  );
-
-  const total = Number(countRows?.[0]?.total || 0);
-
-  // Return minimal fields for list view
-  const rows = await query(
-    `SELECT
-        mp.id,
-        mp.status,
-        mp.product_type AS productType,
-        mp.registration_number AS registrationNumber,
-        mp.model_year AS modelYear,
-        mp.colour,
-        mp.sum_insured AS sumInsured,
-        mp.premium,
-        vm.name AS makeName,
-        vsm.name AS submakeName,
-        mp.created_at AS createdAt
-     FROM motor_proposals mp
-     LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
-     LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
-     ${whereSql}
-     ORDER BY mp.created_at DESC
-     LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
-
-  return {
-    page,
-    limit,
-    total,
-    proposals: rows.map((r) => ({
-      id: r.id,
-      status: r.status,
-      productType: r.productType,
-      registrationNumber: r.registrationNumber,
-      modelYear: r.modelYear,
-      colour: r.colour,
-      sumInsured: r.sumInsured,
-      premium: r.premium,
-      makeName: r.makeName,
-      submakeName: r.submakeName,
-      createdAt: r.createdAt,
-    })),
-  };
-}
-
-/**
  * Get full motor proposal details for logged-in user
  * Includes images from motor_vehicle_images
  */
@@ -660,6 +585,5 @@ module.exports = {
   getMarketValueService,
   submitProposalService,
   uploadMotorAssetsService,
-  getMotorProposalsForUser,
   getMotorProposalByIdForUser,
 };
