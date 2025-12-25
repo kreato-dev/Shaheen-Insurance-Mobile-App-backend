@@ -495,9 +495,171 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
   }
 }
 
+/**
+ * Get motor proposals list for logged-in user
+ * Supports optional status + pagination
+ */
+async function getMotorProposalsForUser(userId, opts = {}) {
+  if (!userId) throw httpError(401, 'User is required');
+
+  const page = Number(opts.page || 1);
+  const limit = Math.min(Math.max(Number(opts.limit || 20), 1), 100);
+  const offset = (page - 1) * limit;
+
+  const where = ['mp.user_id = ?'];
+  const params = [userId];
+
+  // Optional filter for “waiting” proposals etc.
+  if (opts.status) {
+    where.push('mp.status = ?');
+    params.push(opts.status);
+  }
+
+  const whereSql = `WHERE ${where.join(' AND ')}`;
+
+  // Total count (for frontend pagination)
+  const countRows = await query(
+    `SELECT COUNT(*) AS total
+       FROM motor_proposals mp
+       ${whereSql}`,
+    params
+  );
+
+  const total = Number(countRows?.[0]?.total || 0);
+
+  // Return minimal fields for list view
+  const rows = await query(
+    `SELECT
+        mp.id,
+        mp.status,
+        mp.product_type AS productType,
+        mp.registration_number AS registrationNumber,
+        mp.model_year AS modelYear,
+        mp.colour,
+        mp.sum_insured AS sumInsured,
+        mp.premium,
+        vm.name AS makeName,
+        vsm.name AS submakeName,
+        mp.created_at AS createdAt
+     FROM motor_proposals mp
+     LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
+     LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
+     ${whereSql}
+     ORDER BY mp.created_at DESC
+     LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
+  );
+
+  return {
+    page,
+    limit,
+    total,
+    proposals: rows.map((r) => ({
+      id: r.id,
+      status: r.status,
+      productType: r.productType,
+      registrationNumber: r.registrationNumber,
+      modelYear: r.modelYear,
+      colour: r.colour,
+      sumInsured: r.sumInsured,
+      premium: r.premium,
+      makeName: r.makeName,
+      submakeName: r.submakeName,
+      createdAt: r.createdAt,
+    })),
+  };
+}
+
+/**
+ * Get full motor proposal details for logged-in user
+ * Includes images from motor_vehicle_images
+ */
+async function getMotorProposalByIdForUser(userId, proposalId) {
+  if (!userId) throw httpError(401, 'User is required');
+
+  const rows = await query(
+    `SELECT
+        mp.*,
+        c.name AS cityName,
+        vm.name AS makeName,
+        vsm.name AS submakeName,
+        tc.name AS trackerCompanyName
+     FROM motor_proposals mp
+     LEFT JOIN cities c ON c.id = mp.city_id
+     LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
+     LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
+     LEFT JOIN tracker_companies tc ON tc.id = mp.tracker_company_id
+     WHERE mp.id = ? AND mp.user_id = ?
+     LIMIT 1`,
+    [proposalId, userId]
+  );
+
+  if (!rows.length) throw httpError(404, 'Motor proposal not found for this user');
+
+  const p = rows[0];
+
+  // Fetch images for this proposal
+  const images = await query(
+    `SELECT id, image_type AS imageType, file_path AS filePath, created_at AS createdAt
+       FROM motor_vehicle_images
+      WHERE proposal_id = ?
+      ORDER BY id ASC`,
+    [proposalId]
+  );
+
+  // Return everything in a frontend friendly structure
+  return {
+    id: p.id,
+    status: p.status,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+
+    personalDetails: {
+      name: p.name,
+      address: p.address,
+      cityName: p.cityName,
+      cnic: p.cnic,
+      cnicExpiry: p.cnic_expiry,
+      dob: p.dob,
+      nationality: p.nationality,
+      gender: p.gender,
+    },
+
+    vehicleDetails: {
+      productType: p.product_type,
+      registrationNumber: p.registration_number,
+      appliedFor: p.applied_for === 1,
+      isOwner: p.is_owner === 1,
+      ownerRelation: p.owner_relation,
+      engineNumber: p.engine_number,
+      chassisNumber: p.chassis_number,
+      makeName: p.makeName,
+      submakeName: p.submakeName,
+      modelYear: p.model_year,
+      colour: p.colour,
+      trackerCompanyName: p.trackerCompanyName,
+      accessoriesValue: p.accessories_value,
+    },
+
+    pricing: {
+      sumInsured: p.sum_insured,
+      premium: p.premium,
+    },
+
+    images: images.map((img) => ({
+      id: img.id,
+      imageType: img.imageType,
+      filePath: img.filePath,
+      createdAt: img.createdAt,
+    })),
+  };
+}
+
 module.exports = {
   calculatePremiumService,
   getMarketValueService,
   submitProposalService,
   uploadMotorAssetsService,
+  getMotorProposalsForUser,
+  getMotorProposalByIdForUser,
 };

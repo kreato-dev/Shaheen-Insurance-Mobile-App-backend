@@ -667,6 +667,83 @@
       "name": "Policies (Stubbed)",
       "item": [
         {
+          "name": "List All proposals (draft,submitted,approved,rejected,paid,cancelled)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/my-proposals?status=submitted&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "my-proposals"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "submitted",
+                  "description": "draft,submitted,approved,rejected,paid,cancelled"
+                },
+                {
+                   "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Proposal Detail by Id",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/my-proposals/{{proposal-id}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "my-proposals"
+              ],
+              "query": [
+                {
+                  "key": "Proposal ID",
+                  "value": "{{proposal-id}}"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "Get My Policies",
           "request": {
             "method": "GET",

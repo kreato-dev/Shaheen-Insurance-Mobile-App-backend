@@ -114,7 +114,7 @@ CREATE TABLE motor_proposals (
   sum_insured DECIMAL(14,2) NULL,
   premium DECIMAL(14,2) NULL,
 
-  status ENUM('draft','submitted','paid','cancelled') DEFAULT 'submitted',
+  status ENUM('draft','submitted','approved','rejected','paid','cancelled',) DEFAULT 'submitted',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

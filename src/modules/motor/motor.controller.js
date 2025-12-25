@@ -3,7 +3,9 @@ const {
   calculatePremiumService,
   getMarketValueService,
   submitProposalService,
-  uploadMotorAssetsService, // ✅ new service function (we’ll add in motor.service.js next)
+  uploadMotorAssetsService,
+  getMotorProposalsForUser,
+  getMotorProposalByIdForUser,
 } = require('./motor.service');
 
 async function calculatePremium(req, res, next) {
@@ -104,9 +106,50 @@ async function uploadMotorAssets(req, res, next) {
   }
 }
 
+/**
+ * Returns a list of logged-in user's motor proposals
+ */
+async function getMyProposals(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const { status, page = 1, limit = 20 } = req.query;
+
+    const result = await getMotorProposalsForUser(userId, {
+      status,
+      page: Number(page),
+      limit: Number(limit),
+    });
+
+    return res.json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * Returns full proposal details for the logged-in user
+ */
+async function getMyProposalById(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const numericId = Number(req.params.id);
+
+    if (!numericId || Number.isNaN(numericId)) {
+      return res.status(400).json({ message: 'Invalid proposal id' });
+    }
+
+    const result = await getMotorProposalByIdForUser(userId, numericId);
+    return res.json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   calculatePremium,
   getMarketValue,
   submitProposal,
   uploadMotorAssets,
+  getMyProposals,
+  getMyProposalById
 };
