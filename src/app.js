@@ -27,8 +27,13 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (HTML, CSS, JS from /public)
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// project root = one level up from src
+const projectRoot = path.join(__dirname, '..',  'uploads');
+// const uploadsDir = path.join(projectRoot, 'uploads');
+
+app.use('/uploads', express.static(projectRoot));
+
+console.log('Static uploads dir for pictures:', projectRoot);
 
 // Public routes
 app.use('/api/auth', authRoutes);

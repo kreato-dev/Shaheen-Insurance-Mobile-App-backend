@@ -6,6 +6,13 @@ function httpError(status, message) {
   err.status = status;
   return err;
 }
+/**
+ * Relative Path to upload vehicle images + documents
+ * **/
+function toUploadsRelativePath(file) {
+  // We always want a URL path, not OS file path
+  return `uploads/motor/${file.filename}`;
+}
 
 /**
  * Calculate motor premium and sum insured
@@ -415,8 +422,8 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
     if (stepLower === 'cnic') {
       requireFiles(files, ['cnic_front', 'cnic_back']);
 
-      await upsertDocument(conn, proposalId, 'CNIC', 'front', files.cnic_front[0].path);
-      await upsertDocument(conn, proposalId, 'CNIC', 'back', files.cnic_back[0].path);
+      await upsertDocument(conn, proposalId, 'CNIC', 'front', toUploadsRelativePath(files.cnic_front[0]));
+      await upsertDocument(conn, proposalId, 'CNIC', 'back', toUploadsRelativePath(files.cnic_back[0]));
 
       await conn.commit();
       return { proposalId, step: 'cnic', saved: ['cnic_front', 'cnic_back'] };
@@ -426,8 +433,8 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
     if (stepLower === 'license') {
       requireFiles(files, ['license_front', 'license_back']);
 
-      await upsertDocument(conn, proposalId, 'DRIVING_LICENSE', 'front', files.license_front[0].path);
-      await upsertDocument(conn, proposalId, 'DRIVING_LICENSE', 'back', files.license_back[0].path);
+      await upsertDocument(conn, proposalId, 'DRIVING_LICENSE', 'front', toUploadsRelativePath(files.license_front[0]));
+      await upsertDocument(conn, proposalId, 'DRIVING_LICENSE', 'back', toUploadsRelativePath(files.license_back[0]));
 
       await conn.commit();
       return { proposalId, step: 'license', saved: ['license_front', 'license_back'] };
@@ -439,8 +446,8 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       requireFiles(files, ['regbook_front', 'regbook_back']);
 
       // save reg book docs
-      await upsertDocument(conn, proposalId, 'REGISTRATION_BOOK', 'front', files.regbook_front[0].path);
-      await upsertDocument(conn, proposalId, 'REGISTRATION_BOOK', 'back', files.regbook_back[0].path);
+      await upsertDocument(conn, proposalId, 'REGISTRATION_BOOK', 'front', toUploadsRelativePath(files.regbook_front[0]));
+      await upsertDocument(conn, proposalId, 'REGISTRATION_BOOK', 'back', toUploadsRelativePath(files.regbook_back[0]));
 
       // save vehicle images (optional but controlled)
       const supportedTypes = new Set([
@@ -468,7 +475,7 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
           `INSERT INTO motor_vehicle_images
            (proposal_id, image_type, file_path, created_at)
            VALUES (?, ?, ?, NOW())`,
-          [proposalId, field, file.path]
+          [proposalId, field, toUploadsRelativePath(file)]
         );
 
         savedVehicleImages.push(field);
@@ -523,6 +530,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
   const p = rows[0];
 
+  const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
   // Fetch images for this proposal
   const images = await query(
     `SELECT id, image_type AS imageType, file_path AS filePath, created_at AS createdAt
@@ -571,12 +579,15 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       premium: p.premium,
     },
 
-    images: images.map((img) => ({
-      id: img.id,
-      imageType: img.imageType,
-      filePath: img.filePath,
-      createdAt: img.createdAt,
-    })),
+    images: images.map((img) => {
+      return {
+        id: img.id,
+        imageType: img.imageType,
+        filePath: img.filePath,
+        url: `${baseUrl}/${img.filePath}`,
+        createdAt: img.createdAt,
+      };
+    }),
   };
 }
 

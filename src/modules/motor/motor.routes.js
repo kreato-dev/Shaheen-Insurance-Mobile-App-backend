@@ -5,6 +5,9 @@ const multer = require('multer');
 const path = require('path');
 const motorController = require('./motor.controller');
 
+// motor.routes.js is inside src/modules/motor → go up 3 levels: motor → modules → src → root
+const projectRoot = path.join(__dirname, '..', '..', '..'); 
+
 // --- Multer config: jpg/png only + keep extension ---
 function httpError(status, message) {
   const err = new Error(message);
@@ -14,7 +17,7 @@ function httpError(status, message) {
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/motor/');
+    cb(null, path.join(projectRoot, 'uploads', 'motor')); // root/uploads/motor
   },
   filename: function (req, file, cb) {
     const ext = path.extname(file.originalname).toLowerCase();
