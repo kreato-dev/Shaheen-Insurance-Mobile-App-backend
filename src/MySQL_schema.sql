@@ -28,6 +28,28 @@ CREATE TABLE vehicle_submakes (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE vehicle_variants (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  make_id INT NOT NULL,
+  submake_id INT NOT NULL,
+  model_year INT NOT NULL,
+  name VARCHAR(150) NOT NULL,
+
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_vehicle_variants_make
+    FOREIGN KEY (make_id) REFERENCES vehicle_makes(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+
+  CONSTRAINT fk_vehicle_variants_submake
+    FOREIGN KEY (submake_id) REFERENCES vehicle_submakes(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+
+  UNIQUE KEY uq_vehicle_variant (make_id, submake_id, model_year, name),
+  INDEX idx_vehicle_variants_filter (make_id, submake_id, model_year)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE tracker_companies (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(150) NOT NULL,
@@ -106,6 +128,8 @@ CREATE TABLE motor_proposals (
   make_id INT NOT NULL,
   submake_id INT NOT NULL,
   model_year INT NOT NULL,
+  assembly ENUM('local','imported') NOT NULL,
+  variant_id INT NULL,
   colour VARCHAR(50) NOT NULL,
   tracker_company_id INT NULL,
   accessories_value DECIMAL(12,2) DEFAULT 0.00,
@@ -130,6 +154,9 @@ CREATE TABLE motor_proposals (
   CONSTRAINT fk_motor_proposals_submake
     FOREIGN KEY (submake_id) REFERENCES vehicle_submakes(id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_motor_proposals_variant
+    FOREIGN KEY (variant_id) REFERENCES vehicle_variants(id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_motor_proposals_tracker
     FOREIGN KEY (tracker_company_id) REFERENCES tracker_companies(id)
     ON DELETE SET NULL ON UPDATE CASCADE
@@ -290,7 +317,7 @@ CREATE TABLE travel_domestic_proposals (
   base_premium DECIMAL(14,2) NOT NULL,
   final_premium DECIMAL(14,2) NOT NULL,
 
-  status ENUM('draft','submitted','paid','cancelled') DEFAULT 'submitted',
+  status ENUM('draft','submitted','approved','rejected','paid','cancelled') DEFAULT 'submitted',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -361,7 +388,7 @@ CREATE TABLE travel_huj_proposals (
   base_premium DECIMAL(14,2) NOT NULL,
   final_premium DECIMAL(14,2) NOT NULL,
 
-  status ENUM('draft','submitted','paid','cancelled') DEFAULT 'submitted',
+  status ENUM('draft','submitted','approved','rejected','paid','cancelled') DEFAULT 'submitted',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -437,7 +464,7 @@ CREATE TABLE travel_international_proposals (
   base_premium DECIMAL(14,2) NOT NULL,
   final_premium DECIMAL(14,2) NOT NULL,
 
-  status ENUM('draft','submitted','paid','cancelled') DEFAULT 'submitted',
+  status ENUM('draft','submitted','approved','rejected','paid','cancelled') DEFAULT 'submitted',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 
@@ -517,7 +544,7 @@ CREATE TABLE travel_student_proposals (
   base_premium DECIMAL(14,2) NOT NULL,
   final_premium DECIMAL(14,2) NOT NULL,
 
-  status ENUM('draft','submitted','paid','cancelled') DEFAULT 'submitted',
+  status ENUM('draft','submitted','approved','rejected','paid','cancelled') DEFAULT 'submitted',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

@@ -82,6 +82,35 @@ async function getVehicleSubmakes(req, res, next) {
 }
 
 /**
+ * GET /api/data/vehicle-variants?makeId=1&submakeId=5&modelYear=2021
+ */
+async function getVehicleVariants(req, res, next) {
+  try {
+    const makeId = Number(req.query.makeId);
+    const submakeId = Number(req.query.submakeId);
+    const modelYear = Number(req.query.modelYear);
+
+    if (!makeId || !submakeId || !modelYear) {
+      return res.status(400).json({
+        message: 'makeId, submakeId, and modelYear are required',
+      });
+    }
+
+    const rows = await query(
+      `SELECT id, name, model_year AS modelYear
+         FROM vehicle_variants
+        WHERE make_id = ? AND submake_id = ? AND model_year = ?
+        ORDER BY name ASC`,
+      [makeId, submakeId, modelYear]
+    );
+
+    return res.json({ data: rows });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/data/tracker-companies
  */
 async function getTrackerCompanies(req, res, next) {
@@ -153,4 +182,5 @@ module.exports = {
   getVehicleSubmakes,
   getTrackerCompanies,
   getTravelDestinations,
+  getVehicleVariants,
 };

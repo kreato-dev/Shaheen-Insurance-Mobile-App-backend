@@ -134,6 +134,8 @@ function validateVehicleDetails(vehicle) {
     'makeId',
     'submakeId',
     'modelYear',
+    'assembly',
+    'variantId',
     'colour',
   ];
   for (const field of required) {
@@ -146,6 +148,12 @@ function validateVehicleDetails(vehicle) {
   if (Number.isNaN(yearNum) || yearNum < 1980) {
     throw httpError(400, 'vehicleDetails.modelYear is invalid');
   }
+  
+  const assembly = String(vehicle.assembly).toLowerCase();
+  if (!['local', 'imported'].includes(assembly)) {
+    throw httpError(400, 'vehicleDetails.assembly must be local or imported');
+  }
+  vehicle.assembly = assembly;
 
   // Ownership rule:
   // if applicant is not the vehicle owner, then it must be registered under the blood relation of the owner 
@@ -195,7 +203,7 @@ function validateVehicleDetails(vehicle) {
 /**
  * Validate foreign keys exist (city, make, submake, tracker)
  */
-async function validateForeignKeys({ cityId, makeId, submakeId, trackerCompanyId }) {
+async function validateForeignKeys({ cityId, makeId, submakeId, variantId, modelYear, trackerCompanyId,}) {
   if (cityId) {
     const city = await query('SELECT id FROM cities WHERE id = ? LIMIT 1', [cityId]);
     if (city.length === 0) {
@@ -214,6 +222,17 @@ async function validateForeignKeys({ cityId, makeId, submakeId, trackerCompanyId
   );
   if (submake.length === 0) {
     throw httpError(400, 'Invalid submakeId for given makeId');
+  }
+
+  const variant = await query(
+    `SELECT id FROM vehicle_variants
+      WHERE id = ? AND make_id = ? AND submake_id = ? AND model_year = ?
+      LIMIT 1`,
+    [variantId, makeId, submakeId, modelYear]
+  );
+
+  if (variant.length === 0) {
+    throw httpError(400, 'Invalid variantId for given makeId/submakeId/modelYear');
   }
 
   if (trackerCompanyId) {
@@ -261,6 +280,8 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     makeId,
     submakeId,
     modelYear,
+    assembly,
+    variantId,
     colour,
     trackerCompanyId = null,
     accessoriesValue,
@@ -271,6 +292,8 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     cityId,
     makeId,
     submakeId,
+    modelYear,
+    variantId: vehicleDetails.variantId,
     trackerCompanyId,
   });
 
@@ -298,9 +321,9 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
       `INSERT INTO motor_proposals
        (user_id, name, address, city_id, cnic, cnic_expiry, dob, nationality, gender,
         product_type, registration_number, applied_for, is_owner, owner_relation, engine_number, chassis_number,
-        make_id, submake_id, model_year, colour, tracker_company_id, accessories_value,
+        make_id, submake_id, model_year, assembly, variant_id, colour, tracker_company_id, accessories_value,
         sum_insured, premium, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW(), NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW(), NOW())`,
       [
         userId,
         name,
@@ -321,6 +344,8 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         makeId,
         submakeId,
         modelYear,
+        assembly,
+        variantId,
         colour,
         trackerCompanyId,
         accessoriesValue || 0,
@@ -515,12 +540,14 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
         c.name AS cityName,
         vm.name AS makeName,
         vsm.name AS submakeName,
-        tc.name AS trackerCompanyName
+        tc.name AS trackerCompanyName,
+        vv.name AS variantName
      FROM motor_proposals mp
      LEFT JOIN cities c ON c.id = mp.city_id
      LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
      LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
      LEFT JOIN tracker_companies tc ON tc.id = mp.tracker_company_id
+     LEFT JOIN vehicle_variants vv ON vv.id = mp.variant_id
      WHERE mp.id = ? AND mp.user_id = ?
      LIMIT 1`,
     [proposalId, userId]
@@ -531,6 +558,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
   const p = rows[0];
 
   const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
+
   // Fetch images for this proposal
   const images = await query(
     `SELECT id, image_type AS imageType, file_path AS filePath, created_at AS createdAt
@@ -540,7 +568,6 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
     [proposalId]
   );
 
-  // Return everything in a frontend friendly structure
   return {
     id: p.id,
     status: p.status,
@@ -564,11 +591,18 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       appliedFor: p.applied_for === 1,
       isOwner: p.is_owner === 1,
       ownerRelation: p.owner_relation,
+
       engineNumber: p.engine_number,
       chassisNumber: p.chassis_number,
+
       makeName: p.makeName,
       submakeName: p.submakeName,
       modelYear: p.model_year,
+
+      assembly: p.assembly,
+      variantId: p.variant_id,
+      variantName: p.variantName || null,
+
       colour: p.colour,
       trackerCompanyName: p.trackerCompanyName,
       accessoriesValue: p.accessories_value,
@@ -590,6 +624,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
     }),
   };
 }
+
 
 module.exports = {
   calculatePremiumService,

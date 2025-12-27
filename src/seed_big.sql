@@ -60,6 +60,33 @@ INSERT INTO vehicle_submakes (id, make_id, name, created_at, updated_at) VALUES
 (18,6,'Karvaan',NOW(),NOW());
 ALTER TABLE vehicle_submakes AUTO_INCREMENT = 19;
 
+INSERT INTO vehicle_variants (id, make_id, submake_id, model_year, name) VALUES
+-- Toyota Corolla 2025 variants
+(1, 1, 1, 2025, 'Toyota Corolla Altis X Manual 1.6'),
+(2, 1, 1, 2025, 'Toyota Corolla Altis 1.6 X CVT-i'),
+(3, 1, 1, 2025, 'Toyota Corolla Altis Grande X CVT-i 1.8 Black Interior'),
+-- Honda Civic 2021 variants
+(4, 2, 4, 2021, 'Honda Oriel 1.8 i-VTEC CVT'),
+(5, 2, 4, 2021, 'Honda 1.5 VTEC Turbo Oriel'),
+(6, 2, 4, 2021, 'Honda 1.5 RS Turbo'),
+-- Suzuki Alto 2023 variants
+(7, 3, 7, 2023, 'Alto VXR'),
+(8, 2, 7, 2023, 'Alto VXR-AGS'),
+(9, 2, 7, 2023, 'Alto VXL-AGS'),
+-- Kia Sportage 2020 variants
+(10, 4, 10, 2020, 'LX'),
+(11, 4, 10, 2020, 'S'),
+(12, 4, 10, 2020, 'EX'),
+-- Hyundai Elantra 2023 variants
+(13, 5, 14, 2023, 'SE'),
+(14, 5, 14, 2023, 'Blue HEV'),
+(15, 5, 14, 2023, 'N-Line'),
+-- Changan Alsvin 2025 variants
+(16, 6, 16, 2025, 'Alsvin 1.3L MT Comfort.'),
+(17, 6, 16, 2023, 'Changan Alsvin 1.5L DCT Comfort'),
+(18, 6, 16, 2023, 'Changan Alsvin Lumiere');
+ALTER TABLE vehicle_variants AUTO_INCREMENT = 19;
+
 INSERT INTO tracker_companies (id, name, created_at, updated_at) VALUES
 (1,'TPL Trakker',NOW(),NOW()),
 (2,'Falcon-i',NOW(),NOW()),

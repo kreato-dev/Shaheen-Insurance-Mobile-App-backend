@@ -12,6 +12,9 @@ router.get('/vehicle-makes', dataController.getVehicleMakes);
 // GET /api/data/vehicle-submakes/:makeId
 router.get('/vehicle-submakes/:makeId', dataController.getVehicleSubmakes);
 
+// GET /api/data/vehicle-variants?makeId=1&submakeId=5&modelYear=2021
+router.get('/vehicle-variants', dataController.getVehicleVariants);
+
 // GET /api/data/tracker-companies
 router.get('/tracker-companies', dataController.getTrackerCompanies);
 

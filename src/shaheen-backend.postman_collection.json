@@ -257,6 +257,24 @@
           }
         },
         {
+          "name": "Get Vehicle Variants by Make and Submake",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/data/vehicle-variants?makeId=1&submakeId=1&modelYear=2025",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "data",
+                "vehicle-variants"
+              ]
+            }
+          }
+        },
+        {
           "name": "Get Tracker Companies",
           "request": {
             "method": "GET",
