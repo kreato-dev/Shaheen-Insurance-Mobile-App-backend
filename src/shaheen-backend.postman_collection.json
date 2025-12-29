@@ -91,7 +91,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"purpose\": \"email_verify\",\n  \"mobile\": \"03001234567\"\n}"
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"purpose\": \"email_verify\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/resend-email-otp",
@@ -161,7 +161,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"mobile\": \"03001234567\"\n}"
+              "raw": "{\n  \"email\": \"test@example.com\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/forgot-password/otp",
@@ -217,7 +217,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\",\n  \"purpose\": \"forgot_password\",\n  \"mobile\": \"03001234567\"\n}"
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"purpose\": \"forgot_password\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/resend-email-otp",

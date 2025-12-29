@@ -47,12 +47,41 @@ async function registerUser({ fullName, email, mobile, password }) {
   }
 
   // Check if mobile or email already exists
-  const existing = await query(
-    'SELECT id FROM users WHERE mobile = ? OR (email IS NOT NULL AND email = ?) LIMIT 1',
+  const existingRows = await query(
+    `SELECT id, email, mobile, email_verified
+     FROM users
+    WHERE mobile = ? OR email = ?
+    LIMIT 1`,
     [mobile, email]
   );
 
-  if (existing.length > 0) {
+  if (existingRows.length > 0) {
+    const existing = existingRows[0];
+
+    // If user exists but email not verified -> resend OTP instead of blocking register
+    if (existing.email_verified === 0) {
+      const { otp } = await createEmailOtp({
+        email: existing.email,
+        mobile: existing.mobile,
+        purpose: 'email_verify',
+        expiresMinutes,
+      });
+
+      await sendOtpEmail({
+        to: existing.email,
+        otp,
+        purpose: 'email_verify',
+        expiresMinutes: 2,
+      });
+
+      return {
+        message: 'Account already exists but email not verified. OTP resent to email.',
+        email: existing.email,
+        needsEmailVerification: true,
+      };
+    }
+
+    // Verified user -> real conflict
     throw httpError(409, 'User with this mobile/email already exists');
   }
 
@@ -117,9 +146,8 @@ async function verifyEmailOtpService({ email, otp }) {
  * Re-send email OTP if user requested
  */
 
-async function resendEmailOtpService({ email, purpose, mobile }) {
+async function resendEmailOtpService({ email, purpose }) {
   if (!email) throw httpError(400, 'email is required');
-  if (!mobile) throw httpError(400, 'mobile is required');
 
   const allowed = new Set(['email_verify', 'forgot_password']);
   const p = (purpose || 'email_verify').toLowerCase();
@@ -134,13 +162,13 @@ async function resendEmailOtpService({ email, purpose, mobile }) {
     }
   }
 
-  const expiresMinutes = p === 'forgot_password' ? 10 : 5;
+  // const expiresMinutes = p === 'forgot_password' ? 10 : 5;
 
   // Create OTP in DB (same logic as other flows)
-  const { otp } = await createEmailOtp({ mobile, email, purpose: p, expiresMinutes });
+  const { otp } = await createEmailOtp({ email, purpose: p, expiresMinutes: 2 });
 
   // Send it via SMTP (provider swappable)
-  await sendOtpEmail({ to: email, otp, purpose: p, expiresMinutes });
+  await sendOtpEmail({ to: email, otp, purpose: p, expiresMinutes: 2 });
 
   return { message: 'OTP resent successfully' };
 }
@@ -193,12 +221,9 @@ async function loginUser({ mobile, password }) {
  * Security note:
  * we return a generic message even if email not found
  */
-async function sendForgotPasswordOtp({ email, mobile }) {
+async function sendForgotPasswordOtp({ email }) {
   if (!email) {
     throw httpError(400, 'email is required');
-  }
-  if (!mobile) {
-    throw httpError(400, 'mobile is required');
   }
 
   const users = await query(
@@ -212,7 +237,6 @@ async function sendForgotPasswordOtp({ email, mobile }) {
   }
 
   const { otp } = await createEmailOtp({
-    mobile,
     email,
     purpose: 'forgot_password',
     expiresMinutes: 2,

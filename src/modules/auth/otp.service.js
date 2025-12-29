@@ -22,14 +22,14 @@ function generateOtp(length = 6) {
 /**
  * Create OTP and store in DB (email-based).
  * - purpose: 'forgot_password' | 'email_verify'
- * - expiresMinutes: default 5
+ * - expiresMinutes: default 2
  *
  * Note: we store OTP in DB (as you requested). Later you can hash it if needed.
  */
-async function createEmailOtp({mobile, email, purpose, expiresMinutes = 2 }) {
+async function createEmailOtp({mobile, email, purpose, expiresMinutes }) {
   if (!email) throw httpError(400, 'email is required');
   if (!purpose) throw httpError(400, 'purpose is required');
-
+  const mobileExists = mobile || 0; 
   const otp = generateOtp(6);
 
   // expire after N minutes
@@ -47,7 +47,7 @@ async function createEmailOtp({mobile, email, purpose, expiresMinutes = 2 }) {
   await query(
     `INSERT INTO otp_codes (mobile, email, otp, purpose, expires_at, created_at)
      VALUES (?, ?, ?, ?, ?, NOW())`,
-    [mobile, email, otp, purpose, expiresAtSql]
+    [mobileExists, email, otp, purpose, expiresAtSql]
   );
 
   return { otp, expiresAt };

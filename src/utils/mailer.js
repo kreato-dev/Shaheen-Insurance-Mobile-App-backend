@@ -99,7 +99,7 @@ async function sendEmail({ to, subject, html, text }) {
 /**
  * OTP email template: shared for register + forgot password.
  */
-async function sendOtpEmail({ to, otp, purpose, expiresMinutes = 5 }) {
+async function sendOtpEmail({ to, otp, purpose, expiresMinutes }) {
   const purposeLabel =
     purpose === 'email_verify'
       ? 'Email Verification'
