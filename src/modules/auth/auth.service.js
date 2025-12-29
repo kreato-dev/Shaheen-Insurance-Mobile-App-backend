@@ -50,10 +50,12 @@ async function registerUser({ fullName, email, mobile, password }) {
   const existingRows = await query(
     `SELECT id, email, mobile, email_verified
      FROM users
-    WHERE mobile = ? OR email = ?
+    WHERE mobile = ? AND email = ?
     LIMIT 1`,
     [mobile, email]
   );
+
+  if (existingRows.length === 0) throw httpError(409, 'User with this mobile/email already exists');
 
   if (existingRows.length > 0) {
     const existing = existingRows[0];
@@ -64,7 +66,7 @@ async function registerUser({ fullName, email, mobile, password }) {
         email: existing.email,
         mobile: existing.mobile,
         purpose: 'email_verify',
-        expiresMinutes,
+        expiresMinutes: 2,
       });
 
       await sendOtpEmail({
