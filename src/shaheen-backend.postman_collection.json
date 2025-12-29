@@ -26,7 +26,7 @@
       "name": "Auth",
       "item": [
         {
-          "name": "Register",
+          "name": "Register (Sends Email OTP)",
           "request": {
             "method": "POST",
             "header": [
@@ -53,7 +53,77 @@
           }
         },
         {
-          "name": "Login",
+          "name": "Verify Email OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-email-otp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resend Email OTP (Verification)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"purpose\": \"email_verify\",\n  \"mobile\": \"03001234567\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-email-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "resend-email-otp"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login (Saves authToken)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  if (json && json.token) {",
+                  "    pm.collectionVariables.set('authToken', String(json.token));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -80,7 +150,7 @@
           }
         },
         {
-          "name": "Forgot Password - Send OTP",
+          "name": "Forgot Password - Send OTP (EMAIL ONLY)",
           "request": {
             "method": "POST",
             "header": [
@@ -91,7 +161,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobile\": \"03001234567\"\n}"
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"mobile\": \"03001234567\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/forgot-password/otp",
@@ -108,7 +178,7 @@
           }
         },
         {
-          "name": "Forgot Password - Verify OTP",
+          "name": "Forgot Password - Verify OTP (EMAIL ONLY)",
           "request": {
             "method": "POST",
             "header": [
@@ -119,7 +189,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"mobile\": \"03001234567\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewSecret123\"\n}"
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewSecret123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/forgot-password/verify",
@@ -131,6 +201,33 @@
                 "auth",
                 "forgot-password",
                 "verify"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resend Email OTP (Forgot Password)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"purpose\": \"forgot_password\",\n  \"mobile\": \"03001234567\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-email-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "resend-email-otp"
               ]
             }
           }
@@ -412,7 +509,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"personalDetails\": {\n    \"name\": \"Ali Khan\",\n    \"address\": \"Gulshan-e-Iqbal Block 5\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-1234567-1\",\n    \"cnicExpiry\": \"2030-12-31\",\n    \"dob\": \"1995-05-10\",\n    \"nationality\": \"Pakistani\",\n    \"gender\": \"male\"\n  },\n  \"vehicleDetails\": {\n    \"productType\": \"private\",\n    \"registrationNumber\": \"ABC-123\",\n    \"appliedFor\": true,\n    \"isOwner\": false,\n    \"ownerRelation\": \"father\",\n    \"engineNumber\": \"ENG1234567\",\n    \"chassisNumber\": \"CHS1234567\",\n    \"makeId\": 2,\n    \"submakeId\": 4,\n    \"modelYear\": 2021,\n    \"colour\": \"White\",\n    \"trackerCompanyId\": 2,\n    \"accessoriesValue\": 50000,\n    \"vehicleValue\": 2800000\n  }\n}"
+              "raw": "{\n  \"personalDetails\": {\n    \"name\": \"Ali Khan\",\n    \"address\": \"Gulshan-e-Iqbal Block 5\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-1234567-1\",\n    \"cnicExpiry\": \"2030-12-31\",\n    \"dob\": \"1995-05-10\",\n    \"nationality\": \"Pakistani\",\n    \"gender\": \"male\"\n  },\n  \"vehicleDetails\": {\n    \"productType\": \"private\",\n    \"registrationNumber\": \"ABC-123\",\n    \"appliedFor\": true,\n    \"isOwner\": false,\n    \"ownerRelation\": \"father\",\n    \"engineNumber\": \"ENG1234567\",\n    \"chassisNumber\": \"CHS1234567\",\n    \"makeId\": 2,\n    \"submakeId\": 4,\n    \"modelYear\": 2021,\n    \"assembly\": \"imported\",\n    \"variantId\": 6,\n    \"colour\": \"White\",\n    \"trackerCompanyId\": 2,\n    \"accessoriesValue\": 50000,\n    \"vehicleValue\": 2800000\n  }\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/motor/submit-proposal",

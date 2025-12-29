@@ -19,6 +19,39 @@ async function register(req, res, next) {
   }
 }
 
+// NEW: Verify email OTP
+async function verifyEmailOtp(req, res, next) {
+  try {
+    const { email, otp } = req.body;
+
+    const result = await authService.verifyEmailOtpService({
+      email,
+      otp,
+    });
+
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Resend OTP (email verify OR forgot password)
+async function resendEmailOtp(req, res, next) {
+  try {
+    const { email, purpose, mobile } = req.body;
+
+    const result = await authService.resendEmailOtpService({
+      email,
+      purpose, // "email_verify" or "forgot_password"
+      mobile,
+    });
+
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Login user
 async function login(req, res, next) {
   try {
@@ -35,12 +68,12 @@ async function login(req, res, next) {
   }
 }
 
-// Send OTP for forgot password
+// Send OTP for forgot password (EMAIL ONLY)
 async function sendForgotPasswordOtp(req, res, next) {
   try {
-    const { mobile } = req.body;
+    const { email, mobile } = req.body;
 
-    const result = await authService.sendForgotPasswordOtp({ mobile });
+    const result = await authService.sendForgotPasswordOtp({ email, mobile });
 
     return res.json(result);
   } catch (err) {
@@ -48,13 +81,13 @@ async function sendForgotPasswordOtp(req, res, next) {
   }
 }
 
-// Verify OTP & reset password
+// Verify OTP & reset password (EMAIL ONLY)
 async function verifyForgotPasswordOtp(req, res, next) {
   try {
-    const { mobile, otp, newPassword } = req.body;
+    const { email, otp, newPassword } = req.body;
 
     const result = await authService.verifyForgotPasswordOtp({
-      mobile,
+      email,
       otp,
       newPassword,
     });
@@ -67,6 +100,8 @@ async function verifyForgotPasswordOtp(req, res, next) {
 
 module.exports = {
   register,
+  verifyEmailOtp,
+  resendEmailOtp,
   login,
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,

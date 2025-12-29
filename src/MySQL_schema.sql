@@ -71,6 +71,8 @@ CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   full_name VARCHAR(150) NOT NULL,
   email VARCHAR(150) NULL,
+  email_verified TINYINT(1) DEFAULT 0,
+  email_verified_at DATETIME NULL,
   mobile VARCHAR(30) NOT NULL,
   password_hash VARCHAR(255) NOT NULL,
   address VARCHAR(255) NULL,
@@ -94,12 +96,14 @@ CREATE TABLE users (
 CREATE TABLE otp_codes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   mobile VARCHAR(30) NOT NULL,
+  email VARCHAR(150) NULL,
   otp VARCHAR(10) NOT NULL,
-  purpose ENUM('forgot_password','login','other') DEFAULT 'forgot_password',
+  purpose ENUM('forgot_password','email_verify','login','other') DEFAULT 'forgot_password',
   expires_at DATETIME NOT NULL,
   used_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_otp_mobile (mobile)
+  INDEX idx_otp_mobile (mobile),
+  INDEX idx_otp_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 3. Motor Insurance

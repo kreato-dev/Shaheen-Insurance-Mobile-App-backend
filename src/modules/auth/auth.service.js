@@ -2,6 +2,8 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { query } = require('../../config/db');
+const { sendOtpEmail } = require('../../utils/mailer');
+const { createEmailOtp, verifyEmailOtp } = require('./otp.service');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
@@ -35,6 +37,9 @@ function sanitizeUser(user) {
 
 /**
  * Register new user
+ * - Keep mobile for login
+ * - Send OTP to email for verification
+ * - Save user with email_verified=0
  */
 async function registerUser({ fullName, email, mobile, password }) {
   if (!fullName || !mobile || !password || !email) {
@@ -44,7 +49,7 @@ async function registerUser({ fullName, email, mobile, password }) {
   // Check if mobile or email already exists
   const existing = await query(
     'SELECT id FROM users WHERE mobile = ? OR (email IS NOT NULL AND email = ?) LIMIT 1',
-    [mobile, email || null]
+    [mobile, email]
   );
 
   if (existing.length > 0) {
@@ -53,27 +58,97 @@ async function registerUser({ fullName, email, mobile, password }) {
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const result = await query(
-    `INSERT INTO users (full_name, email, mobile, password_hash, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'active', NOW(), NOW())`,
-    [fullName, email || null, mobile, passwordHash]
+  // IMPORTANT:
+  // email_verified = 0 because we will verify using OTP
+  await query(
+    `INSERT INTO users (full_name, email, mobile, password_hash, status, email_verified, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'active', 0, NOW(), NOW())`,
+    [fullName, email, mobile, passwordHash]
   );
 
-  const inserted = await query('SELECT * FROM users WHERE id = ?', [
-    result.insertId,
-  ]);
+  // Generate OTP for email verification and send it
+  // OTP is stored in DB (otp_codes), mailer sends email via SMTP
+  const { otp } = await createEmailOtp({
+    mobile,
+    email,
+    purpose: 'email_verify',
+    expiresMinutes: 2,
+  });
 
-  const user = inserted[0];
-  const token = generateJwt(user);
+  await sendOtpEmail({
+    to: email,
+    otp,
+    purpose: 'email_verify',
+    expiresMinutes: 2,
+  });
 
+  // We don't auto-login here because email is not verified yet.
+  // Frontend should call /verify-email-otp then login.
   return {
-    user: sanitizeUser(user),
-    token,
+    message: 'Registered successfully. OTP sent to email for verification.',
+    email,
   };
 }
 
 /**
+ * Verify email OTP
+ * - verifies OTP from DB
+ * - updates users.email_verified = 1
+ */
+async function verifyEmailOtpService({ email, otp }) {
+  if (!email || !otp) throw httpError(400, 'email and otp are required');
+
+  await verifyEmailOtp({ email, otp, purpose: 'email_verify' });
+
+  await query(
+    `UPDATE users
+        SET email_verified = 1,
+            email_verified_at = NOW(),
+            updated_at = NOW()
+      WHERE email = ?
+      LIMIT 1`,
+    [email]
+  );
+
+  return { message: 'Email verified successfully' };
+}
+
+/**
+ * Re-send email OTP if user requested
+ */
+
+async function resendEmailOtpService({ email, purpose, mobile }) {
+  if (!email) throw httpError(400, 'email is required');
+  if (!mobile) throw httpError(400, 'mobile is required');
+
+  const allowed = new Set(['email_verify', 'forgot_password']);
+  const p = (purpose || 'email_verify').toLowerCase();
+  if (!allowed.has(p)) throw httpError(400, 'purpose must be email_verify or forgot_password');
+
+  // Optional rule: if purpose=email_verify and user already verified, block resend
+  if (p === 'email_verify') {
+    const u = await query('SELECT email_verified FROM users WHERE email = ? LIMIT 1', [email]);
+    if (!u.length) throw httpError(404, 'User not found');
+    if (u[0].email_verified === 1) {
+      return { message: 'Email is already verified.' };
+    }
+  }
+
+  const expiresMinutes = p === 'forgot_password' ? 10 : 5;
+
+  // Create OTP in DB (same logic as other flows)
+  const { otp } = await createEmailOtp({ mobile, email, purpose: p, expiresMinutes });
+
+  // Send it via SMTP (provider swappable)
+  await sendOtpEmail({ to: email, otp, purpose: p, expiresMinutes });
+
+  return { message: 'OTP resent successfully' };
+}
+
+
+/**
  * Login user with mobile + password
+ * Block login if email not verified
  */
 async function loginUser({ mobile, password }) {
   if (!mobile || !password) {
@@ -96,6 +171,11 @@ async function loginUser({ mobile, password }) {
     throw httpError(401, 'Invalid mobile or password');
   }
 
+  // force email verification before login:
+  if (user.email_verified === 0) {
+    throw httpError(403, 'Email is not verified. Please verify OTP first.');
+  }
+
   const token = generateJwt(user);
 
   return {
@@ -105,80 +185,71 @@ async function loginUser({ mobile, password }) {
 }
 
 /**
- * Generate OTP for forgot password
+ * Forgot password OTP (EMAIL ONLY)
+ * - user enters email
+ * - we create otp purpose='forgot_password'
+ * - send email
+ *
+ * Security note:
+ * we return a generic message even if email not found
  */
-async function sendForgotPasswordOtp({ mobile }) {
+async function sendForgotPasswordOtp({ email, mobile }) {
+  if (!email) {
+    throw httpError(400, 'email is required');
+  }
   if (!mobile) {
     throw httpError(400, 'mobile is required');
   }
 
   const users = await query(
-    'SELECT id FROM users WHERE mobile = ? LIMIT 1',
-    [mobile]
+    'SELECT id FROM users WHERE email = ? LIMIT 1',
+    [email]
   );
 
+  // Do not reveal if user exists or not (security)
   if (users.length === 0) {
-    throw httpError(404, 'User with this mobile not found');
+    return { message: 'If an account exists, OTP has been sent to email.' };
   }
 
-  const otp = String(Math.floor(100000 + Math.random() * 900000)); // 6-digit
+  const { otp } = await createEmailOtp({
+    mobile,
+    email,
+    purpose: 'forgot_password',
+    expiresMinutes: 2,
+  });
 
-  await query(
-    `INSERT INTO otp_codes (mobile, otp, purpose, expires_at, created_at)
-     VALUES (?, ?, 'forgot_password', DATE_ADD(NOW(), INTERVAL 10 MINUTE), NOW())`,
-    [mobile, otp]
-  );
+  await sendOtpEmail({
+    to: email,
+    otp,
+    purpose: 'forgot_password',
+    expiresMinutes: 2,
+  });
 
-  // In real life: send via SMS provider.
-  // For dev, you can optionally return OTP if not in production.
-  const includeOtp = process.env.NODE_ENV !== 'production';
-
-  return {
-    message: 'OTP generated successfully',
-    ...(includeOtp ? { otp } : {}),
-  };
+  return { message: 'If an account exists, OTP has been sent to email.' };
 }
 
 /**
- * Verify OTP and reset password
+ * Verify OTP and reset password (EMAIL ONLY)
  */
-async function verifyForgotPasswordOtp({ mobile, otp, newPassword }) {
-  if (!mobile || !otp || !newPassword) {
-    throw httpError(400, 'mobile, otp and New Password are required');
+async function verifyForgotPasswordOtp({ email, otp, newPassword }) {
+  if (!email || !otp || !newPassword) {
+    throw httpError(400, 'email, otp and New Password are required');
   }
 
-  const otpRows = await query(
-    `SELECT * FROM otp_codes
-       WHERE mobile = ? AND otp = ? AND purpose = 'forgot_password'
-         AND used_at IS NULL
-       ORDER BY created_at DESC
-       LIMIT 1`,
-    [mobile, otp]
-  );
-
-  if (otpRows.length === 0) {
-    throw httpError(400, 'Invalid OTP');
-  }
-
-  const otpRow = otpRows[0];
-
-  const expiryRows = await query('SELECT NOW() AS now');
-  const now = expiryRows[0].now;
-
-  if (new Date(now) > new Date(otpRow.expires_at)) {
-    throw httpError(400, 'OTP has expired');
-  }
+  // Verify OTP from DB and mark used
+  await verifyEmailOtp({ email, otp, purpose: 'forgot_password' });
 
   // Update user password
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
   const userRows = await query(
-    'SELECT id FROM users WHERE mobile = ? LIMIT 1',
-    [mobile]
+    'SELECT id FROM users WHERE email = ? LIMIT 1',
+    [email]
   );
 
   if (userRows.length === 0) {
-    throw httpError(404, 'User not found for this mobile');
+    // Keep same message pattern or throw — your call
+    throw httpError(404, 'User not found for this email');
   }
 
   const user = userRows[0];
@@ -186,12 +257,6 @@ async function verifyForgotPasswordOtp({ mobile, otp, newPassword }) {
   await query(
     'UPDATE users SET password_hash = ?, updated_at = NOW() WHERE id = ?',
     [passwordHash, user.id]
-  );
-
-  // Mark OTP as used
-  await query(
-    'UPDATE otp_codes SET used_at = NOW() WHERE id = ?',
-    [otpRow.id]
   );
 
   return {
@@ -204,7 +269,7 @@ async function verifyForgotPasswordOtp({ mobile, otp, newPassword }) {
  */
 async function getUserProfile(userId) {
   const rows = await query(
-    `SELECT id, full_name, email, mobile, address, city_id, cnic, cnic_expiry,
+    `SELECT id, full_name, email, email_verified, email_verified_at, mobile, address, city_id, cnic, cnic_expiry,
             dob, nationality, gender, status, created_at, updated_at
        FROM users
       WHERE id = ?`,
@@ -271,6 +336,8 @@ async function updateUserProfile(userId, data) {
 
 module.exports = {
   registerUser,
+  verifyEmailOtpService,
+  resendEmailOtpService,
   loginUser,
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,
