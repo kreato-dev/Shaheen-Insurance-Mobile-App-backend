@@ -1,8 +1,11 @@
--- Make sure you are using your DB first
+-- =========================================================
+-- SHAHEEN APP - UPDATED SCHEMA (ADMIN + REVIEW/PAYMENT/REFUND)
+-- =========================================================
+
 -- CREATE DATABASE shaheen_app CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 -- USE shaheen_app;
 
--- 1. Static / Lookup Tables
+-- 1) Static / Lookup Tables
 CREATE TABLE cities (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
@@ -34,18 +37,14 @@ CREATE TABLE vehicle_variants (
   submake_id INT NOT NULL,
   model_year INT NOT NULL,
   name VARCHAR(150) NOT NULL,
-
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
   CONSTRAINT fk_vehicle_variants_make
     FOREIGN KEY (make_id) REFERENCES vehicle_makes(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
-
   CONSTRAINT fk_vehicle_variants_submake
     FOREIGN KEY (submake_id) REFERENCES vehicle_submakes(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
-
   UNIQUE KEY uq_vehicle_variant (make_id, submake_id, model_year, name),
   INDEX idx_vehicle_variants_filter (make_id, submake_id, model_year)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -65,8 +64,7 @@ CREATE TABLE travel_destinations (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2. Users & Auth
-
+-- 2) Users (Customers) + OTP
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   full_name VARCHAR(150) NOT NULL,
@@ -83,7 +81,7 @@ CREATE TABLE users (
   nationality VARCHAR(100) NULL,
   gender ENUM('male','female','other') NULL,
   status ENUM('active','inactive') DEFAULT 'active',
-  role ENUM('customer','admin') NOT NULL DEFAULT 'customer',
+  role ENUM('customer') NOT NULL DEFAULT 'customer',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_mobile (mobile),
@@ -106,12 +104,61 @@ CREATE TABLE otp_codes (
   INDEX idx_otp_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 3. Motor Insurance
+-- 2.1) Admins (Dedicated Table - Security)
+CREATE TABLE admins (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(150) NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  mobile VARCHAR(30) NULL,
+  password_hash VARCHAR(255) NOT NULL,
 
+  role ENUM('SUPER_ADMIN','OPERATIONS_ADMIN','FINANCE_ADMIN','SUPPORT_ADMIN')
+    NOT NULL DEFAULT 'OPERATIONS_ADMIN',
+
+  status ENUM('active','inactive') DEFAULT 'active',
+
+  last_login_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_admins_email (email),
+  UNIQUE KEY uq_admins_mobile (mobile)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2.2) Admin Sessions (Session + Inactivity Timeout)
+CREATE TABLE admin_sessions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_id INT NOT NULL,
+
+  -- store HASH of token (never store raw token in DB)
+  token_hash CHAR(64) NOT NULL,
+
+  ip VARCHAR(45) NULL,
+  user_agent VARCHAR(255) NULL,
+
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_activity_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  -- absolute expiry (example: 7 days), plus inactivity expiry in middleware
+  expires_at DATETIME NOT NULL,
+
+  revoked_at DATETIME NULL,
+
+  UNIQUE KEY uq_admin_session_token (token_hash),
+  INDEX idx_admin_sessions_admin (admin_id),
+  INDEX idx_admin_sessions_exp (expires_at),
+
+  CONSTRAINT fk_admin_sessions_admin
+    FOREIGN KEY (admin_id) REFERENCES admins(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 3) Motor Insurance Proposals (Updated lifecycle fields)
 CREATE TABLE motor_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
-  -- Personal details
+
+  -- Personal
   name VARCHAR(150) NOT NULL,
   address VARCHAR(255) NOT NULL,
   city_id INT NOT NULL,
@@ -121,7 +168,7 @@ CREATE TABLE motor_proposals (
   nationality VARCHAR(100) NULL,
   gender ENUM('male','female','other') NULL,
 
-  -- Vehicle details
+  -- Vehicle
   product_type ENUM('private','commercial') NOT NULL,
   registration_number VARCHAR(50) NULL,
   applied_for TINYINT(1) DEFAULT 0,
@@ -142,9 +189,48 @@ CREATE TABLE motor_proposals (
   sum_insured DECIMAL(14,2) NULL,
   premium DECIMAL(14,2) NULL,
 
-  status ENUM('draft','submitted','approved','rejected','paid','cancelled') DEFAULT 'submitted',
+  -- NEW: lifecycle & admin review
+  submission_status ENUM('draft','submitted') NOT NULL DEFAULT 'submitted',
+
+  payment_status ENUM('unpaid','paid') NOT NULL DEFAULT 'unpaid',
+  paid_at DATETIME NULL,
+
+  review_status ENUM('not_applicable','pending_review','reupload_required','approved','rejected')
+    NOT NULL DEFAULT 'not_applicable',
+
+  submitted_at DATETIME NULL,
+  expires_at DATETIME NULL, -- set when submitted & unpaid: NOW()+INTERVAL 7 DAY
+
+  admin_last_action_by INT NULL,
+  admin_last_action_at DATETIME NULL,
+
+  rejection_reason TEXT NULL,
+
+  -- Refund workflow (only meaningful when rejected + paid)
+  refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
+    NOT NULL DEFAULT 'not_applicable',
+
+  refund_amount DECIMAL(14,2) NULL,
+  refund_reference VARCHAR(100) NULL,
+  refund_remarks TEXT NULL,
+  refund_evidence_path VARCHAR(255) NULL,
+  refund_initiated_at DATETIME NULL,
+  refund_processed_at DATETIME NULL,
+  closed_at DATETIME NULL,
+
+  -- Future: policy issue module
+  policy_status ENUM('not_issued','active','expired') NOT NULL DEFAULT 'not_issued',
+  policy_no VARCHAR(100) NULL,
+  policy_issued_at DATETIME NULL,
+  policy_expires_at DATETIME NULL,
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_motor_user (user_id),
+  INDEX idx_motor_payment (payment_status),
+  INDEX idx_motor_review (review_status),
+  INDEX idx_motor_expires (expires_at),
 
   CONSTRAINT fk_motor_proposals_user
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -163,10 +249,13 @@ CREATE TABLE motor_proposals (
     ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_motor_proposals_tracker
     FOREIGN KEY (tracker_company_id) REFERENCES tracker_companies(id)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+
+  CONSTRAINT fk_motor_admin_last_action
+    FOREIGN KEY (admin_last_action_by) REFERENCES admins(id)
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-  -- motor proposal documnent images
 CREATE TABLE motor_documents (
   id INT AUTO_INCREMENT PRIMARY KEY,
   proposal_id INT NOT NULL,
@@ -180,7 +269,6 @@ CREATE TABLE motor_documents (
   UNIQUE KEY uq_motor_doc_unique (proposal_id, doc_type, side)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-  -- motor vehicle images
 CREATE TABLE motor_vehicle_images (
   id INT AUTO_INCREMENT PRIMARY KEY,
   proposal_id INT NOT NULL,
@@ -196,12 +284,7 @@ CREATE TABLE motor_vehicle_images (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 4. Travel Insurance
-
-/* ==============================================================
-   TRAVEL PRICING CATALOG (Normalized) a/c to TPL travel brochure
-   ============================================================== */
-
+-- 4) Travel pricing catalog (unchanged)
 CREATE TABLE travel_packages (
   id INT AUTO_INCREMENT PRIMARY KEY,
   code ENUM('DOMESTIC','HAJJ_UMRAH_ZIARAT','INTERNATIONAL','STUDENT_GUARD') NOT NULL UNIQUE,
@@ -241,26 +324,18 @@ CREATE TABLE travel_plans (
 CREATE TABLE travel_plan_pricing_slabs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   plan_id INT NOT NULL,
-
   slab_label VARCHAR(50) NOT NULL,
   min_days INT NOT NULL,
   max_days INT NOT NULL,
-
   is_multi_trip TINYINT(1) DEFAULT 0,
   max_trip_days INT NULL,
-
   premium DECIMAL(14,2) NOT NULL,
-
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_plan_days (plan_id, min_days, max_days, is_multi_trip),
   CONSTRAINT fk_pricing_plan
     FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-/* =========================================================
-   RULES
-   ========================================================= */
 
 CREATE TABLE travel_package_rules (
   id INT AUTO_INCREMENT PRIMARY KEY,
@@ -277,8 +352,8 @@ CREATE TABLE travel_age_loadings (
   package_id INT NOT NULL,
   min_age INT NOT NULL,
   max_age INT NOT NULL,
-  loading_percent INT NOT NULL, -- 100 / 150 / 200 etc
-  max_trip_days INT NULL,       -- for the 90-day-per-trip restriction on multi-trip
+  loading_percent INT NOT NULL,
+  max_trip_days INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uq_age_band (package_id, min_age, max_age),
   CONSTRAINT fk_age_loadings_package
@@ -286,13 +361,11 @@ CREATE TABLE travel_age_loadings (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/* =========================================================
-   PROPOSALS (4 TABLES) + CHILD TABLES
-   ========================================================= */
+-- 4.1) Travel proposals (same new lifecycle fields, repeated across 4 tables)
+-- Helper: each travel_*_proposals includes:
+-- submission_status, payment_status, review_status, expires_at, rejection_reason, refund fields, policy fields, admin last action
 
-/* --------------------------
-   1) DOMESTIC
--------------------------- */
+-- DOMESTIC
 CREATE TABLE travel_domestic_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
@@ -321,16 +394,53 @@ CREATE TABLE travel_domestic_proposals (
   base_premium DECIMAL(14,2) NOT NULL,
   final_premium DECIMAL(14,2) NOT NULL,
 
-  status ENUM('draft','submitted','approved','rejected','paid','cancelled') DEFAULT 'submitted',
+  submission_status ENUM('draft','submitted') NOT NULL DEFAULT 'submitted',
+
+  payment_status ENUM('unpaid','paid') NOT NULL DEFAULT 'unpaid',
+  paid_at DATETIME NULL,
+
+  review_status ENUM('not_applicable','pending_review','reupload_required','approved','rejected')
+    NOT NULL DEFAULT 'not_applicable',
+
+  submitted_at DATETIME NULL,
+  expires_at DATETIME NULL,
+
+  admin_last_action_by INT NULL,
+  admin_last_action_at DATETIME NULL,
+
+  rejection_reason TEXT NULL,
+
+  refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
+    NOT NULL DEFAULT 'not_applicable',
+  refund_amount DECIMAL(14,2) NULL,
+  refund_reference VARCHAR(100) NULL,
+  refund_remarks TEXT NULL,
+  refund_evidence_path VARCHAR(255) NULL,
+  refund_initiated_at DATETIME NULL,
+  refund_processed_at DATETIME NULL,
+  closed_at DATETIME NULL,
+
+  policy_status ENUM('not_issued','active','expired') NOT NULL DEFAULT 'not_issued',
+  policy_no VARCHAR(100) NULL,
+  policy_issued_at DATETIME NULL,
+  policy_expires_at DATETIME NULL,
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_dom_pay (payment_status),
+  INDEX idx_dom_review (review_status),
+  INDEX idx_dom_exp (expires_at),
 
   CONSTRAINT fk_domestic_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_domestic_city FOREIGN KEY (city_id) REFERENCES cities(id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_domestic_plan FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
-    ON DELETE RESTRICT ON UPDATE CASCADE
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_domestic_admin_last_action
+    FOREIGN KEY (admin_last_action_by) REFERENCES admins(id)
+    ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE travel_domestic_family_members (
@@ -361,9 +471,7 @@ CREATE TABLE travel_domestic_destinations_selected (
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/* --------------------------
-   2) HAJJ / UMRAH / ZIARAT
--------------------------- */
+-- HAJJ/UMRAH/ZIARAT
 CREATE TABLE travel_huj_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
@@ -392,16 +500,51 @@ CREATE TABLE travel_huj_proposals (
   base_premium DECIMAL(14,2) NOT NULL,
   final_premium DECIMAL(14,2) NOT NULL,
 
-  status ENUM('draft','submitted','approved','rejected','paid','cancelled') DEFAULT 'submitted',
+  submission_status ENUM('draft','submitted') NOT NULL DEFAULT 'submitted',
+  payment_status ENUM('unpaid','paid') NOT NULL DEFAULT 'unpaid',
+  paid_at DATETIME NULL,
+
+  review_status ENUM('not_applicable','pending_review','reupload_required','approved','rejected')
+    NOT NULL DEFAULT 'not_applicable',
+
+  submitted_at DATETIME NULL,
+  expires_at DATETIME NULL,
+
+  admin_last_action_by INT NULL,
+  admin_last_action_at DATETIME NULL,
+  rejection_reason TEXT NULL,
+
+  refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
+    NOT NULL DEFAULT 'not_applicable',
+  refund_amount DECIMAL(14,2) NULL,
+  refund_reference VARCHAR(100) NULL,
+  refund_remarks TEXT NULL,
+  refund_evidence_path VARCHAR(255) NULL,
+  refund_initiated_at DATETIME NULL,
+  refund_processed_at DATETIME NULL,
+  closed_at DATETIME NULL,
+
+  policy_status ENUM('not_issued','active','expired') NOT NULL DEFAULT 'not_issued',
+  policy_no VARCHAR(100) NULL,
+  policy_issued_at DATETIME NULL,
+  policy_expires_at DATETIME NULL,
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_huj_pay (payment_status),
+  INDEX idx_huj_review (review_status),
+  INDEX idx_huj_exp (expires_at),
 
   CONSTRAINT fk_huj_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_huj_city FOREIGN KEY (city_id) REFERENCES cities(id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_huj_plan FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
-    ON DELETE RESTRICT ON UPDATE CASCADE
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_huj_admin_last_action
+    FOREIGN KEY (admin_last_action_by) REFERENCES admins(id)
+    ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE travel_huj_family_members (
@@ -432,9 +575,7 @@ CREATE TABLE travel_huj_destinations_selected (
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/* --------------------------
-   3) INTERNATIONAL
--------------------------- */
+-- INTERNATIONAL
 CREATE TABLE travel_international_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
@@ -446,7 +587,6 @@ CREATE TABLE travel_international_proposals (
 
   is_multi_trip TINYINT(1) DEFAULT 0,
   max_trip_days_applied INT NULL,
-
   age_loading_percent INT DEFAULT 0,
 
   first_name VARCHAR(100) NOT NULL,
@@ -468,16 +608,51 @@ CREATE TABLE travel_international_proposals (
   base_premium DECIMAL(14,2) NOT NULL,
   final_premium DECIMAL(14,2) NOT NULL,
 
-  status ENUM('draft','submitted','approved','rejected','paid','cancelled') DEFAULT 'submitted',
+  submission_status ENUM('draft','submitted') NOT NULL DEFAULT 'submitted',
+  payment_status ENUM('unpaid','paid') NOT NULL DEFAULT 'unpaid',
+  paid_at DATETIME NULL,
+
+  review_status ENUM('not_applicable','pending_review','reupload_required','approved','rejected')
+    NOT NULL DEFAULT 'not_applicable',
+
+  submitted_at DATETIME NULL,
+  expires_at DATETIME NULL,
+
+  admin_last_action_by INT NULL,
+  admin_last_action_at DATETIME NULL,
+  rejection_reason TEXT NULL,
+
+  refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
+    NOT NULL DEFAULT 'not_applicable',
+  refund_amount DECIMAL(14,2) NULL,
+  refund_reference VARCHAR(100) NULL,
+  refund_remarks TEXT NULL,
+  refund_evidence_path VARCHAR(255) NULL,
+  refund_initiated_at DATETIME NULL,
+  refund_processed_at DATETIME NULL,
+  closed_at DATETIME NULL,
+
+  policy_status ENUM('not_issued','active','expired') NOT NULL DEFAULT 'not_issued',
+  policy_no VARCHAR(100) NULL,
+  policy_issued_at DATETIME NULL,
+  policy_expires_at DATETIME NULL,
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_int_pay (payment_status),
+  INDEX idx_int_review (review_status),
+  INDEX idx_int_exp (expires_at),
 
   CONSTRAINT fk_int_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_int_city FOREIGN KEY (city_id) REFERENCES cities(id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_int_plan FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
-    ON DELETE RESTRICT ON UPDATE CASCADE
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_int_admin_last_action
+    FOREIGN KEY (admin_last_action_by) REFERENCES admins(id)
+    ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE travel_international_family_members (
@@ -508,9 +683,7 @@ CREATE TABLE travel_international_destinations_selected (
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/* --------------------------
-   4) STUDENT GUARD
--------------------------- */
+-- STUDENT GUARD
 CREATE TABLE travel_student_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
@@ -522,7 +695,6 @@ CREATE TABLE travel_student_proposals (
 
   university_name VARCHAR(255) NULL,
 
-  -- parent / guardian info (optional, keep for later)
   parent_name VARCHAR(150) NULL,
   parent_address VARCHAR(255) NULL,
   parent_cnic VARCHAR(25) NULL,
@@ -548,16 +720,51 @@ CREATE TABLE travel_student_proposals (
   base_premium DECIMAL(14,2) NOT NULL,
   final_premium DECIMAL(14,2) NOT NULL,
 
-  status ENUM('draft','submitted','approved','rejected','paid','cancelled') DEFAULT 'submitted',
+  submission_status ENUM('draft','submitted') NOT NULL DEFAULT 'submitted',
+  payment_status ENUM('unpaid','paid') NOT NULL DEFAULT 'unpaid',
+  paid_at DATETIME NULL,
+
+  review_status ENUM('not_applicable','pending_review','reupload_required','approved','rejected')
+    NOT NULL DEFAULT 'not_applicable',
+
+  submitted_at DATETIME NULL,
+  expires_at DATETIME NULL,
+
+  admin_last_action_by INT NULL,
+  admin_last_action_at DATETIME NULL,
+  rejection_reason TEXT NULL,
+
+  refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
+    NOT NULL DEFAULT 'not_applicable',
+  refund_amount DECIMAL(14,2) NULL,
+  refund_reference VARCHAR(100) NULL,
+  refund_remarks TEXT NULL,
+  refund_evidence_path VARCHAR(255) NULL,
+  refund_initiated_at DATETIME NULL,
+  refund_processed_at DATETIME NULL,
+  closed_at DATETIME NULL,
+
+  policy_status ENUM('not_issued','active','expired') NOT NULL DEFAULT 'not_issued',
+  policy_no VARCHAR(100) NULL,
+  policy_issued_at DATETIME NULL,
+  policy_expires_at DATETIME NULL,
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_std_pay (payment_status),
+  INDEX idx_std_review (review_status),
+  INDEX idx_std_exp (expires_at),
 
   CONSTRAINT fk_std_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT fk_std_city FOREIGN KEY (city_id) REFERENCES cities(id)
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_std_plan FOREIGN KEY (plan_id) REFERENCES travel_plans(id)
-    ON DELETE RESTRICT ON UPDATE CASCADE
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_std_admin_last_action
+    FOREIGN KEY (admin_last_action_by) REFERENCES admins(id)
+    ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE travel_student_destinations_selected (
@@ -571,12 +778,7 @@ CREATE TABLE travel_student_destinations_selected (
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-/* Student coverages are WITH_TUITION / WITHOUT_TUITION, so no family members table by default.
-   If later you need it, we can add travel_student_family_members similarly. */
-
-
--- 5. Payments
-
+-- 5) Payments (placeholder; keep but we’ll also keep payment_status in proposals for faster filtering)
 CREATE TABLE payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
@@ -597,8 +799,7 @@ CREATE TABLE payments (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 6. Notifications / FAQs / Support (for SOW support + notifications)   
-
+-- 6) Notifications / FAQs / Support
 CREATE TABLE notifications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
@@ -638,8 +839,7 @@ CREATE TABLE support_requests (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 7. Optional Policy / Claim Cache (for My Policy / My Claim)
-
+-- 7) Optional Policy / Claim Cache
 CREATE TABLE policies_cache (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,

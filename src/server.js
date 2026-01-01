@@ -13,4 +13,4 @@ setInterval(() => {
 app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}`);
 });
-console.log(new Date());
+// console.log("to verify DB and server timezone:",new Date());
