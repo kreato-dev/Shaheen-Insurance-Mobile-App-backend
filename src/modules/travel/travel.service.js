@@ -484,12 +484,27 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
          is_multi_trip, max_trip_days_applied, age_loading_percent,
          first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
          beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
-         base_premium, final_premium, status, created_at, updated_at)
+         base_premium, final_premium,
+
+        submission_status,
+        payment_status,
+        review_status,
+        refund_status,
+        submitted_at,
+        expires_at,
+        created_at, updated_at)
         VALUES (?, ?, ?, ?, ?,
                 ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
-                ?, ?, 'submitted', NOW(), NOW())
+                ?, ?,
+                'submitted',
+                'unpaid',
+                'not_applicable',
+                'not_applicable',
+                NOW(),
+                DATE_ADD(NOW(), INTERVAL 7 DAY),
+                NOW(), NOW())
       `;
       insertParams = [
         userId,
@@ -529,13 +544,31 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
          parent_name, parent_address, parent_cnic, parent_cnic_issue_date, parent_relation,
          first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
          beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
-         base_premium, final_premium, status, created_at, updated_at)
+         base_premium, final_premium,
+
+        submission_status,
+        payment_status,
+        review_status,
+        refund_status,
+        submitted_at,
+        expires_at,
+
+        created_at, updated_at)
         VALUES (?, ?, ?, ?, ?,
                 ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
-                ?, ?, 'submitted', NOW(), NOW())
+                ?, ?,
+
+                'submitted',
+                'unpaid',
+                'not_applicable',
+                'not_applicable',
+                NOW(),
+                DATE_ADD(NOW(), INTERVAL 7 DAY),
+
+                NOW(), NOW())
       `;
       insertParams = [
         userId,
@@ -578,11 +611,29 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         (user_id, plan_id, start_date, end_date, tenure_days,
          first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
          beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
-         base_premium, final_premium, status, created_at, updated_at)
+         base_premium, final_premium,
+
+        submission_status,
+        payment_status,
+        review_status,
+        refund_status,
+        submitted_at,
+        expires_at,
+
+        created_at, updated_at)
         VALUES (?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?,
-                ?, ?, 'submitted', NOW(), NOW())
+                ?, ?,
+
+                'submitted',
+                'unpaid',
+                'not_applicable',
+                'not_applicable',
+                NOW(),
+                DATE_ADD(NOW(), INTERVAL 7 DAY),
+
+                NOW(), NOW())
       `;
       insertParams = [
         userId,

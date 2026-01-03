@@ -16,9 +16,13 @@ const paymentRoutes = require('./modules/payment/payment.routes');
 const policyRoutes = require('./modules/policy/policy.routes');
 const claimRoutes = require('./modules/claim/claim.routes');
 const proposalsRoutes = require('./modules/proposals/proposals.routes');
+
+// Admin
 const adminRoutes = require('./modules/admin/admin.routes');
+const adminAuthRoutes = require('./modules/admin/auth/adminAuth.routes');
+
 const { errorHandler } = require('./middleware/errorHandler');
-const { authMiddleware, adminMiddleware } = require('./middleware/auth');
+const { authMiddleware } = require('./middleware/auth');
 
 const app = express();
 
@@ -49,13 +53,10 @@ app.use('/api/policies', authMiddleware, policyRoutes);
 app.use('/api/claims', authMiddleware, claimRoutes);
 app.use('/api/proposals', authMiddleware, proposalsRoutes);
 
-// Admin routes (auth + admin)
-app.use(
-  '/api/admin',
-  authMiddleware,
-  adminMiddleware,
-  adminRoutes
-);
+
+// Admin routes (new)
+app.use('/api/admin/auth', adminAuthRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Shortcut route to open the API playground
 app.get('/playground', (req, res) => {

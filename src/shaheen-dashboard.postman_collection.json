@@ -1,0 +1,126 @@
+{
+  "info": {
+    "_postman_id": "7b2c2e5f-3b72-4c1e-8a62-2d3af2a9d3f3",
+    "name": "Shaheen Insurance - Admin APIs (Phase 0-1)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Admin Auth + Session + RBAC + Unified Proposals Inbox (Phase 1 completed)"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000" },
+    { "key": "adminToken", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Admin Auth",
+      "item": [
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/admin/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@shaheen.com\",\n  \"password\": \"Admin@123\"\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.accessToken) pm.collectionVariables.set('adminToken', res.accessToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Me (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/auth/me"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+            ],
+            "url": "{{baseUrl}}/api/admin/auth/change-password",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"Admin@123\",\n  \"newPassword\": \"Admin@1234\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Proposals (Phase 1)",
+      "item": [
+        {
+          "name": "Unified Inbox (Fast - No Count)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/proposals?page=1&limit=20&includeTotal=false"
+          }
+        },
+        {
+          "name": "Unified Inbox (With Count)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/proposals?page=1&limit=20&includeTotal=true"
+          }
+        },
+        {
+          "name": "Pending Review",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/proposals?review_status=pending_review&page=1&limit=20"
+          }
+        },
+        {
+          "name": "Motor Only (Paid)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/proposals?type=MOTOR&payment_status=paid&page=1&limit=20"
+          }
+        },
+        {
+          "name": "Search Proposals",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/proposals?q=03001234567&page=1&limit=20"
+          }
+        },
+        {
+          "name": "Date Filter",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "url": "{{baseUrl}}/api/admin/proposals?from=2025-12-01&to=2026-01-01&page=1&limit=20"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -19,31 +19,5 @@ function authMiddleware(req, res, next) {
   }
 }
 
-async function adminMiddleware(req, res, next) {
-  try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ message: 'Unauthorized' });
-    }
-
-    const rows = await query(
-      'SELECT role FROM users WHERE id = ? LIMIT 1',
-      [userId]
-    );
-
-    if (rows.length === 0) {
-      return res.status(401).json({ message: 'User not found' });
-    }
-
-    const role = rows[0].role;
-    if (role !== 'admin') {
-      return res.status(403).json({ message: 'Forbidden: admin access required' });
-    }
-
-    next();
-  } catch (err) {
-    next(err);
-  }
-}
-
-module.exports = { authMiddleware, adminMiddleware };
+module.exports =
+{authMiddleware};

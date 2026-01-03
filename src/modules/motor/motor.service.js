@@ -322,8 +322,24 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
        (user_id, name, address, city_id, cnic, cnic_expiry, dob, nationality, gender,
         product_type, registration_number, applied_for, is_owner, owner_relation, engine_number, chassis_number,
         make_id, submake_id, model_year, assembly, variant_id, colour, tracker_company_id, accessories_value,
-        sum_insured, premium, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted', NOW(), NOW())`,
+        sum_insured, premium,
+
+        submission_status,
+        payment_status,
+        review_status,
+        refund_status,
+        submitted_at,
+        expires_at,
+
+        created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        'submitted',
+        'unpaid',
+        'not_applicable',
+        'not_applicable',
+        NOW(),
+        DATE_ADD(NOW(), INTERVAL 7 DAY),
+        NOW(), NOW())`,
       [
         userId,
         name,

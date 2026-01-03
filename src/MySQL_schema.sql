@@ -263,6 +263,9 @@ CREATE TABLE motor_documents (
   side ENUM('front','back') NOT NULL,
   file_path VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_motor_documents_proposal_id (proposal_id);
+
   CONSTRAINT fk_motor_documents_proposal
     FOREIGN KEY (proposal_id) REFERENCES motor_proposals(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
@@ -279,6 +282,9 @@ CREATE TABLE motor_vehicle_images (
   ) NOT NULL,
   file_path VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_motor_vehicle_images_proposal_id (proposal_id);
+
   CONSTRAINT fk_motor_vehicle_images_proposal
     FOREIGN KEY (proposal_id) REFERENCES motor_proposals(id)
     ON DELETE CASCADE ON UPDATE CASCADE
@@ -431,6 +437,8 @@ CREATE TABLE travel_domestic_proposals (
   INDEX idx_dom_pay (payment_status),
   INDEX idx_dom_review (review_status),
   INDEX idx_dom_exp (expires_at),
+  INDEX idx_td_created (created_at),
+  INDEX idx_td_user (user_id);
 
   CONSTRAINT fk_domestic_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
@@ -535,6 +543,8 @@ CREATE TABLE travel_huj_proposals (
   INDEX idx_huj_pay (payment_status),
   INDEX idx_huj_review (review_status),
   INDEX idx_huj_exp (expires_at),
+  INDEX idx_th_created (created_at),
+  INDEX idx_th_user (user_id);
 
   CONSTRAINT fk_huj_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
@@ -643,6 +653,8 @@ CREATE TABLE travel_international_proposals (
   INDEX idx_int_pay (payment_status),
   INDEX idx_int_review (review_status),
   INDEX idx_int_exp (expires_at),
+  INDEX idx_ti_created (created_at),
+  INDEX idx_ti_user (user_id);
 
   CONSTRAINT fk_int_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
@@ -755,6 +767,8 @@ CREATE TABLE travel_student_proposals (
   INDEX idx_std_pay (payment_status),
   INDEX idx_std_review (review_status),
   INDEX idx_std_exp (expires_at),
+  INDEX idx_ts_created (created_at),
+  INDEX idx_ts_user (user_id);
 
   CONSTRAINT fk_std_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
@@ -869,3 +883,53 @@ CREATE TABLE claims_cache (
     ON DELETE CASCADE ON UPDATE CASCADE,
   UNIQUE KEY uq_claims_cache (user_id, claim_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ADMIN DASHBOARD
+-- 1) Travel Admin View for Unified Proposals Inbox
+CREATE OR REPLACE VIEW vw_travel_proposals_admin AS
+SELECT
+  'DOMESTIC' AS travel_type,
+  p.id,
+  p.user_id,
+  p.plan_id,
+  p.start_date,
+  p.end_date,
+  p.tenure_days,
+  p.first_name,
+  p.last_name,
+  p.mobile,
+  p.email,
+  p.base_premium,
+  p.final_premium,
+  p.review_status,
+  p.payment_status,
+  p.created_at,
+  p.updated_at
+FROM travel_domestic_proposals p
+
+UNION ALL
+SELECT
+  'HAJJ_UMRAH_ZIARAT' AS travel_type,
+  p.id, p.user_id, p.plan_id, p.start_date, p.end_date, p.tenure_days,
+  p.first_name, p.last_name, p.mobile, p.email,
+  p.base_premium, p.final_premium, p.review_status, p.payment_status,
+  p.created_at, p.updated_at
+FROM travel_huj_proposals p
+
+UNION ALL
+SELECT
+  'INTERNATIONAL' AS travel_type,
+  p.id, p.user_id, p.plan_id, p.start_date, p.end_date, p.tenure_days,
+  p.first_name, p.last_name, p.mobile, p.email,
+  p.base_premium, p.final_premium, p.review_status, p.payment_status,
+  p.created_at, p.updated_at
+FROM travel_international_proposals p
+
+UNION ALL
+SELECT
+  'STUDENT_GUARD' AS travel_type,
+  p.id, p.user_id, p.plan_id, p.start_date, p.end_date, p.tenure_days,
+  p.first_name, p.last_name, p.mobile, p.email,
+  p.base_premium, p.final_premium, p.review_status, p.payment_status,
+  p.created_at, p.updated_at
+FROM travel_student_proposals p;
