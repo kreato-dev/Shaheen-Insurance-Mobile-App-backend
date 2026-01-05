@@ -40,15 +40,9 @@ function logPoolStats() {
   });
 }
 
-// async function queryWithTimeout(sql, params = [], timeoutMs = 15000) {
-//   const [rows] = await pool.execute({ sql, values: params, timeout: timeoutMs });
-//   return rows;
-// }
-
 module.exports = {
   pool,
   query,
-  // queryWithTimeout,
   getConnection,
   logPoolStats,
 };

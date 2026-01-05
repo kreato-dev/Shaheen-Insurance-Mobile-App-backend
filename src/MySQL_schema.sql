@@ -206,6 +206,9 @@ CREATE TABLE motor_proposals (
 
   rejection_reason TEXT NULL,
 
+  reupload_notes TEXT NULL,
+  reupload_required_docs JSON NULL,
+
   -- Refund workflow (only meaningful when rejected + paid)
   refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
     NOT NULL DEFAULT 'not_applicable',
@@ -264,7 +267,7 @@ CREATE TABLE motor_documents (
   file_path VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-  INDEX idx_motor_documents_proposal_id (proposal_id);
+  INDEX idx_motor_documents_proposal_id (proposal_id),
 
   CONSTRAINT fk_motor_documents_proposal
     FOREIGN KEY (proposal_id) REFERENCES motor_proposals(id)
@@ -283,7 +286,7 @@ CREATE TABLE motor_vehicle_images (
   file_path VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-  INDEX idx_motor_vehicle_images_proposal_id (proposal_id);
+  INDEX idx_motor_vehicle_images_proposal_id (proposal_id),
 
   CONSTRAINT fk_motor_vehicle_images_proposal
     FOREIGN KEY (proposal_id) REFERENCES motor_proposals(id)
@@ -416,6 +419,9 @@ CREATE TABLE travel_domestic_proposals (
 
   rejection_reason TEXT NULL,
 
+  reupload_notes TEXT NULL,
+  reupload_required_docs JSON NULL,
+
   refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
     NOT NULL DEFAULT 'not_applicable',
   refund_amount DECIMAL(14,2) NULL,
@@ -438,7 +444,7 @@ CREATE TABLE travel_domestic_proposals (
   INDEX idx_dom_review (review_status),
   INDEX idx_dom_exp (expires_at),
   INDEX idx_td_created (created_at),
-  INDEX idx_td_user (user_id);
+  INDEX idx_td_user (user_id),
 
   CONSTRAINT fk_domestic_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
@@ -522,6 +528,9 @@ CREATE TABLE travel_huj_proposals (
   admin_last_action_at DATETIME NULL,
   rejection_reason TEXT NULL,
 
+  reupload_notes TEXT NULL,
+  reupload_required_docs JSON NULL,
+
   refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
     NOT NULL DEFAULT 'not_applicable',
   refund_amount DECIMAL(14,2) NULL,
@@ -544,7 +553,7 @@ CREATE TABLE travel_huj_proposals (
   INDEX idx_huj_review (review_status),
   INDEX idx_huj_exp (expires_at),
   INDEX idx_th_created (created_at),
-  INDEX idx_th_user (user_id);
+  INDEX idx_th_user (user_id),
 
   CONSTRAINT fk_huj_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
@@ -632,6 +641,9 @@ CREATE TABLE travel_international_proposals (
   admin_last_action_at DATETIME NULL,
   rejection_reason TEXT NULL,
 
+  reupload_notes TEXT NULL,
+  reupload_required_docs JSON NULL,
+
   refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
     NOT NULL DEFAULT 'not_applicable',
   refund_amount DECIMAL(14,2) NULL,
@@ -654,7 +666,7 @@ CREATE TABLE travel_international_proposals (
   INDEX idx_int_review (review_status),
   INDEX idx_int_exp (expires_at),
   INDEX idx_ti_created (created_at),
-  INDEX idx_ti_user (user_id);
+  INDEX idx_ti_user (user_id),
 
   CONSTRAINT fk_int_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
@@ -746,6 +758,9 @@ CREATE TABLE travel_student_proposals (
   admin_last_action_at DATETIME NULL,
   rejection_reason TEXT NULL,
 
+  reupload_notes TEXT NULL,
+  reupload_required_docs JSON NULL,
+
   refund_status ENUM('not_applicable','refund_initiated','refund_processed','closed')
     NOT NULL DEFAULT 'not_applicable',
   refund_amount DECIMAL(14,2) NULL,
@@ -768,7 +783,7 @@ CREATE TABLE travel_student_proposals (
   INDEX idx_std_review (review_status),
   INDEX idx_std_exp (expires_at),
   INDEX idx_ts_created (created_at),
-  INDEX idx_ts_user (user_id);
+  INDEX idx_ts_user (user_id),
 
   CONSTRAINT fk_std_user FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
@@ -797,6 +812,7 @@ CREATE TABLE payments (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   application_type ENUM('MOTOR','TRAVEL') NOT NULL,
+  application_subtype ENUM('DOMESTIC','HAJJ_UMRAH_ZIARAT','INTERNATIONAL','STUDENT_GUARD') NULL,
   application_id INT NOT NULL,
   amount DECIMAL(14,2) NOT NULL,
   status ENUM('PENDING','SUCCESS','FAILED') DEFAULT 'PENDING',
@@ -808,6 +824,7 @@ CREATE TABLE payments (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_payments_user (user_id),
   INDEX idx_payments_app (application_type, application_id),
+  INDEX idx_payments_subtype (application_type, application_subtype, application_id);
   CONSTRAINT fk_payments_user
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE
@@ -899,10 +916,37 @@ SELECT
   p.last_name,
   p.mobile,
   p.email,
+  p.cnic,
   p.base_premium,
   p.final_premium,
-  p.review_status,
+
+  p.submission_status,
   p.payment_status,
+  p.paid_at,
+
+  p.review_status,
+  p.submitted_at,
+  p.expires_at,
+
+  p.admin_last_action_by,
+  p.admin_last_action_at,
+  p.rejection_reason,
+
+  p.reupload_notes,
+  p.reupload_required_docs,
+
+  p.refund_status,
+  p.refund_amount,
+  p.refund_reference,
+  p.refund_initiated_at,
+  p.refund_processed_at,
+  p.closed_at,
+
+  p.policy_status,
+  p.policy_no,
+  p.policy_issued_at,
+  p.policy_expires_at,
+
   p.created_at,
   p.updated_at
 FROM travel_domestic_proposals p
@@ -911,8 +955,15 @@ UNION ALL
 SELECT
   'HAJJ_UMRAH_ZIARAT' AS travel_type,
   p.id, p.user_id, p.plan_id, p.start_date, p.end_date, p.tenure_days,
-  p.first_name, p.last_name, p.mobile, p.email,
-  p.base_premium, p.final_premium, p.review_status, p.payment_status,
+  p.first_name, p.last_name, p.mobile, p.email, p.cnic,
+  p.base_premium, p.final_premium,
+
+  p.submission_status, p.payment_status, p.paid_at,
+  p.review_status, p.submitted_at, p.expires_at,
+  p.admin_last_action_by, p.admin_last_action_at, p.rejection_reason,
+  p.reupload_notes, p.reupload_required_docs,
+  p.refund_status, p.refund_amount, p.refund_reference, p.refund_initiated_at, p.refund_processed_at, p.closed_at,
+  p.policy_status, p.policy_no, p.policy_issued_at, p.policy_expires_at,
   p.created_at, p.updated_at
 FROM travel_huj_proposals p
 
@@ -920,8 +971,15 @@ UNION ALL
 SELECT
   'INTERNATIONAL' AS travel_type,
   p.id, p.user_id, p.plan_id, p.start_date, p.end_date, p.tenure_days,
-  p.first_name, p.last_name, p.mobile, p.email,
-  p.base_premium, p.final_premium, p.review_status, p.payment_status,
+  p.first_name, p.last_name, p.mobile, p.email, p.cnic,
+  p.base_premium, p.final_premium,
+
+  p.submission_status, p.payment_status, p.paid_at,
+  p.review_status, p.submitted_at, p.expires_at,
+  p.admin_last_action_by, p.admin_last_action_at, p.rejection_reason,
+  p.reupload_notes, p.reupload_required_docs,
+  p.refund_status, p.refund_amount, p.refund_reference, p.refund_initiated_at, p.refund_processed_at, p.closed_at,
+  p.policy_status, p.policy_no, p.policy_issued_at, p.policy_expires_at,
   p.created_at, p.updated_at
 FROM travel_international_proposals p
 
@@ -929,7 +987,14 @@ UNION ALL
 SELECT
   'STUDENT_GUARD' AS travel_type,
   p.id, p.user_id, p.plan_id, p.start_date, p.end_date, p.tenure_days,
-  p.first_name, p.last_name, p.mobile, p.email,
-  p.base_premium, p.final_premium, p.review_status, p.payment_status,
+  p.first_name, p.last_name, p.mobile, p.email, p.cnic,
+  p.base_premium, p.final_premium,
+
+  p.submission_status, p.payment_status, p.paid_at,
+  p.review_status, p.submitted_at, p.expires_at,
+  p.admin_last_action_by, p.admin_last_action_at, p.rejection_reason,
+  p.reupload_notes, p.reupload_required_docs,
+  p.refund_status, p.refund_amount, p.refund_reference, p.refund_initiated_at, p.refund_processed_at, p.closed_at,
+  p.policy_status, p.policy_no, p.policy_issued_at, p.policy_expires_at,
   p.created_at, p.updated_at
 FROM travel_student_proposals p;

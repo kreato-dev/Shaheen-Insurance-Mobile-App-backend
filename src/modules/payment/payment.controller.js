@@ -14,6 +14,7 @@ async function initiatePayment(req, res, next) {
       orderId,
       customerEmail,
       applicationType,
+      applicationSubtype, // ✅ NEW (required when applicationType=TRAVEL)
       applicationId,
     } = req.body;
 
@@ -23,6 +24,7 @@ async function initiatePayment(req, res, next) {
       orderId,
       customerEmail,
       applicationType,
+      applicationSubtype, // ✅ pass through
       applicationId,
     });
 

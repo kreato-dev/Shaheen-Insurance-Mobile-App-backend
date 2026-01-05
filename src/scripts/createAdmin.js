@@ -30,3 +30,7 @@ const { query } = require('../config/db');
   console.log('✅ Admin created:', email, 'role:', role);
   process.exit(0);
 })();
+
+/*
+npm run admin:create "Super Admin" admin@shaheen.com Admin@123 SUPER_ADMIN
+*/

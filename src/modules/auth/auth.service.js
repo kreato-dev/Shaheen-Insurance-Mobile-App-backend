@@ -55,7 +55,7 @@ async function registerUser({ fullName, email, mobile, password }) {
     [mobile, email]
   );
 
-  if (existingRows.length === 0) throw httpError(409, 'User with this mobile/email already exists');
+  // if (existingRows.length === 0) throw httpError(409, 'User with this mobile/email already exists');
 
   if (existingRows.length > 0) {
     const existing = existingRows[0];

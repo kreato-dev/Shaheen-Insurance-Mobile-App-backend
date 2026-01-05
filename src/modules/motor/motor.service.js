@@ -586,7 +586,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
   return {
     id: p.id,
-    status: p.status,
+    status: p.submission_status,
     createdAt: p.created_at,
     updatedAt: p.updated_at,
 

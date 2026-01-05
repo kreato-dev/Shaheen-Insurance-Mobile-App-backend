@@ -10,29 +10,29 @@ function buildTravelSelect() {
       CONCAT(COALESCE(v.first_name,''), ' ', COALESCE(v.last_name,'')) AS customer_name,
       v.mobile,
       v.email,
-      NULL AS cnic,
+      v.cnic,
 
       NULL AS sum_insured,
       v.final_premium,
 
-      'submitted' AS submission_status, -- (adjust if your travel tables have submission_status)
+      v.submission_status,
       v.payment_status,
-      NULL AS paid_at,
+      v.paid_at,
 
       v.review_status,
-      NULL AS submitted_at,
-      NULL AS expires_at,
+      v.submitted_at,
+      v.expires_at,
 
-      NULL AS admin_last_action_by,
-      NULL AS admin_last_action_at,
-      NULL AS rejection_reason,
+      v.admin_last_action_by,
+      v.admin_last_action_at,
+      v.rejection_reason,
 
-      NULL AS refund_status,
-      NULL AS refund_amount,
-      NULL AS refund_reference,
-      NULL AS refund_initiated_at,
-      NULL AS refund_processed_at,
-      NULL AS closed_at,
+      v.refund_status,
+      v.refund_amount,
+      v.refund_reference,
+      v.refund_initiated_at,
+      v.refund_processed_at,
+      v.closed_at,
 
       v.created_at,
       v.updated_at,
