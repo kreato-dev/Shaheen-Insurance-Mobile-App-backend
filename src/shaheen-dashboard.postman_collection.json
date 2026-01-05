@@ -1,13 +1,31 @@
 {
   "info": {
     "_postman_id": "7b2c2e5f-3b72-4c1e-8a62-2d3af2a9d3f3",
-    "name": "Shaheen Insurance - Admin APIs (Phase 0-1)",
+    "name": "Shaheen Insurance - Admin APIs (Phase 0-2)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Admin Auth + Session + RBAC + Unified Proposals Inbox (Phase 1 completed)"
+    "description": "Admin Auth + Session + RBAC + Unified Proposals Inbox (Phase 1) + Proposal Details & Review Actions (Phase 2)"
   },
   "variable": [
-    { "key": "baseUrl", "value": "http://localhost:4000" },
-    { "key": "adminToken", "value": "" }
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000"
+    },
+    {
+      "key": "adminToken",
+      "value": ""
+    },
+    {
+      "key": "motorProposalId",
+      "value": "1"
+    },
+    {
+      "key": "travelSubtype",
+      "value": "international"
+    },
+    {
+      "key": "travelProposalId",
+      "value": "1"
+    }
   ],
   "item": [
     {
@@ -17,7 +35,12 @@
           "name": "Login (Admin)",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/auth/login",
             "body": {
               "mode": "raw",
@@ -40,7 +63,12 @@
           "name": "Me (Admin)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/auth/me"
           }
         },
@@ -49,8 +77,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Authorization", "value": "Bearer {{adminToken}}" }
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
             ],
             "url": "{{baseUrl}}/api/admin/auth/change-password",
             "body": {
@@ -63,7 +97,12 @@
           "name": "Logout",
           "request": {
             "method": "POST",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/auth/logout"
           }
         }
@@ -76,7 +115,12 @@
           "name": "Unified Inbox (Fast - No Count)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/proposals?page=1&limit=20&includeTotal=false"
           }
         },
@@ -84,7 +128,12 @@
           "name": "Unified Inbox (With Count)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/proposals?page=1&limit=20&includeTotal=true"
           }
         },
@@ -92,7 +141,12 @@
           "name": "Pending Review",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/proposals?review_status=pending_review&page=1&limit=20"
           }
         },
@@ -100,15 +154,38 @@
           "name": "Motor Only (Paid)",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/proposals?type=MOTOR&payment_status=paid&page=1&limit=20"
+          }
+        },
+        {
+          "name": "Travel Only (Paid)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/proposals?type=TRAVEL&payment_status=paid&page=1&limit=20"
           }
         },
         {
           "name": "Search Proposals",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/proposals?q=03001234567&page=1&limit=20"
           }
         },
@@ -116,8 +193,172 @@
           "name": "Date Filter",
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{adminToken}}" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
             "url": "{{baseUrl}}/api/admin/proposals?from=2025-12-01&to=2026-01-01&page=1&limit=20"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin Proposals (Phase 2)",
+      "item": [
+        {
+          "name": "Motor Detail (Docs + Images)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/proposals/motor/{{motorProposalId}}"
+          },
+          "description": "Returns motor proposal details with motor_documents and motor_vehicle_images, plus reupload_notes/reupload_required_docs."
+        },
+        {
+          "name": "Travel Detail (by subtype)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/proposals/travel/{{travelSubtype}}/{{travelProposalId}}"
+          },
+          "description": "Returns travel proposal details with destinations and family members (where applicable), plus reupload_notes/reupload_required_docs."
+        },
+        {
+          "name": "Review Motor - Approve",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/proposals/motor/{{motorProposalId}}/review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Review Motor - Reupload Required",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/proposals/motor/{{motorProposalId}}/review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reupload_required\",\n  \"reupload_notes\": \"CNIC images are blurry. Upload clear front/back.\",\n  \"required_docs\": [\n    { \"doc_type\": \"CNIC\", \"side\": \"front\" },\n    { \"doc_type\": \"CNIC\", \"side\": \"back\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Review Motor - Reject",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/proposals/motor/{{motorProposalId}}/review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reject\",\n  \"rejection_reason\": \"Vehicle details mismatch with documents.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Review Travel - Approve",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/proposals/travel/{{travelSubtype}}/{{travelProposalId}}/review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Review Travel - Reupload Required",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/proposals/travel/{{travelSubtype}}/{{travelProposalId}}/review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reupload_required\",\n  \"reupload_notes\": \"Passport number missing. Upload passport scan again.\",\n  \"required_docs\": [\n    { \"doc_type\": \"PASSPORT\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Review Travel - Reject",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/proposals/travel/{{travelSubtype}}/{{travelProposalId}}/review",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reject\",\n  \"rejection_reason\": \"CNIC/Passport mismatch.\"\n}"
+            }
           }
         }
       ]
