@@ -36,7 +36,7 @@ async function getMyProposalsFeedService(userId, opts = {}) {
     params.push(userId);
 
     if (statusFilter) {
-      where += ` AND mp.status = ?`;
+      where += ` AND mp.submission_status = ?`;
       params.push(statusFilter);
     }
 
@@ -45,7 +45,7 @@ async function getMyProposalsFeedService(userId, opts = {}) {
         'MOTOR' AS type,
         NULL AS packageCode,
         mp.id AS proposalId,
-        mp.status AS status,
+        mp.submission_status AS submission_status,
         CONCAT(vm.name, ' ', vsm.name, ' ', mp.model_year) AS title,
         mp.registration_number AS subtitle,
         mp.premium AS premium,
@@ -65,7 +65,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
   params.push(userId);
 
   if (statusFilter) {
-    where += ` AND tp.status = ?`;
+    where += ` AND tp.submission_status = ?`;
     params.push(statusFilter);
   }
 
@@ -74,7 +74,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
       'TRAVEL' AS type,
       '${pkgCode}' AS packageCode,
       tp.id AS proposalId,
-      tp.status AS status,
+      tp.submission_status AS submission_status,
 
       -- plan info comes from travel_plans
       CONCAT('${pkgCode}', ' • ', pl.name) AS title,
@@ -116,7 +116,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
       type: r.type,                 // MOTOR | TRAVEL
       packageCode: r.packageCode,   // null for MOTOR, else travel pkg code
       proposalId: r.proposalId,
-      status: r.status,
+      submission_status: r.submission_status,
       title: r.title,
       subtitle: r.subtitle,
       premium: r.premium,

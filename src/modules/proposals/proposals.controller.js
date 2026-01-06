@@ -4,10 +4,10 @@ const { getMyProposalsFeedService } = require('./proposals.service');
 async function getMyProposalsFeed(req, res, next) {
   try {
     const userId = req.user.id;
-    const { status, page = 1, limit = 20 } = req.query;
+    const { submission_status, page = 1, limit = 20 } = req.query;
 
     const result = await getMyProposalsFeedService(userId, {
-      status,
+      submission_status,
       page: Number(page),
       limit: Number(limit),
     });
