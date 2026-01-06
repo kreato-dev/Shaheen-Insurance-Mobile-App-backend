@@ -317,6 +317,24 @@
           }
         },
         {
+          "name": "Get Countries",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/data/countries",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "data",
+                "countries"
+              ]
+            }
+          }
+        },
+        {
           "name": "Get Vehicle Makes",
           "request": {
             "method": "GET",
@@ -837,7 +855,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/proposals/my?status=submitted&page=1&limit=20",
+              "raw": "{{baseUrl}}/api/proposals/my?submission_status=submitted&page=1&limit=20",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -848,7 +866,7 @@
               ],
               "query": [
                 {
-                  "key": "status",
+                  "key": "submission_status",
                   "value": "submitted",
                   "description": "draft,submitted,approved,rejected,paid,cancelled"
                 },

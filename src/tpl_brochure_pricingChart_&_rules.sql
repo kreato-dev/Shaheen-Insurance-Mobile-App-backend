@@ -534,7 +534,7 @@ JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
 WHERE tp.code='BASIC';
 
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 151, 180, 0, NULL, 11560
+SELECT tp.id, '6 months', 151, 184, 0, NULL, 11560
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
@@ -542,7 +542,7 @@ WHERE tp.code='BASIC';
 
 -- 1 year multi-trip
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '1 year multi-trip', 365, 365, 1, 90, 15110
+SELECT tp.id, '1 year multi-trip', 185, 365, 1, 90, 15110
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
@@ -598,13 +598,13 @@ JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
 WHERE tp.code='SILVER';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 151, 180, 0, NULL, 13520
+SELECT tp.id, '6 months', 151, 184, 0, NULL, 13520
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
 WHERE tp.code='SILVER';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '1 year multi-trip', 365, 365, 1, 90, 14450
+SELECT tp.id, '1 year multi-trip', 185, 365, 1, 90, 14450
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
@@ -660,13 +660,13 @@ JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
 WHERE tp.code='GOLD';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 151, 180, 0, NULL, 49930
+SELECT tp.id, '6 months', 151, 184, 0, NULL, 49930
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
 WHERE tp.code='GOLD';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '1 year multi-trip', 365, 365, 1, 90, 21020
+SELECT tp.id, '1 year multi-trip', 185, 365, 1, 90, 21020
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
@@ -722,13 +722,13 @@ JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
 WHERE tp.code='DIAMOND';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 151, 180, 0, NULL, 60445
+SELECT tp.id, '6 months', 151, 184, 0, NULL, 60445
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
 WHERE tp.code='DIAMOND';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '1 year multi-trip', 365, 365, 1, 90, 30220
+SELECT tp.id, '1 year multi-trip', 185, 365, 1, 90, 30220
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='INDIVIDUAL'
@@ -786,13 +786,13 @@ JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
 WHERE tp.code='BASIC';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 151, 180, 0, NULL, 12810
+SELECT tp.id, '6 months', 151, 184, 0, NULL, 12810
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
 WHERE tp.code='BASIC';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '1 year multi-trip', 365, 365, 1, 90, 20365
+SELECT tp.id, '1 year multi-trip', 185, 365, 1, 90, 20365
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
@@ -848,13 +848,13 @@ JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
 WHERE tp.code='SILVER';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 151, 180, 0, NULL, 31270
+SELECT tp.id, '6 months', 151, 184, 0, NULL, 31270
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
 WHERE tp.code='SILVER';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '1 year multi-trip', 365, 365, 1, 90, 28905
+SELECT tp.id, '1 year multi-trip', 185, 365, 1, 90, 28905
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
@@ -910,13 +910,13 @@ JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
 WHERE tp.code='GOLD';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 151, 180, 0, NULL, 90670
+SELECT tp.id, '6 months', 151, 184, 0, NULL, 90670
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
 WHERE tp.code='GOLD';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '1 year multi-trip', 365, 365, 1, 90, 34160
+SELECT tp.id, '1 year multi-trip', 185, 365, 1, 90, 34160
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
@@ -972,13 +972,13 @@ JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
 WHERE tp.code='DIAMOND';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 151, 180, 0, NULL, 122205
+SELECT tp.id, '6 months', 151, 184, 0, NULL, 122205
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
 WHERE tp.code='DIAMOND';
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '1 year multi-trip', 365, 365, 1, 90, 48355
+SELECT tp.id, '1 year multi-trip', 185, 365, 1, 90, 48355
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='INTERNATIONAL'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='FAMILY'
@@ -1040,7 +1040,7 @@ WHERE tp.code='DIAMOND';
 
 -- PLATINUM
 INSERT INTO travel_plan_pricing_slabs (plan_id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium)
-SELECT tp.id, '6 months', 180, 184, 0, NULL, 51900
+SELECT tp.id, '6 months', 1, 184, 0, NULL, 51900
 FROM travel_plans tp
 JOIN travel_packages p ON p.id=tp.package_id AND p.code='STUDENT_GUARD'
 JOIN travel_coverages c ON c.id=tp.coverage_id AND c.code='WITH_TUITION'

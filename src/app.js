@@ -48,11 +48,14 @@ app.use('/api/data', dataRoutes);
 app.use('/api/user', authMiddleware, userRoutes);
 app.use('/api/motor', authMiddleware, motorRoutes);
 app.use('/api/travel', authMiddleware, travelRoutes);
-app.use('/api/payment', authMiddleware, paymentRoutes);
 app.use('/api/policies', authMiddleware, policyRoutes);
 app.use('/api/claims', authMiddleware, claimRoutes);
 app.use('/api/proposals', authMiddleware, proposalsRoutes);
 
+//payment.routes.js already does requireAuth on initiate and webhook is no-auth.
+app.use('/api/payment', 
+  // authMiddleware, 
+  paymentRoutes);
 
 // Admin routes (new)
 app.use('/api/admin/auth', adminAuthRoutes);

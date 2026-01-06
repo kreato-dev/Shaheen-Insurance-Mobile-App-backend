@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 uploads/
+src/modules/admin/users/
 
 # Environment variables
 .env

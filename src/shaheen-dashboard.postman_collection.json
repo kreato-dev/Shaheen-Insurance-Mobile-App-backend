@@ -530,6 +530,61 @@
           "description": "Upload refund evidence file. Field name: evidence. Set collection var refundEvidenceFile to an absolute path on your machine."
         }
       ]
+    },
+    {
+      "name": "Admin User Management (Phase 4A)",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/users?page=1&limit=20"
+          },
+          "description": "Read-only paginated user list. Accessible by SUPPORT_ADMIN / OPERATIONS_ADMIN."
+        },
+        {
+          "name": "Get User Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/users/1"
+          },
+          "description": "Returns full user profile (no password fields)."
+        },
+        {
+          "name": "Trigger Password Reset (Send OTP)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/users/1/password-reset/initiate",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"User requested password reset via support\"\n}"
+            }
+          },
+          "description": "Triggers OTP email using existing otp.service.js + mailer.js"
+        }
+      ]
     }
   ]
 }
