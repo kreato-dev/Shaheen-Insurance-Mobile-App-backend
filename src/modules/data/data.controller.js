@@ -30,6 +30,28 @@ async function getCities(req, res, next) {
 }
 
 /**
+ * GET /api/data/countries
+ */
+async function getCountries(req, res, next) {
+  try {
+    const rows = await query(
+      `
+      SELECT id, name
+      FROM countries
+      ORDER BY name ASC
+      `
+    );
+
+    return res.json({
+      success: true,
+      data: rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
  * GET /api/data/vehicle-makes
  */
 async function getVehicleMakes(req, res, next) {
@@ -178,6 +200,7 @@ async function getTravelDestinations(req, res, next) {
 
 module.exports = {
   getCities,
+  getCountries,
   getVehicleMakes,
   getVehicleSubmakes,
   getTrackerCompanies,

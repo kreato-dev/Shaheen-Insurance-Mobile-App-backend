@@ -6,6 +6,9 @@ const dataController = require('./data.controller');
 // GET /api/data/cities
 router.get('/cities', dataController.getCities);
 
+// GET /api/data/countries
+router.get('/countries', dataController.getCountries);
+
 // GET /api/data/vehicle-makes
 router.get('/vehicle-makes', dataController.getVehicleMakes);
 
