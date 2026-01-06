@@ -824,7 +824,7 @@ CREATE TABLE payments (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX idx_payments_user (user_id),
   INDEX idx_payments_app (application_type, application_id),
-  INDEX idx_payments_subtype (application_type, application_subtype, application_id);
+  INDEX idx_payments_subtype (application_type, application_subtype, application_id),
   CONSTRAINT fk_payments_user
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE

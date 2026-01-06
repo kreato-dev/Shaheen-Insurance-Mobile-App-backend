@@ -2,13 +2,13 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('./payment.controller');
-const { authMiddleware: requireAuth } = require('../../middleware/auth'); // user auth middleware
+const { validateInitiatePaymentBody } = require('./payment.validators');
 
 // POST /api/payment/initiate
 // User must be logged in
 router.post(
   '/initiate',
-  requireAuth,
+  validateInitiatePaymentBody,
   paymentController.initiatePayment
 );
 
@@ -17,6 +17,11 @@ router.post(
 router.post(
   '/webhook',
   paymentController.handleWebhook
+);
+
+router.post(
+  '/dev/mark-success',
+  paymentController.markSuccessDev
 );
 
 module.exports = router;

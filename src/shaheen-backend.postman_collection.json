@@ -715,10 +715,10 @@
       ]
     },
     {
-      "name": "Payment (Stubbed)",
+      "name": "Payment (Stubbed - Phase 3)",
       "item": [
         {
-          "name": "Initiate Payment",
+          "name": "Initiate Payment (MOTOR)",
           "request": {
             "method": "POST",
             "header": [
@@ -747,13 +747,19 @@
                 "initiate"
               ]
             }
-          }
+          },
+          "description": "Creates a payments row (PENDING) and returns PayFast paymentUrl. Proposal status does NOT change yet (until mark-success/webhook)."
         },
         {
-          "name": "Webhook (Manual test)",
+          "name": "Initiate Payment (TRAVEL - INTERNATIONAL)",
           "request": {
             "method": "POST",
             "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
               {
                 "key": "Content-Type",
                 "value": "application/json"
@@ -761,20 +767,54 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"m_payment_id\": \"TEST-ORDER-001\",\n  \"pf_payment_id\": \"GATEWAY-TXID-123\",\n  \"payment_status\": \"COMPLETE\"\n}"
+              "raw": "{\n  \"amount\": 19050,\n  \"orderId\": \"TRAVEL-INT-TEST-001\",\n  \"customerEmail\": \"ali@example.com\",\n  \"applicationType\": \"TRAVEL\",\n  \"applicationSubtype\": \"INTERNATIONAL\",\n  \"applicationId\": 1\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/payment/webhook",
+              "raw": "{{baseUrl}}/api/payment/initiate",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "api",
                 "payment",
-                "webhook"
+                "initiate"
               ]
             }
-          }
+          },
+          "description": "TRAVEL initiate MUST include applicationSubtype (DOMESTIC / HAJJ_UMRAH_ZIARAT / INTERNATIONAL / STUDENT_GUARD)."
+        },
+        {
+          "name": "Mark Payment SUCCESS (Manual / Stubbed)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paymentId\": 2,\n  \"gatewayTxnId\": \"MANUAL-TX-123\",\n  \"status\": \"SUCCESS\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payment/mark-success",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payment",
+                "mark-success"
+              ]
+            }
+          },
+          "description": "Stubbed success flow (until webhook is finalized). Sets payments.status=SUCCESS and updates the related proposal: payment_status='paid', paid_at=NOW(), review_status='pending_review'."
         }
       ]
     },

@@ -2,6 +2,7 @@
 const {
   initiatePaymentService,
   handleWebhookService,
+  markPaymentSuccessDev,
 } = require('./payment.service');
 
 // POST /api/payment/initiate
@@ -54,4 +55,17 @@ async function handleWebhook(req, res, next) {
   }
 }
 
-module.exports = { initiatePayment, handleWebhook };
+async function markSuccessDev(req, res, next) {
+  try {
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(404).json({ message: 'Not found' });
+    }
+    const { paymentId } = req.body;
+    const result = await markPaymentSuccessDev({ paymentId });
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { initiatePayment, handleWebhook, markSuccessDev };

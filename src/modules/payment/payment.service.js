@@ -1,6 +1,6 @@
 // src/modules/payment/payment.service.js
 const crypto = require('crypto');
-const { query } = require('../../config/db');
+const { query, getConnection } = require('../../config/db');
 
 const PAYFAST_MERCHANT_ID = process.env.PAYFAST_MERCHANT_ID;
 const PAYFAST_MERCHANT_KEY = process.env.PAYFAST_MERCHANT_KEY;
@@ -10,9 +10,9 @@ const PAYFAST_PROCESS_URL =
 
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
 const PAYFAST_RETURN_URL =
-  process.env.PAYFAST_RETURN_URL || 'http://localhost:4000/payment/success';
+  process.env.PAYFAST_RETURN_URL || `${APP_BASE_URL}/payment/success`;
 const PAYFAST_CANCEL_URL =
-  process.env.PAYFAST_CANCEL_URL || 'http://localhost:4000/payment/cancel';
+  process.env.PAYFAST_CANCEL_URL || `${APP_BASE_URL}/payment/cancel`;
 
 // Our backend webhook endpoint
 const PAYFAST_NOTIFY_URL = `${APP_BASE_URL}/api/payment/webhook`;
@@ -35,6 +35,7 @@ function formatAmount(amount) {
 // Helper: build signature according to PayFast-style rules
 function generateSignature(data) {
   const passphrase = PAYFAST_PASSPHRASE;
+
   const keys = Object.keys(data).sort();
   const paramString = keys
     .map((key) => `${key}=${encodeURIComponent(String(data[key]).trim())}`)
@@ -47,25 +48,52 @@ function generateSignature(data) {
   return crypto.createHash('md5').update(stringToSign).digest('hex');
 }
 
-const TRAVEL_SUBTYPES = new Set([
-  'DOMESTIC',
-  'HAJJ_UMRAH_ZIARAT',
-  'INTERNATIONAL',
-  'STUDENT_GUARD',
-]);
+function normalizeAppType(v) {
+  const t = String(v || '').trim().toUpperCase();
+  if (!['MOTOR', 'TRAVEL'].includes(t)) throw httpError(400, 'applicationType must be MOTOR or TRAVEL');
+  return t;
+}
 
-const TRAVEL_TABLE_BY_SUBTYPE = {
-  DOMESTIC: 'travel_domestic_proposals',
-  HAJJ_UMRAH_ZIARAT: 'travel_huj_proposals',
-  INTERNATIONAL: 'travel_international_proposals',
-  STUDENT_GUARD: 'travel_student_proposals',
-};
+// Your DB enum values (frontend sends these)
+function normalizeTravelSubtypeEnum(v) {
+  if (v == null || v === '') return null;
+  const s = String(v).trim().toUpperCase();
+  if (!['DOMESTIC', 'HAJJ_UMRAH_ZIARAT', 'INTERNATIONAL', 'STUDENT_GUARD'].includes(s)) {
+    throw httpError(
+      400,
+      'applicationSubtype must be DOMESTIC | HAJJ_UMRAH_ZIARAT | INTERNATIONAL | STUDENT_GUARD'
+    );
+  }
+  return s;
+}
+
+function getTravelProposalTableBySubtype(subtypeEnum) {
+  switch (subtypeEnum) {
+    case 'DOMESTIC':
+      return 'travel_domestic_proposals';
+    case 'HAJJ_UMRAH_ZIARAT':
+      return 'travel_huj_proposals';
+    case 'INTERNATIONAL':
+      return 'travel_international_proposals';
+    case 'STUDENT_GUARD':
+      return 'travel_student_proposals';
+    default:
+      return null;
+  }
+}
 
 /**
  * Initiate Payment
  * - Creates DB payment row with PENDING
  * - Builds PayFast URL + params
  * - Returns URL to frontend (WebView)
+ *
+ * req.body expected:
+ * - amount
+ * - customerEmail
+ * - applicationType: MOTOR | TRAVEL
+ * - applicationSubtype: (TRAVEL only) DOMESTIC | HAJJ_UMRAH_ZIARAT | INTERNATIONAL | STUDENT_GUARD
+ * - applicationId
  */
 async function initiatePaymentService({
   userId,
@@ -73,7 +101,7 @@ async function initiatePaymentService({
   orderId,
   customerEmail,
   applicationType,
-  applicationSubtype, // ✅ NEW (required for TRAVEL)
+  applicationSubtype, // IMPORTANT: TRAVEL enum from frontend
   applicationId,
 }) {
   if (!userId) throw httpError(401, 'User is required');
@@ -86,24 +114,16 @@ async function initiatePaymentService({
   }
 
   const cleanAmount = formatAmount(amount);
-  const appType = String(applicationType || '').toUpperCase();
+  const appType = normalizeAppType(applicationType);
 
-  if (!['MOTOR', 'TRAVEL'].includes(appType)) {
-    throw httpError(400, 'applicationType must be MOTOR or TRAVEL');
-  }
+  const appId = Number(applicationId);
+  if (!appId || Number.isNaN(appId)) throw httpError(400, 'Invalid applicationId');
 
-  // Normalize subtype
-  let appSubtype = applicationSubtype ? String(applicationSubtype).toUpperCase() : null;
+  const subtypeEnum =
+    appType === 'TRAVEL' ? normalizeTravelSubtypeEnum(applicationSubtype) : null;
 
-  if (appType === 'TRAVEL') {
-    if (!appSubtype || !TRAVEL_SUBTYPES.has(appSubtype)) {
-      throw httpError(
-        400,
-        'applicationSubtype is required for TRAVEL (DOMESTIC|HAJJ_UMRAH_ZIARAT|INTERNATIONAL|STUDENT_GUARD)'
-      );
-    }
-  } else {
-    appSubtype = null; // MOTOR has no subtype
+  if (appType === 'TRAVEL' && !subtypeEnum) {
+    throw httpError(400, 'applicationSubtype is required when applicationType=TRAVEL');
   }
 
   let finalOrderId = orderId;
@@ -111,49 +131,40 @@ async function initiatePaymentService({
     finalOrderId = `ORD-${appType}-${Date.now()}`;
   }
 
-  // Optional: validate that application exists
+  // Validate that application exists
   if (appType === 'MOTOR') {
     const rows = await query(
       'SELECT id FROM motor_proposals WHERE id = ? LIMIT 1',
-      [applicationId]
+      [appId]
     );
-    if (rows.length === 0) {
-      throw httpError(400, 'Invalid motor proposal (applicationId)');
-    }
-  } else if (appType === 'TRAVEL') {
-    const table = TRAVEL_TABLE_BY_SUBTYPE[appSubtype];
-    if (!table) {
-      throw httpError(400, 'Invalid applicationSubtype for TRAVEL');
-    }
+    if (rows.length === 0) throw httpError(400, 'Invalid motor proposal (applicationId)');
+  } else {
+    const table = getTravelProposalTableBySubtype(subtypeEnum);
+    if (!table) throw httpError(400, 'Invalid travel subtype');
+
     const rows = await query(
       `SELECT id FROM ${table} WHERE id = ? LIMIT 1`,
-      [applicationId]
+      [appId]
     );
-    if (rows.length === 0) {
-      throw httpError(400, `Invalid travel proposal (applicationId) for subtype ${appSubtype}`);
-    }
+    if (rows.length === 0) throw httpError(400, 'Invalid travel proposal (applicationId)');
   }
 
   // Insert payment record
-  // ✅ NOTE: payments table must have application_subtype column for this to work
   const insertResult = await query(
     `INSERT INTO payments
      (user_id, application_type, application_subtype, application_id, amount, status, gateway, order_id, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, 'PENDING', 'PayFast', ?, NOW(), NOW())`,
-    [userId, appType, appSubtype, applicationId, cleanAmount, finalOrderId]
+    [userId, appType, subtypeEnum, appId, cleanAmount, finalOrderId]
   );
 
   const paymentId = insertResult.insertId;
 
   if (!PAYFAST_MERCHANT_ID || !PAYFAST_MERCHANT_KEY) {
-    throw httpError(
-      500,
-      'Payment gateway not configured (merchant id/key missing)'
-    );
+    throw httpError(500, 'Payment gateway not configured (merchant id/key missing)');
   }
 
   const itemName =
-    appType === 'MOTOR' ? 'Motor Insurance Policy' : 'Travel Insurance Policy';
+    appType === 'MOTOR' ? 'Motor Insurance Policy' : `Travel Insurance Policy (${subtypeEnum})`;
 
   // Data we send to PayFast
   const pfData = {
@@ -162,7 +173,7 @@ async function initiatePaymentService({
     return_url: PAYFAST_RETURN_URL,
     cancel_url: PAYFAST_CANCEL_URL,
     notify_url: PAYFAST_NOTIFY_URL,
-    m_payment_id: paymentId,
+    m_payment_id: paymentId, // our internal ID to map back in webhook
     amount: cleanAmount,
     item_name: itemName,
     email_address: customerEmail,
@@ -190,10 +201,9 @@ async function initiatePaymentService({
  * Handle PayFast webhook
  * - Validate signature
  * - Update payment status (SUCCESS/FAILED)
- * - Update related proposal payment_status + review_status
+ * - On success: mark proposal as paid + move to pending_review
  *
- * Lifecycle rule:
- * Submitted + paid → Pending Review (review_status = pending_review)
+ * IMPORTANT: PayFast sends x-www-form-urlencoded (express.urlencoded())
  */
 async function handleWebhookService(payload) {
   if (!payload || typeof payload !== 'object') {
@@ -205,6 +215,7 @@ async function handleWebhookService(payload) {
     throw httpError(400, 'Missing signature from gateway');
   }
 
+  // We must not include signature itself when regenerating
   const dataForSign = { ...payload };
   delete dataForSign.signature;
 
@@ -217,111 +228,178 @@ async function handleWebhookService(payload) {
     throw httpError(400, 'Invalid payment signature');
   }
 
-  const paymentIdStr = payload['m_payment_id'];
-  const pfPaymentId =
-    payload['pf_payment_id'] || payload['payment_id'] || null;
-  const paymentStatus =
-    payload['payment_status'] || payload['status'] || 'FAILED';
+  const paymentIdStr = payload.m_payment_id || payload['m_payment_id'];
+  const pfPaymentId = payload.pf_payment_id || payload.payment_id || null;
+
+  // PayFast often uses payment_status: COMPLETE
+  const paymentStatusRaw = payload.payment_status || payload.status || 'FAILED';
+  const normalizedStatus = String(paymentStatusRaw).trim().toUpperCase();
 
   const paymentId = Number(paymentIdStr);
   if (!paymentId || Number.isNaN(paymentId)) {
     throw httpError(400, 'Invalid m_payment_id');
   }
 
-  const rows = await query(
-    'SELECT * FROM payments WHERE id = ? LIMIT 1',
-    [paymentId]
-  );
-  if (rows.length === 0) {
-    throw httpError(404, 'Payment record not found');
-  }
-
-  const payment = rows[0];
-
-  // Optional: validate amount matches
-  const amountFromGateway = payload['amount_gross'] || payload['amount'];
-  if (amountFromGateway) {
-    const expected = Number(payment.amount);
-    const actual = Number(amountFromGateway);
-    if (!Number.isNaN(actual) && Math.abs(expected - actual) > 1) {
-      throw httpError(400, 'Amount mismatch between gateway and system');
-    }
-  }
-
+  // Determine new status
   let newStatus = 'FAILED';
-  const normalized = String(paymentStatus).toUpperCase();
-  if (normalized === 'COMPLETE' || normalized === 'SUCCESS' || normalized === 'PAID') {
+  if (['COMPLETE', 'SUCCESS', 'PAID', 'COMPLETED'].includes(normalizedStatus)) {
     newStatus = 'SUCCESS';
   }
 
-  // Update payments table
-  await query(
-    `UPDATE payments
-        SET status = ?,
-            gateway_txn_id = ?,
-            raw_response = ?,
-            updated_at = NOW()
-      WHERE id = ?`,
-    [newStatus, pfPaymentId, JSON.stringify(payload), paymentId]
-  );
+  // Use transaction: update payments + update proposal atomically
+  const conn = await getConnection();
+  try {
+    await conn.beginTransaction();
 
-  // On success, mark proposal as paid + pending_review
-  if (newStatus === 'SUCCESS') {
+    const [rows] = await conn.execute(
+      'SELECT * FROM payments WHERE id = ? LIMIT 1 FOR UPDATE',
+      [paymentId]
+    );
+    if (!rows.length) throw httpError(404, 'Payment record not found');
+    const payment = rows[0];
+
+    // Idempotency: if already SUCCESS/FAILED, we can safely no-op
+    if (payment.status === 'SUCCESS' || payment.status === 'FAILED') {
+      await conn.commit();
+      return { paymentId, status: payment.status, alreadyProcessed: true };
+    }
+
+    // Optional: validate amount matches (use small tolerance)
+    const amountFromGateway = payload.amount_gross || payload.amount;
+    if (amountFromGateway != null) {
+      const expected = Number(payment.amount);
+      const actual = Number(amountFromGateway);
+      if (!Number.isNaN(actual) && Math.abs(expected - actual) > 1) {
+        throw httpError(400, 'Amount mismatch between gateway and system');
+      }
+    }
+
+    // Update payments table
+    await conn.execute(
+      `UPDATE payments
+         SET status = ?,
+             gateway_txn_id = ?,
+             raw_response = ?,
+             updated_at = NOW()
+       WHERE id = ?`,
+      [newStatus, pfPaymentId, JSON.stringify(payload), paymentId]
+    );
+
+    // On success, mark proposal as paid and move to pending_review
+    if (newStatus === 'SUCCESS') {
+      if (payment.application_type === 'MOTOR') {
+        await conn.execute(
+          `UPDATE motor_proposals
+              SET payment_status = 'paid',
+                  paid_at = NOW(),
+                  review_status = 'pending_review',
+                  submitted_at = COALESCE(submitted_at, NOW()),
+                  updated_at = NOW()
+            WHERE id = ?`,
+          [payment.application_id]
+        );
+      } else if (payment.application_type === 'TRAVEL') {
+        const subtypeEnum = payment.application_subtype;
+        const table = getTravelProposalTableBySubtype(subtypeEnum);
+        if (!table) throw httpError(400, 'Invalid travel subtype on payment record');
+
+        await conn.execute(
+          `UPDATE ${table}
+              SET payment_status = 'paid',
+                  paid_at = NOW(),
+                  review_status = 'pending_review',
+                  submitted_at = COALESCE(submitted_at, NOW()),
+                  updated_at = NOW()
+            WHERE id = ?`,
+          [payment.application_id]
+        );
+      }
+    }
+
+    await conn.commit();
+
+    return {
+      paymentId,
+      status: newStatus,
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+async function markPaymentSuccessDev({ paymentId }) {
+  const id = Number(paymentId);
+  if (!id || Number.isNaN(id)) throw httpError(400, 'Invalid paymentId');
+
+  const conn = await getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [rows] = await conn.execute(
+      'SELECT * FROM payments WHERE id = ? LIMIT 1 FOR UPDATE',
+      [id]
+    );
+    if (!rows.length) throw httpError(404, 'Payment record not found');
+
+    const payment = rows[0];
+
+    // idempotent
+    if (payment.status === 'SUCCESS') {
+      await conn.commit();
+      return { ok: true, paymentId: id, status: 'SUCCESS', alreadyProcessed: true };
+    }
+
+    await conn.execute(
+      `UPDATE payments
+       SET status='SUCCESS', updated_at=NOW()
+       WHERE id=?`,
+      [id]
+    );
+
     if (payment.application_type === 'MOTOR') {
-      await query(
-        `
-        UPDATE motor_proposals
-        SET
-          payment_status = 'paid',
-          paid_at = COALESCE(paid_at, NOW()),
-          review_status = CASE
-            WHEN review_status = 'not_applicable' THEN 'pending_review'
-            ELSE review_status
-          END,
-          submitted_at = COALESCE(submitted_at, NOW()),
-          expires_at = NULL,
-          updated_at = NOW()
-        WHERE id = ?
-        `,
+      await conn.execute(
+        `UPDATE motor_proposals
+         SET payment_status='paid',
+             paid_at=NOW(),
+             review_status='pending_review',
+             submitted_at = COALESCE(submitted_at, NOW()),
+             updated_at=NOW()
+         WHERE id=?`,
         [payment.application_id]
       );
     } else if (payment.application_type === 'TRAVEL') {
-      const subtype = payment.application_subtype
-        ? String(payment.application_subtype).toUpperCase()
-        : null;
+      const subtype = payment.application_subtype;
+      const table = getTravelProposalTableBySubtype(subtype);
+      if (!table) throw httpError(400, 'Invalid travel subtype on payment record');
 
-      const table = TRAVEL_TABLE_BY_SUBTYPE[subtype];
-      if (!table) {
-        throw httpError(400, 'Missing/invalid application_subtype in payments for TRAVEL');
-      }
-
-      await query(
-        `
-        UPDATE ${table}
-        SET
-          payment_status = 'paid',
-          paid_at = COALESCE(paid_at, NOW()),
-          review_status = CASE
-            WHEN review_status = 'not_applicable' THEN 'pending_review'
-            ELSE review_status
-          END,
-          submitted_at = COALESCE(submitted_at, NOW()),
-          expires_at = NULL,
-          updated_at = NOW()
-        WHERE id = ?
-        `,
+      await conn.execute(
+        `UPDATE ${table}
+         SET payment_status='paid',
+             paid_at=NOW(),
+             review_status='pending_review',
+             submitted_at = COALESCE(submitted_at, NOW()),
+             updated_at=NOW()
+         WHERE id=?`,
         [payment.application_id]
       );
     }
-  }
 
-  return {
-    paymentId,
-    status: newStatus,
-  };
+    await conn.commit();
+    return { ok: true, paymentId: id, status: 'SUCCESS' };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
 }
+
 
 module.exports = {
   initiatePaymentService,
   handleWebhookService,
+  markPaymentSuccessDev,
 };
