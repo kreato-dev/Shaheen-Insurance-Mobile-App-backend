@@ -13,6 +13,14 @@ CREATE TABLE cities (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE countries (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(150) NOT NULL,
+  region VARCHAR(100) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE vehicle_makes (
   id INT AUTO_INCREMENT PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
@@ -78,7 +86,7 @@ CREATE TABLE users (
   cnic VARCHAR(25) NULL,
   cnic_expiry DATE NULL,
   dob DATE NULL,
-  nationality VARCHAR(100) NULL,
+  nationality INT NULL,
   gender ENUM('male','female','other') NULL,
   status ENUM('active','inactive') DEFAULT 'active',
   role ENUM('customer') NOT NULL DEFAULT 'customer',
@@ -87,7 +95,9 @@ CREATE TABLE users (
   UNIQUE KEY uq_users_mobile (mobile),
   UNIQUE KEY uq_users_email (email),
   CONSTRAINT fk_users_city
-    FOREIGN KEY (city_id) REFERENCES cities(id)
+    FOREIGN KEY (city_id) REFERENCES cities(id),
+  CONSTRAINT fk_users_country
+    FOREIGN KEY (nationality) REFERENCES countries(id)
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
