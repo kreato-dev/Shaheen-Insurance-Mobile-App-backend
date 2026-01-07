@@ -53,9 +53,7 @@ app.use('/api/claims', authMiddleware, claimRoutes);
 app.use('/api/proposals', authMiddleware, proposalsRoutes);
 
 //payment.routes.js already does requireAuth on initiate and webhook is no-auth.
-app.use('/api/payment', 
-  // authMiddleware, 
-  paymentRoutes);
+app.use('/api/payment', authMiddleware, paymentRoutes);
 
 // Admin routes (new)
 app.use('/api/admin/auth', adminAuthRoutes);
