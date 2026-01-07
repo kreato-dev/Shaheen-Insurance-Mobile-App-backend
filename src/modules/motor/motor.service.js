@@ -544,55 +544,143 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
 }
 
 /**
- * Get full motor proposal details for logged-in user
- * Includes images from motor_vehicle_images
+ * ✅ Get full motor proposal details for logged-in user
+ * Includes:
+ * - motor_documents (with doc_url)
+ * - motor_vehicle_images (with image_url)
+ * - lifecycle/review/refund/policy blocks (new columns)
  */
 async function getMotorProposalByIdForUser(userId, proposalId) {
   if (!userId) throw httpError(401, 'User is required');
 
+  const id = Number(proposalId);
+  if (!id || Number.isNaN(id)) throw httpError(400, 'Invalid proposalId');
+
   const rows = await query(
-    `SELECT
-        mp.*,
-        c.name AS cityName,
-        vm.name AS makeName,
-        vsm.name AS submakeName,
-        tc.name AS trackerCompanyName,
-        vv.name AS variantName
-     FROM motor_proposals mp
-     LEFT JOIN cities c ON c.id = mp.city_id
-     LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
-     LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
-     LEFT JOIN tracker_companies tc ON tc.id = mp.tracker_company_id
-     LEFT JOIN vehicle_variants vv ON vv.id = mp.variant_id
-     WHERE mp.id = ? AND mp.user_id = ?
-     LIMIT 1`,
-    [proposalId, userId]
+    `
+    SELECT
+      mp.*,
+      c.name AS cityName,
+      vm.name AS makeName,
+      vsm.name AS submakeName,
+      tc.name AS trackerCompanyName,
+      vv.name AS variantName,
+      a.id AS lastActionAdminId
+    FROM motor_proposals mp
+    LEFT JOIN cities c ON c.id = mp.city_id
+    LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
+    LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
+    LEFT JOIN tracker_companies tc ON tc.id = mp.tracker_company_id
+    LEFT JOIN vehicle_variants vv ON vv.id = mp.variant_id
+    LEFT JOIN admins a ON a.id = mp.admin_last_action_by
+    WHERE mp.id = ? AND mp.user_id = ?
+    LIMIT 1
+    `,
+    [id, userId]
   );
 
   if (!rows.length) throw httpError(404, 'Motor proposal not found for this user');
 
   const p = rows[0];
 
+  // ✅ Must match your static route: app.use('/uploads', express.static(...))
+  // Stored paths are like: "uploads/motor/xxx.png"
   const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
+  const buildUrl = (filePath) => (filePath ? `${baseUrl}/${String(filePath).replace(/^\//, '')}` : null);
 
-  // Fetch images for this proposal
+  // Vehicle images
   const images = await query(
-    `SELECT id, image_type AS imageType, file_path AS filePath, created_at AS createdAt
-       FROM motor_vehicle_images
-      WHERE proposal_id = ?
-      ORDER BY id ASC`,
-    [proposalId]
+    `
+    SELECT
+      id,
+      image_type AS imageType,
+      file_path AS filePath,
+      created_at AS createdAt
+    FROM motor_vehicle_images
+    WHERE proposal_id = ?
+    ORDER BY id ASC
+    `,
+    [id]
   );
+
+  // Motor documents (CNIC/DRIVING_LICENSE/REGISTRATION_BOOK)
+  const documents = await query(
+    `
+    SELECT
+      id,
+      doc_type AS docType,
+      side,
+      file_path AS filePath,
+      created_at AS createdAt
+    FROM motor_documents
+    WHERE proposal_id = ?
+    ORDER BY id ASC
+    `,
+    [id]
+  );
+
+  // required docs JSON might come as string depending on mysql driver/settings
+  let requiredDocs = p.reupload_required_docs ?? null;
+  if (typeof requiredDocs === 'string') {
+    try { requiredDocs = JSON.parse(requiredDocs); } catch (_) {}
+  }
 
   return {
     id: p.id,
-    status: p.submission_status,
+    proposalType: 'MOTOR',
+
     createdAt: p.created_at,
     updatedAt: p.updated_at,
+
+    // ✅ lifecycle & review fields (new)
+    lifecycle: {
+      submissionStatus: p.submission_status,          // draft|submitted
+      paymentStatus: p.payment_status,               // unpaid|paid
+      paidAt: p.paid_at,
+      reviewStatus: p.review_status,                 // not_applicable|pending_review|reupload_required|approved|rejected
+      submittedAt: p.submitted_at,
+      expiresAt: p.expires_at,
+    },
+
+    admin: {
+      lastActionBy: p.admin_last_action_by,
+      lastActionAt: p.admin_last_action_at,
+      lastActionAdmin: p.lastActionAdminId
+        ? {
+            id: p.lastActionAdminId
+          }
+        : null,
+    },
+
+    review: {
+      rejectionReason: p.rejection_reason,
+      reuploadNotes: p.reupload_notes,
+      reuploadRequiredDocs: requiredDocs,
+    },
+
+    refund: {
+      refundStatus: p.refund_status,                 // not_applicable|refund_initiated|refund_processed|closed
+      refundAmount: p.refund_amount,
+      refundReference: p.refund_reference,
+      refundRemarks: p.refund_remarks,
+      refundEvidencePath: p.refund_evidence_path,
+      refundEvidenceUrl: buildUrl(p.refund_evidence_path),
+      refundInitiatedAt: p.refund_initiated_at,
+      refundProcessedAt: p.refund_processed_at,
+      closedAt: p.closed_at,
+    },
+
+    policy: {
+      policyStatus: p.policy_status,                 // not_issued|active|expired
+      policyNo: p.policy_no,
+      policyIssuedAt: p.policy_issued_at,
+      policyExpiresAt: p.policy_expires_at,
+    },
 
     personalDetails: {
       name: p.name,
       address: p.address,
+      cityId: p.city_id,
       cityName: p.cityName,
       cnic: p.cnic,
       cnicExpiry: p.cnic_expiry,
@@ -611,16 +699,19 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       engineNumber: p.engine_number,
       chassisNumber: p.chassis_number,
 
+      makeId: p.make_id,
       makeName: p.makeName,
+      submakeId: p.submake_id,
       submakeName: p.submakeName,
       modelYear: p.model_year,
-
       assembly: p.assembly,
+
       variantId: p.variant_id,
       variantName: p.variantName || null,
 
       colour: p.colour,
-      trackerCompanyName: p.trackerCompanyName,
+      trackerCompanyId: p.tracker_company_id,
+      trackerCompanyName: p.trackerCompanyName || null,
       accessoriesValue: p.accessories_value,
     },
 
@@ -629,15 +720,22 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       premium: p.premium,
     },
 
-    images: images.map((img) => {
-      return {
-        id: img.id,
-        imageType: img.imageType,
-        filePath: img.filePath,
-        url: `${baseUrl}/${img.filePath}`,
-        createdAt: img.createdAt,
-      };
-    }),
+    documents: documents.map((d) => ({
+      id: d.id,
+      docType: d.docType,
+      side: d.side,
+      filePath: d.filePath,
+      url: buildUrl(d.filePath),
+      createdAt: d.createdAt,
+    })),
+
+    images: images.map((img) => ({
+      id: img.id,
+      imageType: img.imageType,
+      filePath: img.filePath,
+      url: buildUrl(img.filePath),
+      createdAt: img.createdAt,
+    })),
   };
 }
 

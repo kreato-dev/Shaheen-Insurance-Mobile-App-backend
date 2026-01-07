@@ -827,19 +827,37 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     throw httpError(400, `Invalid package. Allowed: ${Object.keys(PACKAGE_TABLES).join(', ')}`);
   }
 
-  // Proposal row (must belong to this user)
+  const id = Number(proposalId);
+  if (!id || Number.isNaN(id)) throw httpError(400, 'Invalid proposalId');
+
+  // ✅ Proposal row (join plan meta so UI can show plan/package/coverage properly)
   const rows = await query(
-    `SELECT p.*, c.name AS cityName
-       FROM ${tables.proposals} p
-       LEFT JOIN cities c ON c.id = p.city_id
-      WHERE p.id = ? AND p.user_id = ?
-      LIMIT 1`,
-    [proposalId, userId]
+    `
+    SELECT
+      p.*,
+      c.name AS cityName,
+
+      pkg.code AS packageCode,
+
+      cov.code AS coverageType,
+
+      pl.code AS productPlan,
+
+      pl.currency AS currency
+    FROM ${tables.proposals} p
+    LEFT JOIN cities c ON c.id = p.city_id
+
+    LEFT JOIN travel_plans pl ON pl.id = p.plan_id
+    LEFT JOIN travel_coverages cov ON cov.id = pl.coverage_id
+    LEFT JOIN travel_packages pkg ON pkg.id = pl.package_id
+
+    WHERE p.id = ? AND p.user_id = ?
+    LIMIT 1
+    `,
+    [id, userId]
   );
 
-  if (!rows.length) {
-    throw httpError(404, 'Travel proposal not found for this user');
-  }
+  if (!rows.length) throw httpError(404, 'Travel proposal not found for this user');
 
   const p = rows[0];
 
@@ -847,51 +865,91 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
   const destinations = await query(
     `SELECT
         ds.destination_id AS destinationId,
-        d.name AS name,
-        d.region AS region
+        d.name,
+        d.region
      FROM ${tables.destinations} ds
      INNER JOIN travel_destinations d ON d.id = ds.destination_id
      WHERE ds.proposal_id = ?
      ORDER BY ds.id ASC`,
-    [proposalId]
+    [id]
   );
 
-  // Family members (only if you have family tables for these packages)
-  const familyMembers = await query(
-    `SELECT
-        id,
-        member_type AS memberType,
-        first_name AS firstName,
-        last_name AS lastName,
-        dob,
-        gender,
-        cnic,
-        passport_number AS passportNumber,
-        relation,
-        created_at AS createdAt
-     FROM ${tables.family}
-     WHERE proposal_id = ?
-     ORDER BY id ASC`,
-    [proposalId]
-  ).catch(() => []); // if a package doesn't use family table yet, keep safe
+  // ✅ Family members (ONLY for domestic/huj/international)
+  let familyMembers = [];
+  if (tables.family) {
+    familyMembers = await query(
+      `SELECT
+          id,
+          member_type AS memberType,
+          first_name AS firstName,
+          last_name AS lastName,
+          dob,
+          gender,
+          cnic,
+          passport_number AS passportNumber,
+          relation,
+          created_at AS createdAt
+       FROM ${tables.family}
+       WHERE proposal_id = ?
+       ORDER BY id ASC`,
+      [id]
+    );
+  }
 
   return {
-    packageCode,
+    packageCode: p.packageCode || packageCode, // fallback
     proposalId: p.id,
-    status: p.status,
+
+    // ✅ new lifecycle fields (you added these in tables)
+    submissionStatus: p.submission_status,
+    paymentStatus: p.payment_status,
+    paidAt: p.paid_at,
+    reviewStatus: p.review_status,
+    submittedAt: p.submitted_at,
+    expiresAt: p.expires_at,
+
+    adminLastActionBy: p.admin_last_action_by,
+    adminLastActionAt: p.admin_last_action_at,
+
+    rejectionReason: p.rejection_reason,
+    reuploadNotes: p.reupload_notes,
+    reuploadRequiredDocs: p.reupload_required_docs,
+
+    refund: {
+      refundStatus: p.refund_status,
+      refundAmount: p.refund_amount,
+      refundReference: p.refund_reference,
+      refundRemarks: p.refund_remarks,
+      refundEvidencePath: p.refund_evidence_path,
+      refundInitiatedAt: p.refund_initiated_at,
+      refundProcessedAt: p.refund_processed_at,
+      closedAt: p.closed_at,
+    },
+
+    policy: {
+      policyStatus: p.policy_status,
+      policyNo: p.policy_no,
+      policyIssuedAt: p.policy_issued_at,
+      policyExpiresAt: p.policy_expires_at,
+    },
+
     createdAt: p.created_at,
     updatedAt: p.updated_at,
 
     tripDetails: {
-      packageType: p.package_type || packageCode, // depends on your schema
-      coverageType: p.coverage_type,
-      productPlan: p.product_plan,
+      packageCode: p.packageCode || packageCode,
+      coverageType: p.coverageType || null,
+      productPlan: p.productPlan || null,
+      currency: p.currency || 'PKR',
+
       startDate: p.start_date,
       endDate: p.end_date,
       tenureDays: p.tenure_days,
-      sumInsured: p.sum_insured ?? null,
-      addOnsSelected: p.add_ons_selected ?? null,
+
+      // only exists on INTERNATIONAL, safe for others
       isMultiTrip: p.is_multi_trip ?? null,
+      maxTripDaysApplied: p.max_trip_days_applied ?? null,
+      ageLoadingPercent: p.age_loading_percent ?? null,
     },
 
     applicantInfo: {
@@ -905,10 +963,13 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       mobile: p.mobile,
       email: p.email,
       dob: p.dob,
+
+      // only exists on STUDENT
       universityName: p.university_name ?? null,
     },
 
     parentInfo: {
+      // only exists on STUDENT
       parentName: p.parent_name ?? null,
       parentAddress: p.parent_address ?? null,
       parentCnic: p.parent_cnic ?? null,
@@ -926,9 +987,10 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
 
     pricing: {
       basePremium: p.base_premium ?? null,
-      addOnsPremium: p.add_ons_premium ?? null,
       finalPremium: p.final_premium ?? null,
-      ageLoadingPercent: p.age_loading_percent ?? null,
+
+      // doesn’t exist in DB (unless you add later)
+      addOnsPremium: p.add_ons_premium ?? null,
     },
 
     destinations: destinations.map((d) => ({
@@ -937,7 +999,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       region: d.region,
     })),
 
-    familyMembers: (familyMembers || []).map((m) => ({
+    familyMembers: familyMembers.map((m) => ({
       id: m.id,
       memberType: m.memberType,
       firstName: m.firstName,
@@ -951,6 +1013,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     })),
   };
 }
+
 
 module.exports = {
   // existing main functions

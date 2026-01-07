@@ -689,16 +689,6 @@
                   "src": ""
                 },
                 {
-                  "key": "registration_front",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "registration_back",
-                  "type": "file",
-                  "src": ""
-                },
-                {
                   "key": "regbook_front",
                   "type": "file",
                   "src": ""
