@@ -681,8 +681,9 @@ INSERT INTO travel_destinations (id, name, region, created_at, updated_at) VALUE
 (191,'Zambia','Africa',NOW(),NOW()),
 (192,'Zimbabwe','Africa',NOW(),NOW()),
 (193,'Holy See (Vatican City)','Europe',NOW(),NOW()),
-(194,'State of Palestine','Asia',NOW(),NOW());
-ALTER TABLE travel_destinations AUTO_INCREMENT = 195;
+(194,'State of Palestine','Asia',NOW(),NOW()),
+(195,'Anywhere in Pakistan (Except Home City)','Pakistan',NOW(),NOW());
+ALTER TABLE travel_destinations AUTO_INCREMENT = 196;
 
 -- =========================
 -- 2) USERS

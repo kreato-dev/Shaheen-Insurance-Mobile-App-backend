@@ -18,7 +18,7 @@ function toUploadsRelativePath(file) {
  * Calculate motor premium and sum insured
  * Very simple sample logic:
  *  - sumInsured = vehicleValue + accessoriesValue (default = 0 from frontend)
- *  - baseRate = 2% of sumInsured
+ *  - baseRate = 1.4% of sumInsured
  *  - if tracker: 10% discount <- not included rightnow
  *  - if vehicle age > 5 years: +15% loading <- not included rightnow
  */
@@ -44,7 +44,7 @@ async function calculatePremiumService({ vehicleValue, year, tracker, accessorie
   const vehicleAge = nowYear - numericYear;
 
   let sumInsured = numericValue + numericaccessoriesValue;
-  let premium = sumInsured * 0.02; // 2%
+  let premium = sumInsured * 0.014; // 1.4%
 
   const hasTracker = tracker === true || tracker === 'true' || tracker === 1 || tracker === '1';
 
