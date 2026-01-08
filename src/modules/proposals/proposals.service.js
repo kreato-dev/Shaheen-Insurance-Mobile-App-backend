@@ -46,6 +46,11 @@ async function getMyProposalsFeedService(userId, opts = {}) {
         NULL AS packageCode,
         mp.id AS proposalId,
         mp.submission_status AS submission_status,
+
+        mp.review_status AS review_status,
+        mp.payment_status AS payment_status,
+        mp.paid_at AS paid_at,
+
         CONCAT(vm.name, ' ', vsm.name, ' ', mp.model_year) AS title,
         mp.registration_number AS subtitle,
         mp.premium AS premium,
@@ -75,6 +80,10 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
       '${pkgCode}' AS packageCode,
       tp.id AS proposalId,
       tp.submission_status AS submission_status,
+
+      tp.review_status AS review_status,
+      tp.payment_status AS payment_status,
+      tp.paid_at AS paid_at,
 
       -- plan info comes from travel_plans
       CONCAT('${pkgCode}', ' • ', pl.name) AS title,
@@ -117,6 +126,11 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
       packageCode: r.packageCode,   // null for MOTOR, else travel pkg code
       proposalId: r.proposalId,
       submission_status: r.submission_status,
+
+      review_status: r.review_status,
+      payment_status: r.payment_status,
+      paid_at: r.paid_at,
+      
       title: r.title,
       subtitle: r.subtitle,
       premium: r.premium,
