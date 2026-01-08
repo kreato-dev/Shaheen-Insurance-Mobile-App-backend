@@ -817,6 +817,22 @@ CREATE TABLE travel_student_destinations_selected (
     ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE travel_documents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  package_code ENUM('DOMESTIC','HAJJ_UMRAH_ZIARAT','INTERNATIONAL','STUDENT_GUARD') NOT NULL,
+  proposal_id INT NOT NULL,
+
+  doc_type ENUM('CNIC','PASSPORT','TICKET') NOT NULL,
+  side ENUM('front','back','single') NULL,
+
+  file_path VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uk_travel_docs (package_code, proposal_id, doc_type, side),
+  INDEX idx_travel_docs_lookup (package_code, proposal_id, doc_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- 5) Payments (placeholder; keep but we’ll also keep payment_status in proposals for faster filtering)
 CREATE TABLE payments (
   id INT AUTO_INCREMENT PRIMARY KEY,

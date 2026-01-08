@@ -39,11 +39,42 @@ const PACKAGE_TABLES = {
 // Domestic: fixed destination id (seeded in travel_destinations table)
 const DOMESTIC_ANYWHERE_DEST_ID = Number(process.env.DOMESTIC_ANYWHERE_DEST_ID || 195);
 
+/* =========================
+   Upload helpers (NEW)
+   ========================= */
+
+function toUploadsRelativePathTravel(file) {
+  return `uploads/travel/${file.filename}`;
+}
+
+async function assertTravelProposalOwnership(conn, packageCode, proposalId, userId) {
+  const tables = PACKAGE_TABLES[packageCode];
+  if (!tables) throw httpError(400, 'Invalid package');
+
+  const [rows] = await conn.execute(
+    `SELECT id FROM ${tables.proposals} WHERE id = ? AND user_id = ? LIMIT 1`,
+    [proposalId, userId]
+  );
+
+  if (!rows.length) {
+    throw httpError(404, 'Travel proposal not found for this user');
+  }
+}
+
+async function upsertTravelDocument(conn, { packageCode, proposalId, docType, side, filePath }) {
+  await conn.execute(
+    `INSERT INTO travel_documents (package_code, proposal_id, doc_type, side, file_path, created_at)
+     VALUES (?, ?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE file_path = VALUES(file_path)`,
+    [packageCode, proposalId, docType, side, filePath]
+  );
+}
+
 /**
  * Calculate age from DOB.
  * Returns null if dob is invalid.
  */
-function calculateAge(dobStr) {
+   function calculateAge(dobStr) {
   const dob = new Date(dobStr);
   if (Number.isNaN(dob.getTime())) return null;
 
@@ -70,26 +101,6 @@ function calculateTenureDays(startDateStr, endDateStr) {
   const diffMs = end.getTime() - start.getTime();
   return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
 }
-/*
-* Duplcate function 
-*/
-// /**
-//  * Normalize incoming package values
-//  * e.g. "International" -> INTERNATIONAL
-//  */
-// function normalizePackageCode(input) {
-//   const s = String(input || '').trim().toUpperCase();
-//   if (s === 'HAJJ' || s === 'UMRAH' || s === 'ZIARAT') return 'HAJJ_UMRAH_ZIARAT';
-//   if (s.includes('HAJJ') || s.includes('UMRAH') || s.includes('ZIARAT')) return 'HAJJ_UMRAH_ZIARAT';
-//   if (s.includes('DOMESTIC')) return 'DOMESTIC';
-//   if (s.includes('INTERNATIONAL')) return 'INTERNATIONAL';
-//   if (s.includes('STUDENT')) return 'STUDENT_GUARD';
-
-//   // also accept already-normalized codes
-//   if (PACKAGE_TABLES[s]) return s;
-
-//   return s;
-// }
 
 /**
  * Normalize frontend packageType string to DB enum code.
@@ -321,7 +332,7 @@ async function quoteTravelPremiumService(data) {
 
   // Base premium comes from slab
   const basePremium = Number(slab.premium);
-
+  
   // Final premium includes possible age loading for international
   const finalPremium = Number((basePremium * (1 + loadingPercent / 100)).toFixed(2));
 
@@ -457,7 +468,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
   validateFamilyMembersIfNeeded(coverageCode, familyMembers);
 
   // ✅ Destination rules:
-  // - DOMESTIC: auto-set "Anywhere in Pakistan (Except Home City)" and do NOT require destinationIds
+  // - DOMESTIC: auto-set "Anywhere in Pakistan (Except Home City)" , no destinationIds required
   // - Other packages: destinationIds required + validated
   let effectiveDestinationIds = destinationIds;
 
@@ -468,13 +479,11 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
     if (Array.isArray(destinationIds) && destinationIds.length > 0) {
       throw httpError(400, 'Domestic package does not require destinationIds');
     }
-
     effectiveDestinationIds = [DOMESTIC_ANYWHERE_DEST_ID];
-  }
+  } 
   else {
     await validateDestinations(destinationIds);
   }
-
 
   const tenureDays = calculateTenureDays(startDate, endDate);
 
@@ -626,7 +635,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         beneficiary.beneficiaryCnic,
         beneficiary.beneficiaryCnicIssueDate,
         beneficiary.beneficiaryRelation,
-
+        
         quote.basePremium,
         quote.finalPremium,
       ];
@@ -750,6 +759,112 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
 }
 
 /* =========================================================
+   Upload Travel Assets Service
+   ========================================================= */
+
+async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput, step, files }) {
+  if (!userId) throw httpError(401, 'User is required');
+  if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
+  if (!packageCodeInput) throw httpError(400, 'packageCode is required');
+  if (!step) throw httpError(400, 'step is required');
+
+  const packageCode = normalizePackageCode(packageCodeInput);
+  const stepLower = String(step).toLowerCase();
+
+  const conn = await getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    await assertTravelProposalOwnership(conn, packageCode, proposalId, userId);
+
+    // Step: identity (CNIC 2 pics OR Passport 1 pic)
+    if (stepLower === 'identity') {
+      const hasCnicFront = !!(files.cnic_front && files.cnic_front[0]);
+      const hasCnicBack = !!(files.cnic_back && files.cnic_back[0]);
+      const hasPassport = !!(files.passport_image && files.passport_image[0]);
+
+      const cnicComplete = hasCnicFront && hasCnicBack;
+
+      if (!cnicComplete && !hasPassport) {
+        throw httpError(400, 'Upload CNIC (cnic_front + cnic_back) OR Passport (passport_image)');
+      }
+
+      if (cnicComplete) {
+        await upsertTravelDocument(conn, {
+          packageCode,
+          proposalId,
+          docType: 'CNIC',
+          side: 'front',
+          filePath: toUploadsRelativePathTravel(files.cnic_front[0]),
+        });
+
+        await upsertTravelDocument(conn, {
+          packageCode,
+          proposalId,
+          docType: 'CNIC',
+          side: 'back',
+          filePath: toUploadsRelativePathTravel(files.cnic_back[0]),
+        });
+      }
+
+      if (hasPassport) {
+        await upsertTravelDocument(conn, {
+          packageCode,
+          proposalId,
+          docType: 'PASSPORT',
+          side: 'single',
+          filePath: toUploadsRelativePathTravel(files.passport_image[0]),
+        });
+      }
+
+      await conn.commit();
+
+      return {
+        proposalId,
+        packageCode,
+        step: 'identity',
+        saved: {
+          cnic: cnicComplete ? ['cnic_front', 'cnic_back'] : [],
+          passport: hasPassport ? ['passport_image'] : [],
+        },
+      };
+    }
+
+    // Step: ticket (optional)
+    if (stepLower === 'ticket') {
+      const hasTicket = !!(files.ticket_image && files.ticket_image[0]);
+
+      if (hasTicket) {
+        await upsertTravelDocument(conn, {
+          packageCode,
+          proposalId,
+          docType: 'TICKET',
+          side: 'single',
+          filePath: toUploadsRelativePathTravel(files.ticket_image[0]),
+        });
+      }
+
+      await conn.commit();
+
+      return {
+        proposalId,
+        packageCode,
+        step: 'ticket',
+        saved: hasTicket ? ['ticket_image'] : [],
+      };
+    }
+
+    throw httpError(400, 'Invalid step. Use: identity, ticket');
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+/* =========================================================
    CATALOG (Dropdown APIs)
    ========================================================= */
 
@@ -758,9 +873,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
  * Returns available travel packages (Domestic, International, etc.)
  */
 async function listPackagesService() {
-  const rows = await query(
-    `SELECT id, code, name FROM travel_packages ORDER BY id ASC`
-  );
+  const rows = await query(`SELECT id, code, name FROM travel_packages ORDER BY id ASC`);
   return rows;
 }
 
@@ -842,6 +955,7 @@ async function listSlabsService(planId) {
  * Also returns:
  * - destinations selected (joined with travel_destinations)
  * - family members (if any)
+ * - travel_documents
  */
 async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId) {
   if (!userId) throw httpError(401, 'User is required');
@@ -862,21 +976,15 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     SELECT
       p.*,
       c.name AS cityName,
-
       pkg.code AS packageCode,
-
       cov.code AS coverageType,
-
       pl.code AS productPlan,
-
       pl.currency AS currency
     FROM ${tables.proposals} p
     LEFT JOIN cities c ON c.id = p.city_id
-
     LEFT JOIN travel_plans pl ON pl.id = p.plan_id
     LEFT JOIN travel_coverages cov ON cov.id = pl.coverage_id
     LEFT JOIN travel_packages pkg ON pkg.id = pl.package_id
-
     WHERE p.id = ? AND p.user_id = ?
     LIMIT 1
     `,
@@ -921,6 +1029,23 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       [id]
     );
   }
+
+  // documents
+  const documents = await query(
+    `SELECT
+        id,
+        doc_type AS docType,
+        side,
+        file_path AS filePath,
+        created_at AS createdAt
+     FROM travel_documents
+     WHERE package_code = ? AND proposal_id = ?
+     ORDER BY id ASC`,
+    [packageCode, id]
+  );
+
+  const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
+  const buildUrl = (filePath) => (filePath ? `${baseUrl}/${String(filePath).replace(/^\//, '')}` : null);
 
   return {
     packageCode: p.packageCode || packageCode, // fallback
@@ -971,7 +1096,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       startDate: p.start_date,
       endDate: p.end_date,
       tenureDays: p.tenure_days,
-
+      
       // only exists on INTERNATIONAL, safe for others
       isMultiTrip: p.is_multi_trip ?? null,
       maxTripDaysApplied: p.max_trip_days_applied ?? null,
@@ -989,7 +1114,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       mobile: p.mobile,
       email: p.email,
       dob: p.dob,
-
+      
       // only exists on STUDENT
       universityName: p.university_name ?? null,
     },
@@ -1014,7 +1139,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     pricing: {
       basePremium: p.base_premium ?? null,
       finalPremium: p.final_premium ?? null,
-
+      
       // doesn’t exist in DB (unless you add later)
       addOnsPremium: p.add_ons_premium ?? null,
     },
@@ -1037,16 +1162,28 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       relation: m.relation,
       createdAt: m.createdAt,
     })),
+
+    documents: documents.map((d) => ({
+      id: d.id,
+      docType: d.docType,
+      side: d.side,
+      filePath: d.filePath,
+      url: buildUrl(d.filePath),
+      createdAt: d.createdAt,
+    })),
   };
 }
 
 
 module.exports = {
-  // existing main functions
+  // main
   quoteTravelPremiumService,
   submitProposalService,
 
-  // catalog APIs
+  // uploads
+  uploadTravelAssetsService,
+
+  // catalog
   listPackagesService,
   listCoveragesService,
   listPlansService,

@@ -13,12 +13,8 @@
         "header": [],
         "url": {
           "raw": "{{baseUrl}}/health",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "health"
-          ]
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
         }
       }
     },
@@ -29,26 +25,15 @@
           "name": "Register (Sends Email OTP)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"fullName\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"mobile\": \"03001234567\",\n  \"password\": \"Password123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/register",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "register"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "register"]
             }
           }
         },
@@ -56,26 +41,15 @@
           "name": "Verify Email OTP",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/verify-email-otp",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "verify-email-otp"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "verify-email-otp"]
             }
           }
         },
@@ -83,26 +57,15 @@
           "name": "Resend Email OTP (Verification)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"test@example.com\",\n  \"purpose\": \"email_verify\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/resend-email-otp",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "resend-email-otp"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-email-otp"]
             }
           }
         },
@@ -126,26 +89,15 @@
           ],
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"mobile\": \"03001234567\",\n  \"password\": \"Password123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/login",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "login"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
             }
           }
         },
@@ -153,27 +105,12 @@
           "name": "Forgot Password - Send OTP (EMAIL ONLY)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"email\": \"test@example.com\"\n}"
-            },
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"test@example.com\"\n}" },
             "url": {
               "raw": "{{baseUrl}}/api/auth/forgot-password/otp",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "forgot-password",
-                "otp"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgot-password", "otp"]
             }
           }
         },
@@ -181,27 +118,15 @@
           "name": "Forgot Password - Verify OTP (EMAIL ONLY)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewSecret123\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/forgot-password/verify",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "forgot-password",
-                "verify"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "forgot-password", "verify"]
             }
           }
         },
@@ -209,26 +134,15 @@
           "name": "Resend Email OTP (Forgot Password)",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"test@example.com\",\n  \"purpose\": \"forgot_password\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/auth/resend-email-otp",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "resend-email-otp"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "resend-email-otp"]
             }
           }
         }
@@ -241,23 +155,11 @@
           "name": "Get Profile",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" }],
             "url": {
               "raw": "{{baseUrl}}/api/user/profile",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "profile"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "profile"]
             }
           }
         },
@@ -266,15 +168,8 @@
           "request": {
             "method": "PUT",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
@@ -282,14 +177,8 @@
             },
             "url": {
               "raw": "{{baseUrl}}/api/user/profile",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "user",
-                "profile"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "user", "profile"]
             }
           }
         }
@@ -303,17 +192,7 @@
           "request": {
             "method": "GET",
             "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/data/cities",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "data",
-                "cities"
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/api/data/cities", "host": ["{{baseUrl}}"], "path": ["api", "data", "cities"] }
           }
         },
         {
@@ -323,14 +202,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/countries",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "data",
-                "countries"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "countries"]
             }
           }
         },
@@ -341,14 +214,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/vehicle-makes",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "data",
-                "vehicle-makes"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "vehicle-makes"]
             }
           }
         },
@@ -359,15 +226,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/vehicle-submakes/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "data",
-                "vehicle-submakes",
-                "1"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "vehicle-submakes", "1"]
             }
           }
         },
@@ -378,14 +238,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/vehicle-variants?makeId=1&submakeId=1&modelYear=2025",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "data",
-                "vehicle-variants"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "vehicle-variants"]
             }
           }
         },
@@ -396,14 +250,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/tracker-companies",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "data",
-                "tracker-companies"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "tracker-companies"]
             }
           }
         },
@@ -414,14 +262,8 @@
             "header": [],
             "url": {
               "raw": "{{baseUrl}}/api/data/travel-destinations",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "data",
-                "travel-destinations"
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "data", "travel-destinations"]
             }
           }
         }
@@ -435,31 +277,11 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"vehicleValue\": 2500000,\n  \"accessoriesValue\": 0,\n  \"year\": 2020,\n  \"tracker\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/motor/calculate-premium",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "motor",
-                "calculate-premium"
-              ]
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"vehicleValue\": 2500000,\n  \"accessoriesValue\": 0,\n  \"year\": 2020,\n  \"tracker\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/api/motor/calculate-premium", "host": ["{{baseUrl}}"], "path": ["api", "motor", "calculate-premium"] }
           }
         },
         {
@@ -467,31 +289,11 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"makeId\": 1,\n  \"submakeId\": 5,\n  \"year\": 2019\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/motor/market-value",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "motor",
-                "market-value"
-              ]
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"makeId\": 1,\n  \"submakeId\": 5,\n  \"year\": 2019\n}" },
+            "url": { "raw": "{{baseUrl}}/api/motor/market-value", "host": ["{{baseUrl}}"], "path": ["api", "motor", "market-value"] }
           }
         },
         {
@@ -515,76 +317,33 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"personalDetails\": {\n    \"name\": \"Ali Khan\",\n    \"address\": \"Gulshan-e-Iqbal Block 5\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-1234567-1\",\n    \"cnicExpiry\": \"2030-12-31\",\n    \"dob\": \"1995-05-10\",\n    \"nationality\": \"Pakistani\",\n    \"gender\": \"male\"\n  },\n  \"vehicleDetails\": {\n    \"productType\": \"private\",\n    \"registrationNumber\": \"ABC-123\",\n    \"appliedFor\": true,\n    \"isOwner\": false,\n    \"ownerRelation\": \"father\",\n    \"engineNumber\": \"ENG1234567\",\n    \"chassisNumber\": \"CHS1234567\",\n    \"makeId\": 2,\n    \"submakeId\": 4,\n    \"modelYear\": 2021,\n    \"assembly\": \"imported\",\n    \"variantId\": 6,\n    \"colour\": \"White\",\n    \"trackerCompanyId\": 2,\n    \"accessoriesValue\": 50000,\n    \"vehicleValue\": 2800000\n  }\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/motor/submit-proposal",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "motor",
-                "submit-proposal"
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/api/motor/submit-proposal", "host": ["{{baseUrl}}"], "path": ["api", "motor", "submit-proposal"] }
           }
         },
         {
           "name": "Upload CNIC (front + back) - step=cnic",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" }],
             "body": {
               "mode": "formdata",
               "formdata": [
-                {
-                  "key": "cnic_front",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "cnic_back",
-                  "type": "file",
-                  "src": ""
-                }
+                { "key": "cnic_front", "type": "file", "src": "" },
+                { "key": "cnic_back", "type": "file", "src": "" }
               ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/motor/{{motorProposalId}}/uploads?step=cnic",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "motor",
-                "{{motorProposalId}}",
-                "uploads"
-              ],
-              "query": [
-                {
-                  "key": "step",
-                  "value": "cnic"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "motor", "{{motorProposalId}}", "uploads"],
+              "query": [{ "key": "step", "value": "cnic" }]
             }
           }
         },
@@ -592,45 +351,19 @@
           "name": "Upload Driving License (front + back) - step=license",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" }],
             "body": {
               "mode": "formdata",
               "formdata": [
-                {
-                  "key": "license_front",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "license_back",
-                  "type": "file",
-                  "src": ""
-                }
+                { "key": "license_front", "type": "file", "src": "" },
+                { "key": "license_back", "type": "file", "src": "" }
               ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/motor/{{motorProposalId}}/uploads?step=license",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "motor",
-                "{{motorProposalId}}",
-                "uploads"
-              ],
-              "query": [
-                {
-                  "key": "step",
-                  "value": "license"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "motor", "{{motorProposalId}}", "uploads"],
+              "query": [{ "key": "step", "value": "license" }]
             }
           }
         },
@@ -638,85 +371,27 @@
           "name": "Upload Vehicle Images + Reg Book (front + back) - step=vehicle",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" }],
             "body": {
               "mode": "formdata",
               "formdata": [
-                {
-                  "key": "front_side",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "back_side",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "right_side",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "left_side",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "dashboard",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "engine_bay",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "boot",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "engine_number",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "regbook_front",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "regbook_back",
-                  "type": "file",
-                  "src": ""
-                }
+                { "key": "front_side", "type": "file", "src": "" },
+                { "key": "back_side", "type": "file", "src": "" },
+                { "key": "right_side", "type": "file", "src": "" },
+                { "key": "left_side", "type": "file", "src": "" },
+                { "key": "dashboard", "type": "file", "src": "" },
+                { "key": "engine_bay", "type": "file", "src": "" },
+                { "key": "boot", "type": "file", "src": "" },
+                { "key": "engine_number", "type": "file", "src": "" },
+                { "key": "regbook_front", "type": "file", "src": "" },
+                { "key": "regbook_back", "type": "file", "src": "" }
               ]
             },
             "url": {
               "raw": "{{baseUrl}}/api/motor/{{motorProposalId}}/uploads?step=vehicle",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "motor",
-                "{{motorProposalId}}",
-                "uploads"
-              ],
-              "query": [
-                {
-                  "key": "step",
-                  "value": "vehicle"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "motor", "{{motorProposalId}}", "uploads"],
+              "query": [{ "key": "step", "value": "vehicle" }]
             }
           }
         }
@@ -730,31 +405,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"amount\": 44000,\n  \"orderId\": \"MOTOR-TEST-001\",\n  \"customerEmail\": \"test@example.com\",\n  \"applicationType\": \"MOTOR\",\n  \"applicationId\": 1\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/initiate",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payment",
-                "initiate"
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/api/payment/initiate", "host": ["{{baseUrl}}"], "path": ["api", "payment", "initiate"] }
           },
           "description": "Creates a payments row (PENDING) and returns PayFast paymentUrl. Proposal status does NOT change yet (until mark-success/webhook)."
         },
@@ -763,31 +421,14 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"amount\": 19050,\n  \"orderId\": \"TRAVEL-INT-TEST-001\",\n  \"customerEmail\": \"ali@example.com\",\n  \"applicationType\": \"TRAVEL\",\n  \"applicationSubtype\": \"INTERNATIONAL\",\n  \"applicationId\": 1\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/initiate",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payment",
-                "initiate"
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/api/payment/initiate", "host": ["{{baseUrl}}"], "path": ["api", "payment", "initiate"] }
           },
           "description": "TRAVEL initiate MUST include applicationSubtype (DOMESTIC / HAJJ_UMRAH_ZIARAT / INTERNATIONAL / STUDENT_GUARD)."
         },
@@ -796,31 +437,11 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"paymentId\": 2,\n  \"gatewayTxnId\": \"MANUAL-TX-123\",\n  \"status\": \"SUCCESS\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/payment/mark-success",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payment",
-                "mark-success"
-              ]
-            }
+            "body": { "mode": "raw", "raw": "{\n  \"paymentId\": 2,\n  \"gatewayTxnId\": \"MANUAL-TX-123\",\n  \"status\": \"SUCCESS\"\n}" },
+            "url": { "raw": "{{baseUrl}}/api/payment/mark-success", "host": ["{{baseUrl}}"], "path": ["api", "payment", "mark-success"] }
           },
           "description": "Stubbed success flow (until webhook is finalized). Sets payments.status=SUCCESS and updates the related proposal: payment_status='paid', paid_at=NOW(), review_status='pending_review'."
         }
@@ -834,40 +455,17 @@
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/proposals/my?submission_status=submitted&page=1&limit=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "proposals",
-                "my"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "proposals", "my"],
               "query": [
-                {
-                  "key": "submission_status",
-                  "value": "submitted",
-                  "description": "draft,submitted,approved,rejected,paid,cancelled"
-                },
-                {
-                  "key": "page",
-                  "value": "1"
-                },
-                {
-                  "key": "limit",
-                  "value": "20"
-                }
+                { "key": "submission_status", "value": "submitted", "description": "draft,submitted,approved,rejected,paid,cancelled" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
               ]
             }
           }
@@ -877,27 +475,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/motor/my-proposals/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "motor",
-                "my-proposals"
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/api/motor/my-proposals/", "host": ["{{baseUrl}}"], "path": ["api", "motor", "my-proposals"] }
           }
         },
         {
@@ -905,75 +486,26 @@
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/my-proposals/",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "my-proposals"
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/api/travel/my-proposals/", "host": ["{{baseUrl}}"], "path": ["api", "travel", "my-proposals"] }
           }
         },
         {
           "name": "Get My Policies",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/policies/list",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "policies",
-                "list"
-              ]
-            }
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" }],
+            "url": { "raw": "{{baseUrl}}/api/policies/list", "host": ["{{baseUrl}}"], "path": ["api", "policies", "list"] }
           }
         },
         {
           "name": "Get Policy by ID",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/policies/1",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "policies",
-                "1"
-              ]
-            }
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" }],
+            "url": { "raw": "{{baseUrl}}/api/policies/1", "host": ["{{baseUrl}}"], "path": ["api", "policies", "1"] }
           }
         }
       ]
@@ -985,24 +517,8 @@
           "name": "Get My Claims",
           "request": {
             "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/claims/list",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "claims",
-                "list"
-              ]
-            }
+            "header": [{ "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" }],
+            "url": { "raw": "{{baseUrl}}/api/claims/list", "host": ["{{baseUrl}}"], "path": ["api", "claims", "list"] }
           }
         }
       ]
@@ -1015,28 +531,10 @@
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/catalog/packages",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "catalog",
-                "packages"
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/api/travel/catalog/packages", "host": ["{{baseUrl}}"], "path": ["api", "travel", "catalog", "packages"] }
           }
         },
         {
@@ -1044,33 +542,14 @@
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/travel/catalog/coverages?package={{travelPackageCode}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "catalog",
-                "coverages"
-              ],
-              "query": [
-                {
-                  "key": "package",
-                  "value": "{{travelPackageCode}}"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "travel", "catalog", "coverages"],
+              "query": [{ "key": "package", "value": "{{travelPackageCode}}" }]
             }
           }
         },
@@ -1099,36 +578,16 @@
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/travel/catalog/plans?package={{travelPackageCode}}&coverage={{travelCoverageCode}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "catalog",
-                "plans"
-              ],
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "travel", "catalog", "plans"],
               "query": [
-                {
-                  "key": "package",
-                  "value": "{{travelPackageCode}}"
-                },
-                {
-                  "key": "coverage",
-                  "value": "{{travelCoverageCode}}"
-                }
+                { "key": "package", "value": "{{travelPackageCode}}" },
+                { "key": "coverage", "value": "{{travelCoverageCode}}" }
               ]
             }
           }
@@ -1138,33 +597,14 @@
           "request": {
             "method": "GET",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "url": {
               "raw": "{{baseUrl}}/api/travel/catalog/slabs?planId={{travelPlanId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "catalog",
-                "slabs"
-              ],
-              "query": [
-                {
-                  "key": "planId",
-                  "value": "{{travelPlanId}}"
-                }
-              ]
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "travel", "catalog", "slabs"],
+              "query": [{ "key": "planId", "value": "{{travelPlanId}}" }]
             }
           }
         }
@@ -1178,63 +618,45 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"packageType\": \"International\",\n  \"coverageType\": \"individual\",\n  \"productPlan\": \"Gold\",\n  \"startDate\": \"2026-02-01\",\n  \"endDate\": \"2026-02-22\",\n  \"dob\": \"1995-05-10\",\n  \"isMultiTrip\": false\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/quote-premium",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "quote-premium"
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/api/travel/quote-premium", "host": ["{{baseUrl}}"], "path": ["api", "travel", "quote-premium"] }
           }
         },
         {
-          "name": "Submit Proposal (International Individual Gold - 3 week)",
+          "name": "Submit Proposal (International Individual Gold - 3 week) (Saves travelProposalId)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  if (json && json.proposalId) {",
+                  "    pm.collectionVariables.set('travelProposalId', String(json.proposalId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"tripDetails\": {\n    \"packageType\": \"International\",\n    \"coverageType\": \"individual\",\n    \"productPlan\": \"Gold\",\n    \"startDate\": \"2026-02-01\",\n    \"endDate\": \"2026-02-22\",\n    \"destinationIds\": [1],\n    \"isMultiTrip\": false\n  },\n  \"applicantInfo\": {\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Khan\",\n    \"address\": \"Gulshan Karachi\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-2222222-2\",\n    \"passportNumber\": \"AB1234567\",\n    \"mobile\": \"03009998888\",\n    \"email\": \"ali@example.com\",\n    \"dob\": \"1995-05-10\"\n  },\n  \"beneficiary\": {\n    \"beneficiaryName\": \"Danish Ahmed\",\n    \"beneficiaryAddress\": \"DHA Lahore\",\n    \"beneficiaryCnic\": \"42101-3333333-3\",\n    \"beneficiaryCnicIssueDate\": \"2012-03-15\",\n    \"beneficiaryRelation\": \"Brother\"\n  }\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/submit-proposal",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "submit-proposal"
-              ]
-            }
+            "url": { "raw": "{{baseUrl}}/api/travel/submit-proposal", "host": ["{{baseUrl}}"], "path": ["api", "travel", "submit-proposal"] }
           }
         },
         {
@@ -1242,48 +664,83 @@
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
+              { "key": "Authorization", "value": "Bearer {{authToken}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json" }
             ],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"tripDetails\": {\n    \"packageType\": \"International\",\n    \"coverageType\": \"family\",\n    \"productPlan\": \"Gold\",\n    \"startDate\": \"2026-02-01\",\n    \"endDate\": \"2026-02-22\",\n    \"destinationIds\": [1],\n    \"isMultiTrip\": false\n  },\n  \"applicantInfo\": {\n    \"firstName\": \"Ali\",\n    \"lastName\": \"Khan\",\n    \"address\": \"Gulshan Karachi\",\n    \"cityId\": 1,\n    \"cnic\": \"42101-2222222-2\",\n    \"passportNumber\": \"AB1234567\",\n    \"mobile\": \"03009998888\",\n    \"email\": \"ali@example.com\",\n    \"dob\": \"1995-05-10\"\n  },\n  \"beneficiary\": {\n    \"beneficiaryName\": \"Danish Ahmed\",\n    \"beneficiaryAddress\": \"DHA Lahore\",\n    \"beneficiaryCnic\": \"42101-3333333-3\",\n    \"beneficiaryCnicIssueDate\": \"2012-03-15\",\n    \"beneficiaryRelation\": \"Brother\"\n  },\n  \"familyMembers\": [\n    {\n      \"memberType\": \"spouse\",\n      \"firstName\": \"Ayesha\",\n      \"lastName\": \"Khan\",\n      \"dob\": \"1998-08-08\",\n      \"gender\": \"female\",\n      \"cnic\": \"42101-9999999-9\",\n      \"passportNumber\": \"SP1231231\",\n      \"relation\": \"Wife\"\n    }\n  ]\n}"
             },
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/submit-proposal",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "submit-proposal"
+            "url": { "raw": "{{baseUrl}}/api/travel/submit-proposal", "host": ["{{baseUrl}}"], "path": ["api", "travel", "submit-proposal"] }
+          }
+        },
+        {
+          "name": "Upload Travel Identity (CNIC front+back OR Passport) - step=identity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "cnic_front", "type": "file", "src": "" },
+                { "key": "cnic_back", "type": "file", "src": "" },
+                { "key": "passport_image", "type": "file", "src": "" }
               ]
-            }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/{{travelPackageCode}}/{{travelProposalId}}/uploads?step=identity",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "travel", "{{travelPackageCode}}", "{{travelProposalId}}", "uploads"],
+              "query": [
+                { "key": "step", "value": "identity" }
+              ]
+            },
+            "description": "CNIC requires BOTH cnic_front + cnic_back. Passport requires passport_image only. Send either CNIC pair OR passport."
+          }
+        },
+        {
+          "name": "Upload Travel Ticket (Optional) - step=ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "ticket_image", "type": "file", "src": "" }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/travel/{{travelPackageCode}}/{{travelProposalId}}/uploads?step=ticket",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "travel", "{{travelPackageCode}}", "{{travelProposalId}}", "uploads"],
+              "query": [
+                { "key": "step", "value": "ticket" }
+              ]
+            },
+            "description": "Ticket picture is optional."
           }
         }
       ]
     }
   ],
   "variable": [
-    {
-      "key": "baseUrl",
-      "value": "http://localhost:4000"
-    },
-    {
-      "key": "authToken",
-      "value": ""
-    },
-    {
-      "key": "motorProposalId",
-      "value": ""
-    }
+    { "key": "baseUrl", "value": "http://localhost:4000" },
+    { "key": "authToken", "value": "" },
+    { "key": "motorProposalId", "value": "" },
+
+    { "key": "travelProposalId", "value": "" },
+    { "key": "travelPackageCode", "value": "INTERNATIONAL" }
   ]
 }

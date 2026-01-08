@@ -7,6 +7,7 @@ const {
   listPlansService,
   listSlabsService,
   getTravelProposalByIdForUser,
+  uploadTravelAssetsService, // ✅ NEW
 } = require('./travel.service');
 
 /**
@@ -67,9 +68,37 @@ async function submitProposal(req, res, next) {
   }
 }
 
-/* =========================================================
+/**
+ * ✅ POST /api/travel/:packageCode/:proposalId/uploads?step=identity|ticket
+ */
+async function uploadTravelAssets(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const proposalId = Number(req.params.proposalId);
+    const packageCodeInput = req.params.packageCode;
+    const step = String(req.query.step || '').toLowerCase();
+    const files = req.files || {};
+
+    const result = await uploadTravelAssetsService({
+      userId,
+      proposalId,
+      packageCodeInput,
+      step,
+      files,
+    });
+
+    return res.json({
+      message: 'Travel uploads saved successfully',
+      ...result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+/* =========================
    Catalog controllers (Dropdown APIs)
-   ========================================================= */
+   ========================= */
 
 /**
  * GET /api/travel/catalog/packages
@@ -138,17 +167,11 @@ async function getMyProposalById(req, res, next) {
     }
     if (!packageCode) {
       return res.status(400).json({
-        message:
-          'package query param is required (e.g. ?package=INTERNATIONAL)',
+        message: 'package query param is required (e.g. ?package=INTERNATIONAL)',
       });
     }
 
-    const result = await getTravelProposalByIdForUser(
-      userId,
-      String(packageCode),
-      numericId
-    );
-
+    const result = await getTravelProposalByIdForUser(userId, String(packageCode), numericId);
     return res.json({ data: result });
   } catch (err) {
     next(err);
@@ -156,16 +179,18 @@ async function getMyProposalById(req, res, next) {
 }
 
 module.exports = {
-  // main
   quotePremium,
   submitProposal,
+
+  // uploads
+  uploadTravelAssets,
 
   // catalog
   listPackages,
   listCoverages,
   listPlans,
   listSlabs,
-  
+
   //get proposals
   getMyProposalById,
 };
