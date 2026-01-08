@@ -36,6 +36,8 @@ const PACKAGE_TABLES = {
   },
 };
 
+// Domestic: fixed destination id (seeded in travel_destinations table)
+const DOMESTIC_ANYWHERE_DEST_ID = Number(process.env.DOMESTIC_ANYWHERE_DEST_ID || 195);
 
 /**
  * Calculate age from DOB.
@@ -154,13 +156,18 @@ async function validateDestinations(destinationIds) {
     throw httpError(400, 'tripDetails.destinationIds (non-empty array) is required');
   }
 
-  const placeholders = destinationIds.map(() => '?').join(', ');
+  const uniqueIds = [...new Set(destinationIds.map(Number))].filter(Boolean);
+  if (uniqueIds.length === 0) {
+    throw httpError(400, 'tripDetails.destinationIds must contain valid IDs');
+  }
+
+  const placeholders = uniqueIds.map(() => '?').join(', ');
   const rows = await query(
     `SELECT id FROM travel_destinations WHERE id IN (${placeholders})`,
-    destinationIds
+    uniqueIds
   );
 
-  if (rows.length !== destinationIds.length) {
+  if (rows.length !== uniqueIds.length) {
     throw httpError(400, 'One or more destinationIds are invalid');
   }
 }
@@ -387,7 +394,7 @@ function validateFamilyMembersIfNeeded(coverageCode, familyMembers) {
 /**
  * Decide proposal table by packageCode.
  * This matches your requirement: proposals stored separately per package.
- */
+*/
 function resolveProposalTable(packageCode) {
   if (packageCode === 'DOMESTIC') return 'travel_domestic_proposals';
   if (packageCode === 'HAJJ_UMRAH_ZIARAT') return 'travel_huj_proposals';
@@ -413,15 +420,15 @@ function resolveFamilyTable(packageCode) {
 
 /**
  * POST /api/travel/submit-proposal
- *
- * Steps:
- * 1) Validate payload
- * 2) Calculate tenureDays
- * 3) Quote using DB slabs + rules
- * 4) Insert proposal into correct table
- * 5) Insert destinations
- * 6) Insert family members (if coverage is FAMILY)
- */
+*
+* Steps:
+* 1) Validate payload
+* 2) Calculate tenureDays
+* 3) Quote using DB slabs + rules
+* 4) Insert proposal into correct table
+* 5) Insert destinations
+* 6) Insert family members (if coverage is FAMILY)
+*/
 async function submitProposalService(userId, tripDetails, applicantInfo, beneficiary, parentInfo, familyMembers) {
   if (!userId) throw httpError(401, 'User is required');
   if (!tripDetails) throw httpError(400, 'tripDetails is required');
@@ -448,7 +455,26 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
   const coverageCode = normalizeCoverageCode(packageCode, coverageType);
 
   validateFamilyMembersIfNeeded(coverageCode, familyMembers);
-  await validateDestinations(destinationIds);
+
+  // ✅ Destination rules:
+  // - DOMESTIC: auto-set "Anywhere in Pakistan (Except Home City)" and do NOT require destinationIds
+  // - Other packages: destinationIds required + validated
+  let effectiveDestinationIds = destinationIds;
+
+  if (packageCode === 'DOMESTIC') {
+    if (!DOMESTIC_ANYWHERE_DEST_ID) {
+      throw httpError(500, 'DOMESTIC_ANYWHERE_DEST_ID is not configured');
+    }
+    if (Array.isArray(destinationIds) && destinationIds.length > 0) {
+      throw httpError(400, 'Domestic package does not require destinationIds');
+    }
+
+    effectiveDestinationIds = [DOMESTIC_ANYWHERE_DEST_ID];
+  }
+  else {
+    await validateDestinations(destinationIds);
+  }
+
 
   const tenureDays = calculateTenureDays(startDate, endDate);
 
@@ -668,7 +694,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
     const proposalId = result.insertId;
 
     // Insert destinations (same logic for all packages)
-    for (const destId of destinationIds) {
+    for (const destId of effectiveDestinationIds) {
       await conn.execute(
         `INSERT INTO ${destTable} (proposal_id, destination_id, created_at)
          VALUES (?, ?, NOW())`,
