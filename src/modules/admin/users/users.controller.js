@@ -49,9 +49,27 @@ async function initiateUserPasswordReset(req, res, next) {
   }
 }
 
+// all submitted propsal by user id 
+async function getProposalsFeedofUser(req, res, next) {
+  try {
+    const id = Number(req.params.id);
+    const { page = 1, limit = 20 } = req.query;
+
+    const result = await usersService.getProposalsFeedService(id, {
+      page: Number(page),
+      limit: Number(limit),
+    });
+
+    return res.json({ data: result });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listUsers,
   getUserById,
   updateUserStatus,
   initiateUserPasswordReset,
+  getProposalsFeedofUser,
 };

@@ -563,6 +563,20 @@
           "description": "Returns full user profile (no password fields)."
         },
         {
+          "name": "List All Proposals of User by User ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/users/user-proposal-list/?page=1&limit=20"
+          },
+          "description": "Returns all Proposals of User by User ID"
+        },
+        {
           "name": "Trigger Password Reset (Send OTP)",
           "request": {
             "method": "POST",

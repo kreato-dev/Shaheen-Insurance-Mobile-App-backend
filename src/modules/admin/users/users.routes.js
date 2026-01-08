@@ -35,4 +35,11 @@ router.post(
   usersController.initiateUserPasswordReset
 );
 
+router.get(
+  '/user-proposal-list/:id',
+  requireAdmin,
+  requirePermission('USERS:READ'),
+   usersController.getProposalsFeedofUser);
+
+
 module.exports = router;
