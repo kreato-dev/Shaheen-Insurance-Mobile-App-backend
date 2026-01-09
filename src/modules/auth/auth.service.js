@@ -46,20 +46,20 @@ async function registerUser({ fullName, email, mobile, password }) {
     throw httpError(400, 'All fields are required');
   }
 
-  // Check if mobile or email already exists
-  const existingRows = await query(
+  // Check if mobile and email already exists
+  const existingRows1 = await query(
     `SELECT id, email, mobile, email_verified
-     FROM users
+    FROM users
     WHERE mobile = ? AND email = ?
     LIMIT 1`,
     [mobile, email]
   );
-
+  
   // if (existingRows.length === 0) throw httpError(409, 'User with this mobile/email already exists');
-
-  if (existingRows.length > 0) {
-    const existing = existingRows[0];
-
+  
+  if (existingRows1.length > 0) {
+    const existing = existingRows1[0];
+    
     // If user exists but email not verified -> resend OTP instead of blocking register
     if (existing.email_verified === 0) {
       const { otp } = await createEmailOtp({
@@ -68,25 +68,36 @@ async function registerUser({ fullName, email, mobile, password }) {
         purpose: 'email_verify',
         expiresMinutes: 2,
       });
-
+      
       await sendOtpEmail({
         to: existing.email,
         otp,
         purpose: 'email_verify',
         expiresMinutes: 2,
       });
-
+      
       return {
         message: 'Account already exists but email not verified. OTP resent to email.',
         email: existing.email,
         needsEmailVerification: true,
       };
     }
-
+    
     // Verified user -> real conflict
-    throw httpError(409, 'User with this mobile/email already exists');
+    throw httpError(409, 'User with this mobile and email already exists');
   }
 
+  // Check if mobile or email already exists
+  const existingRows2 = await query(
+    `SELECT id, email, mobile, email_verified
+       FROM users
+    WHERE mobile = ? OR email = ?
+    LIMIT 1`,
+    [mobile, email]
+     );
+
+  if (existingRows2.length > 0) throw httpError(409, 'User with this mobile or email already exists');
+  
   const passwordHash = await bcrypt.hash(password, 10);
 
   // IMPORTANT:
