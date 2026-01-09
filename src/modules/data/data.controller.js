@@ -167,6 +167,9 @@ async function getTravelDestinations(req, res, next) {
     const where = [];
     const params = [];
 
+    // hide system-only destinations (like Domestic "Anywhere..." row)
+    where.push('is_system = 0');
+
     if (region) {
       where.push('region = ?');
       params.push(region);
