@@ -29,6 +29,10 @@
     {
       "key": "refundEvidenceFile",
       "value": ""
+    },
+    {
+      "key": "travelPackageCode",
+      "value": "INTERNATIONAL"
     }
   ],
   "item": [
@@ -364,6 +368,118 @@
               "raw": "{\n  \"action\": \"reject\",\n  \"rejection_reason\": \"CNIC/Passport mismatch.\"\n}"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Policies",
+      "item": [
+        {
+          "name": "Issue Policy (MOTOR) + Upload 2 PDFs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "proposalType",
+                  "value": "MOTOR",
+                  "type": "text"
+                },
+                {
+                  "key": "proposalId",
+                  "value": "{{motorProposalId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "policy_pdf",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "schedule_pdf",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/policies/issue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "policies",
+                "issue"
+              ]
+            }
+          },
+          "description": "Uploads 2 PDFs (policy_pdf + schedule_pdf) and issues a Motor policy. Motor duration expected to be fixed 1 year (as per your logic)."
+        },
+        {
+          "name": "Issue Policy (TRAVEL) + Upload 2 PDFs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "proposalType",
+                  "value": "TRAVEL",
+                  "type": "text"
+                },
+                {
+                  "key": "proposalId",
+                  "value": "{{travelProposalId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "travelPackageCode",
+                  "value": "{{travelPackageCode}}",
+                  "type": "text"
+                },
+                {
+                  "key": "policy_pdf",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "schedule_pdf",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/policies/issue",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "policies",
+                "issue"
+              ]
+            }
+          },
+          "description": "Uploads 2 PDFs (policy_pdf + schedule_pdf) and issues a Travel policy. travelPackageCode is required for TRAVEL (DOMESTIC / HAJJ_UMRAH_ZIARAT / INTERNATIONAL / STUDENT_GUARD)."
         }
       ]
     },

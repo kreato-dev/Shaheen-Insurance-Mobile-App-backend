@@ -896,23 +896,45 @@ CREATE TABLE support_requests (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 7) Optional Policy / Claim Cache
-CREATE TABLE policies_cache (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  policy_no VARCHAR(100) NOT NULL,
-  product VARCHAR(100) NOT NULL,
-  expiry_date DATE NULL,
-  status VARCHAR(50) NOT NULL,
-  pdf_url VARCHAR(255) NULL,
-  last_synced_at DATETIME NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_policies_cache_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-  UNIQUE KEY uq_policies_cache (user_id, policy_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 7) Policies
+CREATE TABLE policies (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
 
+  proposal_type ENUM('MOTOR','TRAVEL') NOT NULL,
+  proposal_id BIGINT NOT NULL,
+
+  -- for TRAVEL: DOMESTIC / HAJJ_UMRAH_ZIARAT / INTERNATIONAL / STUDENT_GUARD
+  -- for MOTOR: always 'NA'
+  travel_package_code VARCHAR(32) NOT NULL DEFAULT 'NA',
+
+  policy_no VARCHAR(64) NOT NULL UNIQUE,
+
+  policy_status ENUM('active','expired','cancelled') NOT NULL DEFAULT 'active',
+
+  issued_at DATETIME NOT NULL,
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+
+  currency VARCHAR(10) DEFAULT 'PKR',
+  sum_insured DECIMAL(12,2) NULL,
+  premium DECIMAL(12,2) NULL,
+
+  policy_pdf_path VARCHAR(255) NULL,
+  schedule_pdf_path VARCHAR(255) NULL,
+
+  issued_by_admin_id BIGINT NULL,
+
+  snapshot_json JSON NULL,
+
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_policy_once (proposal_type, travel_package_code, proposal_id),
+  INDEX idx_policy_status (policy_status),
+  INDEX idx_policy_lookup (proposal_type, travel_package_code, proposal_id)
+);
+
+-- 8) Claim Cache
 CREATE TABLE claims_cache (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,

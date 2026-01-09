@@ -441,7 +441,7 @@
               { "key": "Content-Type", "value": "application/json" }
             ],
             "body": { "mode": "raw", "raw": "{\n  \"paymentId\": 2,\n  \"gatewayTxnId\": \"MANUAL-TX-123\",\n  \"status\": \"SUCCESS\"\n}" },
-            "url": { "raw": "{{baseUrl}}/api/payment/mark-success", "host": ["{{baseUrl}}"], "path": ["api", "payment", "mark-success"] }
+            "url": { "raw": "{{baseUrl}}/api/payment/dev/mark-success", "host": ["{{baseUrl}}"], "path": ["api", "payment", "mark-success"] }
           },
           "description": "Stubbed success flow (until webhook is finalized). Sets payments.status=SUCCESS and updates the related proposal: payment_status='paid', paid_at=NOW(), review_status='pending_review'."
         }
