@@ -355,12 +355,29 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     );
   }
 
+  const rawDocuments = await query(
+    `SELECT id, doc_type, side, file_path, created_at
+   FROM travel_documents
+   WHERE proposal_id = ?
+   ORDER BY created_at ASC`,
+    [id]
+  );
+
+  const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
+
+  const documents = rawDocuments.map(doc => ({
+    ...doc,
+    file_url: `${APP_BASE_URL}/${doc.file_path}`,
+  }));
+
+
   return {
     travelSubtype: String(travelSubtype).toLowerCase(),
     travelType: t.travelType,
     proposal,
     destinations,
     familyMembers,
+    documents,
   };
 }
 

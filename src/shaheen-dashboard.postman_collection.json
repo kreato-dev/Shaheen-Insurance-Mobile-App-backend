@@ -230,7 +230,7 @@
           "description": "Returns motor proposal details with motor_documents and motor_vehicle_images, plus *_url fields."
         },
         {
-          "name": "Travel Detail (by subtype)",
+          "name": "Travel Detail (by subtype) + Docs",
           "request": {
             "method": "GET",
             "header": [
