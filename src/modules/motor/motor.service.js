@@ -6,6 +6,24 @@ function httpError(status, message) {
   err.status = status;
   return err;
 }
+
+/**
+ * mappings for reupload/replace vehicle images + documents
+**/
+const DOC_FIELD_MAP = {
+  cnic_front:    { docType: 'CNIC', side: 'front' },
+  cnic_back:     { docType: 'CNIC', side: 'back' },
+  license_front: { docType: 'DRIVING_LICENSE', side: 'front' },
+  license_back:  { docType: 'DRIVING_LICENSE', side: 'back' },
+  regbook_front: { docType: 'REGISTRATION_BOOK', side: 'front' },
+  regbook_back:  { docType: 'REGISTRATION_BOOK', side: 'back' },
+};
+
+const VEHICLE_IMAGE_FIELDS = new Set([
+  'front_side','back_side','right_side','left_side',
+  'dashboard','engine_bay','boot','engine_number',
+]);
+
 /**
  * Relative Path to upload vehicle images + documents
  * **/
@@ -439,6 +457,19 @@ async function upsertDocument(conn, proposalId, docType, side, filePath) {
 }
 
 /**
+ * reupload vehicle images
+ */
+async function upsertVehicleImage(conn, proposalId, imageType, filePath) {
+  await conn.execute(
+    `INSERT INTO motor_vehicle_images (proposal_id, image_type, file_path, created_at)
+     VALUES (?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE file_path=VALUES(file_path), created_at=NOW()`,
+    [proposalId, imageType, filePath]
+  );
+}
+
+
+/**
  * Upload assets by step:
  * - step=cnic: cnic_front + cnic_back => motor_documents (CNIC)
  * - step=license: license_front + license_back => motor_documents (DRIVING_LICENSE)
@@ -512,12 +543,7 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
 
         const file = arr[0];
 
-        await conn.execute(
-          `INSERT INTO motor_vehicle_images
-           (proposal_id, image_type, file_path, created_at)
-           VALUES (?, ?, ?, NOW())`,
-          [proposalId, field, toUploadsRelativePath(file)]
-        );
+        await upsertVehicleImage(conn, proposalId, field, toUploadsRelativePath(file));
 
         savedVehicleImages.push(field);
       }
@@ -542,6 +568,110 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
     conn.release();
   }
 }
+
+/**
+ * Reupload assets:
+ */
+async function reuploadMotorAssetsService({ userId, proposalId, files }) {
+  if (!userId) throw httpError(401, 'User is required');
+  if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
+
+  const uploadedFields = Object.keys(files || {});
+  if (!uploadedFields.length) throw httpError(400, 'No files uploaded');
+
+  const conn = await getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await assertProposalOwnership(conn, proposalId, userId);
+
+    // check admin requested reupload
+    const [rows] = await conn.execute(
+      `SELECT review_status, reupload_required_docs
+       FROM motor_proposals
+       WHERE id=? LIMIT 1`,
+      [proposalId]
+    );
+
+    if (!rows.length) throw httpError(404, 'Proposal not found');
+
+    const p = rows[0];
+    if (String(p.review_status) !== 'reupload_required') {
+      throw httpError(400, 'Reupload is not requested for this proposal');
+    }
+
+    let required = [];
+    try {
+      required = p.reupload_required_docs ? JSON.parse(p.reupload_required_docs) : [];
+    } catch {
+      throw httpError(500, 'Invalid stored reupload_required_docs JSON');
+    }
+
+    // build allow-list
+    const allowDocs = new Set();   // "CNIC:front"
+    const allowImgs = new Set();   // "dashboard"
+
+    for (const item of required) {
+      if (item?.doc_type && item?.side) {
+        allowDocs.add(`${String(item.doc_type).toUpperCase()}:${String(item.side).toLowerCase()}`);
+      }
+      if (item?.image_type) {
+        allowImgs.add(String(item.image_type));
+      }
+    }
+
+    // validate uploaded fields are requested
+    for (const field of uploadedFields) {
+      if (DOC_FIELD_MAP[field]) {
+        const key = `${DOC_FIELD_MAP[field].docType}:${DOC_FIELD_MAP[field].side}`;
+        if (!allowDocs.has(key)) throw httpError(400, `Not requested for reupload: ${key}`);
+        continue;
+      }
+
+      if (VEHICLE_IMAGE_FIELDS.has(field)) {
+        if (!allowImgs.has(field)) throw httpError(400, `Not requested for reupload image: ${field}`);
+        continue;
+      }
+
+      throw httpError(400, `Unexpected field: ${field}`);
+    }
+
+    // replace in DB
+    const saved = { documents: [], vehicleImages: [] };
+
+    for (const field of uploadedFields) {
+      const file = files[field]?.[0];
+      if (!file) continue;
+
+      if (DOC_FIELD_MAP[field]) {
+        const { docType, side } = DOC_FIELD_MAP[field];
+        await upsertDocument(conn, proposalId, docType, side, toUploadsRelativePath(file));
+        saved.documents.push(field);
+      } else if (VEHICLE_IMAGE_FIELDS.has(field)) {
+        await upsertVehicleImage(conn, proposalId, field, toUploadsRelativePath(file));
+        saved.vehicleImages.push(field);
+      }
+    }
+
+    // OPTIONAL: after user reuploads, move review_status back to pending_review (or keep reupload_required)
+    await conn.execute(
+      `UPDATE motor_proposals
+       SET review_status='pending_review',
+           admin_last_action_at=NOW()
+       WHERE id=?`,
+      [proposalId]
+    );
+
+    await conn.commit();
+    return { proposalId, saved };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 
 /**
  * ✅ Get full motor proposal details for logged-in user
@@ -745,5 +875,6 @@ module.exports = {
   getMarketValueService,
   submitProposalService,
   uploadMotorAssetsService,
+  reuploadMotorAssetsService,
   getMotorProposalByIdForUser,
 };

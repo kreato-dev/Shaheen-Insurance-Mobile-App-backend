@@ -299,6 +299,7 @@ CREATE TABLE motor_vehicle_images (
 
   INDEX idx_motor_vehicle_images_proposal_id (proposal_id),
 
+  UNIQUE KEY uq_motor_vehicle_image_type (proposal_id, image_type),
   CONSTRAINT fk_motor_vehicle_images_proposal
     FOREIGN KEY (proposal_id) REFERENCES motor_proposals(id)
     ON DELETE CASCADE ON UPDATE CASCADE

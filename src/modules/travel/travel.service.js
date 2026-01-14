@@ -12,6 +12,17 @@ function httpError(status, message) {
 }
 
 /**
+ * mappings for reupload/replace travel documents
+**/
+const TRAVEL_FIELD_MAP = {
+  cnic_front:     { docType: 'CNIC', side: 'front' },
+  cnic_back:      { docType: 'CNIC', side: 'back' },
+  passport_image: { docType: 'PASSPORT', side: 'single' },
+  ticket_image:   { docType: 'TICKET', side: 'single' },
+};
+
+
+/**
  * Map packageCode -> table names
  */
 const PACKAGE_TABLES = {
@@ -865,6 +876,111 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
 }
 
 /* =========================================================
+   Reupload Travel Assets Service
+   ========================================================= */
+async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInput, files }) {
+  if (!userId) throw httpError(401, 'User is required');
+  if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
+  if (!packageCodeInput) throw httpError(400, 'packageCode is required');
+
+  const packageCode = normalizePackageCode(packageCodeInput);
+
+  const uploadedFields = Object.keys(files || {});
+  if (!uploadedFields.length) throw httpError(400, 'No files uploaded');
+
+  const tables = PACKAGE_TABLES[packageCode];
+  if (!tables) throw httpError(400, 'Invalid package');
+
+  const conn = await getConnection();
+
+  try {
+    await conn.beginTransaction();
+
+    await assertTravelProposalOwnership(conn, packageCode, proposalId, userId);
+
+    // ✅ check admin requested reupload (read from package proposal table)
+    const [rows] = await conn.execute(
+      `SELECT review_status, reupload_required_docs
+       FROM ${tables.proposals}
+       WHERE id=? LIMIT 1`,
+      [proposalId]
+    );
+
+    if (!rows.length) throw httpError(404, 'Proposal not found');
+
+    const p = rows[0];
+    if (String(p.review_status) !== 'reupload_required') {
+      throw httpError(400, 'Reupload is not requested for this proposal');
+    }
+
+    let required = [];
+    try {
+      required = p.reupload_required_docs ? JSON.parse(p.reupload_required_docs) : [];
+    } catch {
+      throw httpError(500, 'Invalid stored reupload_required_docs JSON');
+    }
+
+    // allow list: "CNIC:front"
+    const allowDocs = new Set();
+    for (const item of required) {
+      if (item?.doc_type) {
+        const dt = String(item.doc_type).toUpperCase();
+        const side = item.side ? String(item.side).toLowerCase() : 'single';
+        allowDocs.add(`${dt}:${side}`);
+      }
+    }
+
+    // validate uploaded fields are expected + requested
+    for (const field of uploadedFields) {
+      const map = TRAVEL_FIELD_MAP[field];
+      if (!map) throw httpError(400, `Unexpected field: ${field}`);
+
+      const key = `${map.docType}:${map.side}`;
+      if (!allowDocs.has(key)) {
+        throw httpError(400, `Not requested for reupload: ${key}`);
+      }
+    }
+
+    // ✅ replace in travel_documents (UPSERT)
+    const saved = [];
+    for (const field of uploadedFields) {
+      const file = files[field]?.[0];
+      if (!file) continue;
+
+      const { docType, side } = TRAVEL_FIELD_MAP[field];
+
+      await upsertTravelDocument(conn, {
+        packageCode,
+        proposalId,
+        docType,
+        side,
+        filePath: toUploadsRelativePathTravel(file),
+      });
+
+      saved.push(field);
+    }
+
+    // OPTIONAL: set review_status back to pending_review after reupload
+    await conn.execute(
+      `UPDATE ${tables.proposals}
+       SET review_status='pending_review',
+           admin_last_action_at=NOW()
+       WHERE id=?`,
+      [proposalId]
+    );
+
+    await conn.commit();
+    return { proposalId, packageCode, saved };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+
+/* =========================================================
    CATALOG (Dropdown APIs)
    ========================================================= */
 
@@ -1182,6 +1298,8 @@ module.exports = {
 
   // uploads
   uploadTravelAssetsService,
+  // reuploads
+  reuploadTravelAssetsService,
 
   // catalog
   listPackagesService,

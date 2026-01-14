@@ -81,6 +81,21 @@ router.post(
   travelController.uploadTravelAssets
 );
 
+// POST /api/travel/:packageCode/:proposalId/reupload
+router.post(
+  '/:packageCode/:proposalId/reupload',
+  (req, res, next) => {
+    return upload.fields([
+      { name: 'cnic_front', maxCount: 1 },
+      { name: 'cnic_back', maxCount: 1 },
+      { name: 'passport_image', maxCount: 1 },
+      { name: 'ticket_image', maxCount: 1 },
+    ])(req, res, next);
+  },
+  travelController.reuploadTravelAssets
+);
+
+
 // Catalog (no auth needed usually, but up to you)
 router.get('/catalog/packages', travelController.listPackages);
 router.get('/catalog/coverages', travelController.listCoverages);

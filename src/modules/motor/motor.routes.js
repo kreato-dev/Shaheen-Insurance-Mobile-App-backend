@@ -104,6 +104,33 @@ router.post(
   motorController.uploadMotorAssets
 );
 
+// POST /api/motor/:proposalId/reuploads?
+router.post(
+  '/:proposalId/reupload',
+  (req, res, next) => {
+    return upload.fields([
+      // docs
+      { name: 'cnic_front', maxCount: 1 },
+      { name: 'cnic_back', maxCount: 1 },
+      { name: 'license_front', maxCount: 1 },
+      { name: 'license_back', maxCount: 1 },
+      { name: 'regbook_front', maxCount: 1 },
+      { name: 'regbook_back', maxCount: 1 },
+
+      // vehicle images
+      { name: 'front_side', maxCount: 1 },
+      { name: 'back_side', maxCount: 1 },
+      { name: 'right_side', maxCount: 1 },
+      { name: 'left_side', maxCount: 1 },
+      { name: 'dashboard', maxCount: 1 },
+      { name: 'engine_bay', maxCount: 1 },
+      { name: 'boot', maxCount: 1 },
+      { name: 'engine_number', maxCount: 1 },
+    ])(req, res, next);
+  },
+  motorController.reuploadMotorAssets
+);
+
 // GET /api/motor/my-proposals/:id
 router.get('/my-proposals/:id', motorController.getMyProposalById);
 module.exports = router;

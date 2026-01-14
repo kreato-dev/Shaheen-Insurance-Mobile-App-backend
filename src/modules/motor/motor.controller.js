@@ -4,6 +4,7 @@ const {
   getMarketValueService,
   submitProposalService,
   uploadMotorAssetsService,
+  reuploadMotorAssetsService,
   getMotorProposalByIdForUser,
 } = require('./motor.service');
 
@@ -105,6 +106,28 @@ async function uploadMotorAssets(req, res, next) {
   }
 }
 
+//reupload motor doc or images by proposalId
+async function reuploadMotorAssets(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const proposalId = Number(req.params.proposalId);
+    const files = req.files || {};
+
+    const result = await reuploadMotorAssetsService({
+      userId,
+      proposalId,
+      files,
+    });
+
+    return res.json({
+      message: 'Motor reupload saved successfully',
+      ...result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 
 /**
  * Returns full proposal details for the logged-in user
@@ -130,5 +153,6 @@ module.exports = {
   getMarketValue,
   submitProposal,
   uploadMotorAssets,
+  reuploadMotorAssets,
   getMyProposalById
 };

@@ -7,7 +7,8 @@ const {
   listPlansService,
   listSlabsService,
   getTravelProposalByIdForUser,
-  uploadTravelAssetsService, // ✅ NEW
+  uploadTravelAssetsService,
+  reuploadTravelAssetsService,
 } = require('./travel.service');
 
 /**
@@ -95,6 +96,34 @@ async function uploadTravelAssets(req, res, next) {
     next(err);
   }
 }
+
+/**
+ * ✅ POST /api/travel/:packageCode/:proposalId/reuploads
+ */
+async function reuploadTravelAssets(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const proposalId = Number(req.params.proposalId);
+    const packageCodeInput = req.params.packageCode;
+    const files = req.files || {};
+
+    const result = await reuploadTravelAssetsService({
+      userId,
+      proposalId,
+      packageCodeInput,
+      files,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Travel reupload saved successfully',
+      data: result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 
 /* =========================
    Catalog controllers (Dropdown APIs)
@@ -184,6 +213,8 @@ module.exports = {
 
   // uploads
   uploadTravelAssets,
+  // reuploads
+  reuploadTravelAssets,
 
   // catalog
   listPackages,
