@@ -238,6 +238,10 @@ CREATE TABLE motor_proposals (
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
 
+  -- registration number issue module if vehicle is applied
+  registration_updated_at DATETIME NULL,
+  registration_updated_by ENUM('user','admin') NULL
+
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 

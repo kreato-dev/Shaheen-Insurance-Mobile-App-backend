@@ -133,4 +133,8 @@ router.post(
 
 // GET /api/motor/my-proposals/:id
 router.get('/my-proposals/:id', motorController.getMyProposalById);
+
+// PATCH /api/motor/my-proposals/:id/registration-number
+router.patch('/my-proposals/:id/registration-number', motorController.updateRegistrationNumber);
+
 module.exports = router;

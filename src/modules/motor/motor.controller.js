@@ -6,6 +6,7 @@ const {
   uploadMotorAssetsService,
   reuploadMotorAssetsService,
   getMotorProposalByIdForUser,
+  updateMotorRegistrationNumberService,
 } = require('./motor.service');
 
 async function calculatePremium(req, res, next) {
@@ -148,11 +149,40 @@ async function getMyProposalById(req, res, next) {
   }
 }
 
+/**
+ * Update registration number of the Applied vehicle
+ */
+async function updateRegistrationNumber(req, res, next) {
+  try {
+    const userId = req.user.id;
+    const proposalId = Number(req.params.id);
+    const { registrationNumber } = req.body;
+
+    if (!proposalId || Number.isNaN(proposalId)) {
+      return res.status(400).json({ message: 'Invalid proposal id' });
+    }
+
+    const result = await updateMotorRegistrationNumberService({
+      userId,
+      proposalId,
+      registrationNumber,
+    });
+
+    return res.json({
+      message: 'Registration number updated successfully',
+      ...result,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   calculatePremium,
   getMarketValue,
   submitProposal,
   uploadMotorAssets,
   reuploadMotorAssets,
-  getMyProposalById
+  getMyProposalById,
+  updateRegistrationNumber
 };

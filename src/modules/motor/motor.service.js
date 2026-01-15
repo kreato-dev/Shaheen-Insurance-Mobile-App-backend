@@ -174,6 +174,61 @@ function validateVehicleDetails(vehicle) {
   }
   vehicle.assembly = assembly;
 
+  /* =========================================================
+      Applied-for-registration handling RULE
+     ========================================================= */
+
+  const rawAppliedFor = vehicle.appliedFor;
+
+  const appliedFor =
+    rawAppliedFor === true ||
+    rawAppliedFor === 1 ||
+    rawAppliedFor === '1' ||
+    rawAppliedFor === 'true';
+
+  const regNoRaw =
+    vehicle.registrationNumber !== undefined && vehicle.registrationNumber !== null
+      ? String(vehicle.registrationNumber).trim()
+      : '';
+
+  // If appliedFor = true → registrationNumber must be empty OR "APPLIED"
+  if (appliedFor) {
+    if (regNoRaw && regNoRaw.toUpperCase() !== 'APPLIED') {
+      throw httpError(
+        400,
+        'registrationNumber must be "APPLIED" (or empty) when appliedFor is true'
+      );
+    }
+
+    // Normalize to APPLIED so DB is consistent
+    vehicle.registrationNumber = 'APPLIED';
+    vehicle.appliedFor = 1;
+  } else {
+    // If appliedFor = false → registrationNumber must be a real number (not APPLIED)
+    if (!regNoRaw) {
+      throw httpError(
+        400,
+        'vehicleDetails.registrationNumber is required when vehicleDetails.appliedFor is false'
+      );
+    }
+
+    if (regNoRaw.toUpperCase() === 'APPLIED') {
+      throw httpError(
+        400,
+        'registrationNumber cannot be "APPLIED" when appliedFor is false'
+      );
+    }
+
+    // Keep it flexible but not garbage
+    if (regNoRaw.length < 4) {
+      throw httpError(400, 'vehicleDetails.registrationNumber looks invalid');
+    }
+
+    // Normalize formatting
+    vehicle.registrationNumber = regNoRaw.toUpperCase();
+    vehicle.appliedFor = 0;
+  }
+
   // Ownership rule:
   // if applicant is not the vehicle owner, then it must be registered under the blood relation of the owner 
   const rawIsOwner = vehicle.isOwner;
@@ -554,10 +609,10 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       requireFiles(files, ['cnic_front', 'cnic_back']);
 
       const newFront = toUploadsRelativePath(files.cnic_front[0]);
-      const newBack  = toUploadsRelativePath(files.cnic_back[0]);
+      const newBack = toUploadsRelativePath(files.cnic_back[0]);
 
       const oldFront = await replaceMotorDocument(conn, proposalId, 'CNIC', 'front', newFront);
-      const oldBack  = await replaceMotorDocument(conn, proposalId, 'CNIC', 'back', newBack);
+      const oldBack = await replaceMotorDocument(conn, proposalId, 'CNIC', 'back', newBack);
 
       if (oldFront && oldFront !== newFront) oldPathsToDelete.push(oldFront);
       if (oldBack && oldBack !== newBack) oldPathsToDelete.push(oldBack);
@@ -575,10 +630,10 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       requireFiles(files, ['license_front', 'license_back']);
 
       const newFront = toUploadsRelativePath(files.license_front[0]);
-      const newBack  = toUploadsRelativePath(files.license_back[0]);
+      const newBack = toUploadsRelativePath(files.license_back[0]);
 
       const oldFront = await replaceMotorDocument(conn, proposalId, 'DRIVING_LICENSE', 'front', newFront);
-      const oldBack  = await replaceMotorDocument(conn, proposalId, 'DRIVING_LICENSE', 'back', newBack);
+      const oldBack = await replaceMotorDocument(conn, proposalId, 'DRIVING_LICENSE', 'back', newBack);
 
       if (oldFront && oldFront !== newFront) oldPathsToDelete.push(oldFront);
       if (oldBack && oldBack !== newBack) oldPathsToDelete.push(oldBack);
@@ -596,10 +651,10 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
 
       // regbook docs
       const newRegFront = toUploadsRelativePath(files.regbook_front[0]);
-      const newRegBack  = toUploadsRelativePath(files.regbook_back[0]);
+      const newRegBack = toUploadsRelativePath(files.regbook_back[0]);
 
       const oldRegFront = await replaceMotorDocument(conn, proposalId, 'REGISTRATION_BOOK', 'front', newRegFront);
-      const oldRegBack  = await replaceMotorDocument(conn, proposalId, 'REGISTRATION_BOOK', 'back', newRegBack);
+      const oldRegBack = await replaceMotorDocument(conn, proposalId, 'REGISTRATION_BOOK', 'back', newRegBack);
 
       if (oldRegFront && oldRegFront !== newRegFront) oldPathsToDelete.push(oldRegFront);
       if (oldRegBack && oldRegBack !== newRegBack) oldPathsToDelete.push(oldRegBack);
@@ -640,9 +695,9 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
     // IMPORTANT: delete newly uploaded files if DB failed
     // (otherwise you’ll have orphan files on disk)
     for (const p of newPaths) {
-      try { await deleteFileIfExists(p); } catch (_) {}
+      try { await deleteFileIfExists(p); } catch (_) { }
     }
-    
+
     throw err;
   } finally {
     conn.release();
@@ -978,6 +1033,82 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
   };
 }
 
+// update registration number when issued
+async function updateMotorRegistrationNumberService({ userId, proposalId, registrationNumber }) {
+  if (!userId) throw httpError(401, 'User is required');
+  if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
+
+  const reg = String(registrationNumber || '').trim().toUpperCase();
+
+  if (!reg) throw httpError(400, 'registrationNumber is required');
+  if (reg === 'APPLIED') throw httpError(400, 'registrationNumber cannot be "APPLIED"');
+
+  if (reg.length < 4) throw httpError(400, 'registrationNumber looks invalid');
+
+  const conn = await getConnection();
+  try {
+    await conn.beginTransaction();
+
+    // ownership + current status checks
+    const [rows] = await conn.execute(
+      `SELECT
+         id,
+         user_id,
+         applied_for,
+         registration_number,
+         review_status,
+         policy_status
+       FROM motor_proposals
+       WHERE id = ? AND user_id = ?
+       LIMIT 1`,
+      [proposalId, userId]
+    );
+
+    if (!rows.length) throw httpError(404, 'Motor proposal not found for this user');
+
+    const p = rows[0];
+
+    // ✅ must be applied_for = 1 to allow update
+    if (Number(p.applied_for) !== 1) {
+      throw httpError(400, 'Registration number update is only allowed for applied-for-registration vehicles');
+    }
+
+    // Optional safety: block if already approved/active etc.
+    // (keep or remove based on business flow)
+    const reviewStatus = String(p.review_status || '');
+    const policyStatus = String(p.policy_status || '');
+
+    if (reviewStatus === 'approved' || policyStatus === 'active') {
+      throw httpError(400, 'Cannot update registration number after approval / policy issuance');
+    }
+
+    // Update registration + flip applied_for off
+    await conn.execute(
+      `UPDATE motor_proposals
+       SET registration_number = ?,
+           applied_for = 0,
+           registration_updated_at = NOW(),
+           registration_updated_by = 'user',
+           updated_at = NOW()
+       WHERE id = ? AND user_id = ?`,
+      [reg, proposalId, userId]
+    );
+
+    await conn.commit();
+
+    return {
+      proposalId,
+      registrationNumber: reg,
+      appliedFor: 0,
+    };
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 
 module.exports = {
   calculatePremiumService,
@@ -986,4 +1117,5 @@ module.exports = {
   uploadMotorAssetsService,
   reuploadMotorAssetsService,
   getMotorProposalByIdForUser,
+  updateMotorRegistrationNumberService,
 };
