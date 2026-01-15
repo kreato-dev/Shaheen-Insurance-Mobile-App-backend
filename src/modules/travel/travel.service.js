@@ -1,5 +1,6 @@
 // src/modules/travel/travel.service.js
 const { query, getConnection } = require('../../config/db');
+const { deleteFileIfExists } = require('../../utils/fileCleanup');
 
 /**
  * Small helper to throw HTTP-like errors from service layer
@@ -15,10 +16,10 @@ function httpError(status, message) {
  * mappings for reupload/replace travel documents
 **/
 const TRAVEL_FIELD_MAP = {
-  cnic_front:     { docType: 'CNIC', side: 'front' },
-  cnic_back:      { docType: 'CNIC', side: 'back' },
+  cnic_front: { docType: 'CNIC', side: 'front' },
+  cnic_back: { docType: 'CNIC', side: 'back' },
   passport_image: { docType: 'PASSPORT', side: 'single' },
-  ticket_image:   { docType: 'TICKET', side: 'single' },
+  ticket_image: { docType: 'TICKET', side: 'single' },
 };
 
 
@@ -82,10 +83,35 @@ async function upsertTravelDocument(conn, { packageCode, proposalId, docType, si
 }
 
 /**
+ * replace old travel document and return old file_path (so we can delete it from storage)
+ * Needs UNIQUE KEY on travel_documents(package_code, proposal_id, doc_type, side)
+ */
+async function replaceTravelDocument(conn, { packageCode, proposalId, docType, side, newFilePath }) {
+  const [rows] = await conn.execute(
+    `SELECT file_path
+     FROM travel_documents
+     WHERE package_code=? AND proposal_id=? AND doc_type=? AND side=?
+     LIMIT 1`,
+    [packageCode, proposalId, docType, side]
+  );
+
+  const oldPath = rows.length ? rows[0].file_path : null;
+
+  await conn.execute(
+    `INSERT INTO travel_documents (package_code, proposal_id, doc_type, side, file_path, created_at)
+     VALUES (?, ?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE file_path=VALUES(file_path), created_at=NOW()`,
+    [packageCode, proposalId, docType, side, newFilePath]
+  );
+
+  return oldPath;
+}
+
+/**
  * Calculate age from DOB.
  * Returns null if dob is invalid.
  */
-   function calculateAge(dobStr) {
+function calculateAge(dobStr) {
   const dob = new Date(dobStr);
   if (Number.isNaN(dob.getTime())) return null;
 
@@ -343,7 +369,7 @@ async function quoteTravelPremiumService(data) {
 
   // Base premium comes from slab
   const basePremium = Number(slab.premium);
-  
+
   // Final premium includes possible age loading for international
   const finalPremium = Number((basePremium * (1 + loadingPercent / 100)).toFixed(2));
 
@@ -491,7 +517,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       throw httpError(400, 'Domestic package does not require destinationIds');
     }
     effectiveDestinationIds = [DOMESTIC_ANYWHERE_DEST_ID];
-  } 
+  }
   else {
     await validateDestinations(destinationIds);
   }
@@ -646,7 +672,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         beneficiary.beneficiaryCnic,
         beneficiary.beneficiaryCnicIssueDate,
         beneficiary.beneficiaryRelation,
-        
+
         quote.basePremium,
         quote.finalPremium,
       ];
@@ -782,12 +808,20 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
   const packageCode = normalizePackageCode(packageCodeInput);
   const stepLower = String(step).toLowerCase();
 
+  // collect newly uploaded file paths (if rollback happens, delete them)
+  const newPaths = [];
+  for (const [field, arr] of Object.entries(files || {})) {
+    if (!arr || !arr[0]) continue;
+    newPaths.push(toUploadsRelativePathTravel(arr[0]));
+  }
+
   const conn = await getConnection();
 
   try {
     await conn.beginTransaction();
-
     await assertTravelProposalOwnership(conn, packageCode, proposalId, userId);
+
+    const oldPathsToDelete = [];
 
     // Step: identity (CNIC 2 pics OR Passport 1 pic)
     if (stepLower === 'identity') {
@@ -801,35 +835,50 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
         throw httpError(400, 'Upload CNIC (cnic_front + cnic_back) OR Passport (passport_image)');
       }
 
+      // CNIC (only if complete)
       if (cnicComplete) {
-        await upsertTravelDocument(conn, {
+        const newFront = toUploadsRelativePathTravel(files.cnic_front[0]);
+        const newBack = toUploadsRelativePathTravel(files.cnic_back[0]);
+
+        const oldFront = await replaceTravelDocument(conn, {
           packageCode,
           proposalId,
           docType: 'CNIC',
           side: 'front',
-          filePath: toUploadsRelativePathTravel(files.cnic_front[0]),
+          newFilePath: newFront,
         });
 
-        await upsertTravelDocument(conn, {
+        const oldBack = await replaceTravelDocument(conn, {
           packageCode,
           proposalId,
           docType: 'CNIC',
           side: 'back',
-          filePath: toUploadsRelativePathTravel(files.cnic_back[0]),
+          newFilePath: newBack,
         });
+
+        if (oldFront && oldFront !== newFront) oldPathsToDelete.push(oldFront);
+        if (oldBack && oldBack !== newBack) oldPathsToDelete.push(oldBack);
       }
 
+      // PASSPORT (optional)
       if (hasPassport) {
-        await upsertTravelDocument(conn, {
+        const newPassport = toUploadsRelativePathTravel(files.passport_image[0]);
+
+        const oldPassport = await replaceTravelDocument(conn, {
           packageCode,
           proposalId,
           docType: 'PASSPORT',
           side: 'single',
-          filePath: toUploadsRelativePathTravel(files.passport_image[0]),
+          newFilePath: newPassport,
         });
+
+        if (oldPassport && oldPassport !== newPassport) oldPathsToDelete.push(oldPassport);
       }
 
       await conn.commit();
+
+      // delete old files after commit
+      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
       return {
         proposalId,
@@ -847,16 +896,22 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
       const hasTicket = !!(files.ticket_image && files.ticket_image[0]);
 
       if (hasTicket) {
-        await upsertTravelDocument(conn, {
+        const newTicket = toUploadsRelativePathTravel(files.ticket_image[0]);
+
+        const oldTicket = await replaceTravelDocument(conn, {
           packageCode,
           proposalId,
           docType: 'TICKET',
           side: 'single',
-          filePath: toUploadsRelativePathTravel(files.ticket_image[0]),
+          newFilePath: newTicket,
         });
+
+        if (oldTicket && oldTicket !== newTicket) oldPathsToDelete.push(oldTicket);
       }
 
       await conn.commit();
+
+      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
       return {
         proposalId,
@@ -869,6 +924,12 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
     throw httpError(400, 'Invalid step. Use: identity, ticket');
   } catch (err) {
     await conn.rollback();
+
+    // if DB fails, delete newly uploaded files to avoid storage junk
+    for (const p of newPaths) {
+      try { await deleteFileIfExists(p); } catch (_) { }
+    }
+
     throw err;
   } finally {
     conn.release();
@@ -891,6 +952,13 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
   const tables = PACKAGE_TABLES[packageCode];
   if (!tables) throw httpError(400, 'Invalid package');
 
+  // collect new file paths (if rollback happens, delete them)
+  const newPaths = [];
+  for (const field of uploadedFields) {
+    const f = files[field]?.[0];
+    if (f) newPaths.push(toUploadsRelativePathTravel(f));
+  }
+
   const conn = await getConnection();
 
   try {
@@ -898,7 +966,7 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
 
     await assertTravelProposalOwnership(conn, packageCode, proposalId, userId);
 
-    // ✅ check admin requested reupload (read from package proposal table)
+    // check admin requested reupload (from package proposal table)
     const [rows] = await conn.execute(
       `SELECT review_status, reupload_required_docs
        FROM ${tables.proposals}
@@ -941,22 +1009,26 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
       }
     }
 
-    // ✅ replace in travel_documents (UPSERT)
+    // replace in travel_documents and collect old paths to delete after commit
+    const oldPathsToDelete = [];
     const saved = [];
+
     for (const field of uploadedFields) {
       const file = files[field]?.[0];
       if (!file) continue;
 
       const { docType, side } = TRAVEL_FIELD_MAP[field];
+      const newPath = toUploadsRelativePathTravel(file);
 
-      await upsertTravelDocument(conn, {
+      const oldPath = await replaceTravelDocument(conn, {
         packageCode,
         proposalId,
         docType,
         side,
-        filePath: toUploadsRelativePathTravel(file),
+        newFilePath: newPath,
       });
 
+      if (oldPath && oldPath !== newPath) oldPathsToDelete.push(oldPath);
       saved.push(field);
     }
 
@@ -970,9 +1042,21 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
     );
 
     await conn.commit();
+
+    // delete old files after commit
+    for (const p of oldPathsToDelete) {
+      await deleteFileIfExists(p);
+    }
+
     return { proposalId, packageCode, saved };
   } catch (err) {
     await conn.rollback();
+
+    // if transaction failed, delete newly uploaded files (avoid storage junk)
+    for (const p of newPaths) {
+      try { await deleteFileIfExists(p); } catch (_) { }
+    }
+
     throw err;
   } finally {
     conn.release();
@@ -1163,6 +1247,12 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
   const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
   const buildUrl = (filePath) => (filePath ? `${baseUrl}/${String(filePath).replace(/^\//, '')}` : null);
 
+  // required docs JSON might come as string depending on mysql driver/settings
+  let requiredDocs = p.reupload_required_docs ?? null;
+  if (typeof requiredDocs === 'string') {
+    try { requiredDocs = JSON.parse(requiredDocs); } catch (_) { }
+  }
+
   return {
     packageCode: p.packageCode || packageCode, // fallback
     proposalId: p.id,
@@ -1180,7 +1270,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
 
     rejectionReason: p.rejection_reason,
     reuploadNotes: p.reupload_notes,
-    reuploadRequiredDocs: p.reupload_required_docs,
+    reuploadRequiredDocs: requiredDocs,
 
     refund: {
       refundStatus: p.refund_status,
@@ -1212,7 +1302,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       startDate: p.start_date,
       endDate: p.end_date,
       tenureDays: p.tenure_days,
-      
+
       // only exists on INTERNATIONAL, safe for others
       isMultiTrip: p.is_multi_trip ?? null,
       maxTripDaysApplied: p.max_trip_days_applied ?? null,
@@ -1230,7 +1320,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       mobile: p.mobile,
       email: p.email,
       dob: p.dob,
-      
+
       // only exists on STUDENT
       universityName: p.university_name ?? null,
     },
@@ -1255,7 +1345,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     pricing: {
       basePremium: p.base_premium ?? null,
       finalPremium: p.final_premium ?? null,
-      
+
       // doesn’t exist in DB (unless you add later)
       addOnsPremium: p.add_ons_premium ?? null,
     },

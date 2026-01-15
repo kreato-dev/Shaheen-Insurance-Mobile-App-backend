@@ -281,7 +281,7 @@
             "url": "{{baseUrl}}/api/admin/proposals/motor/{{motorProposalId}}/review",
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"action\": \"reupload_required\",\n  \"reupload_notes\": \"CNIC images are blurry. Upload clear front/back.\",\n  \"required_docs\": [\n    { \"doc_type\": \"CNIC\", \"side\": \"front\" },\n    { \"doc_type\": \"CNIC\", \"side\": \"back\" }\n  ]\n}"
+              "raw": "{\n  \"action\": \"reupload_required\",\n  \"reupload_notes\": \"CNIC images are blurry. Upload clear front/back.\",\n  \"required_docs\": [\n    { \"doc_type\": \"CNIC\", \"side\": \"front\" },\n    { \"doc_type\": \"CNIC\", \"side\": \"back\" },\n    { \"image_type\": \"back_side\" }  ]\n}"
             }
           }
         },

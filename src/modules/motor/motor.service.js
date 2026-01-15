@@ -1,5 +1,6 @@
 // src/modules/motor/motor.service.js
 const { query, getConnection } = require('../../config/db');
+const { deleteFileIfExists } = require('../../utils/fileCleanup');
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -11,17 +12,17 @@ function httpError(status, message) {
  * mappings for reupload/replace vehicle images + documents
 **/
 const DOC_FIELD_MAP = {
-  cnic_front:    { docType: 'CNIC', side: 'front' },
-  cnic_back:     { docType: 'CNIC', side: 'back' },
+  cnic_front: { docType: 'CNIC', side: 'front' },
+  cnic_back: { docType: 'CNIC', side: 'back' },
   license_front: { docType: 'DRIVING_LICENSE', side: 'front' },
-  license_back:  { docType: 'DRIVING_LICENSE', side: 'back' },
+  license_back: { docType: 'DRIVING_LICENSE', side: 'back' },
   regbook_front: { docType: 'REGISTRATION_BOOK', side: 'front' },
-  regbook_back:  { docType: 'REGISTRATION_BOOK', side: 'back' },
+  regbook_back: { docType: 'REGISTRATION_BOOK', side: 'back' },
 };
 
 const VEHICLE_IMAGE_FIELDS = new Set([
-  'front_side','back_side','right_side','left_side',
-  'dashboard','engine_bay','boot','engine_number',
+  'front_side', 'back_side', 'right_side', 'left_side',
+  'dashboard', 'engine_bay', 'boot', 'engine_number',
 ]);
 
 /**
@@ -166,7 +167,7 @@ function validateVehicleDetails(vehicle) {
   if (Number.isNaN(yearNum) || yearNum < 1980) {
     throw httpError(400, 'vehicleDetails.modelYear is invalid');
   }
-  
+
   const assembly = String(vehicle.assembly).toLowerCase();
   if (!['local', 'imported'].includes(assembly)) {
     throw httpError(400, 'vehicleDetails.assembly must be local or imported');
@@ -221,7 +222,7 @@ function validateVehicleDetails(vehicle) {
 /**
  * Validate foreign keys exist (city, make, submake, tracker)
  */
-async function validateForeignKeys({ cityId, makeId, submakeId, variantId, modelYear, trackerCompanyId,}) {
+async function validateForeignKeys({ cityId, makeId, submakeId, variantId, modelYear, trackerCompanyId, }) {
   if (cityId) {
     const city = await query('SELECT id FROM cities WHERE id = ? LIMIT 1', [cityId]);
     if (city.length === 0) {
@@ -456,9 +457,6 @@ async function upsertDocument(conn, proposalId, docType, side, filePath) {
   );
 }
 
-/**
- * reupload vehicle images
- */
 async function upsertVehicleImage(conn, proposalId, imageType, filePath) {
   await conn.execute(
     `INSERT INTO motor_vehicle_images (proposal_id, image_type, file_path, created_at)
@@ -468,17 +466,77 @@ async function upsertVehicleImage(conn, proposalId, imageType, filePath) {
   );
 }
 
+/**
+ * replace the old vehicle documents with new one, also return the old file path so we can delete it from storage
+*/
+async function replaceMotorDocument(conn, proposalId, docType, side, newFilePath) {
+  const [rows] = await conn.execute(
+    `SELECT file_path
+     FROM motor_documents
+     WHERE proposal_id=? AND doc_type=? AND side=?
+     LIMIT 1`,
+    [proposalId, docType, side]
+  );
+
+  const oldPath = rows.length ? rows[0].file_path : null;
+
+  await conn.execute(
+    `INSERT INTO motor_documents (proposal_id, doc_type, side, file_path, created_at)
+     VALUES (?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE file_path=VALUES(file_path), created_at=NOW()`,
+    [proposalId, docType, side, newFilePath]
+  );
+
+  return oldPath;
+}
+
+/**
+ * replace the old vehicle images with new one, also return the old file path so we can delete it from storage
+*/
+
+async function replaceMotorVehicleImage(conn, proposalId, imageType, newFilePath) {
+  const [rows] = await conn.execute(
+    `SELECT file_path
+     FROM motor_vehicle_images
+     WHERE proposal_id=? AND image_type=?
+     LIMIT 1`,
+    [proposalId, imageType]
+  );
+
+  const oldPath = rows.length ? rows[0].file_path : null;
+
+  await conn.execute(
+    `INSERT INTO motor_vehicle_images (proposal_id, image_type, file_path, created_at)
+     VALUES (?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE file_path=VALUES(file_path), created_at=NOW()`,
+    [proposalId, imageType, newFilePath]
+  );
+
+  return oldPath;
+}
 
 /**
  * Upload assets by step:
  * - step=cnic: cnic_front + cnic_back => motor_documents (CNIC)
  * - step=license: license_front + license_back => motor_documents (DRIVING_LICENSE)
  * - step=vehicle: vehicle images => motor_vehicle_images AND regbook_front/back => motor_documents (REGISTRATION_BOOK)
+ *
+ * Also deletes old files from storage after successful DB commit
+ * If DB fails, deletes newly uploaded files to avoid junk in storage
  */
 async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
   if (!userId) throw httpError(401, 'User is required');
   if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
   if (!step) throw httpError(400, 'step is required');
+
+  const stepLower = String(step).toLowerCase();
+
+  // collect all newly uploaded file paths (for cleanup on rollback)
+  const newPaths = [];
+  for (const [field, arr] of Object.entries(files || {})) {
+    if (!arr || !arr[0]) continue;
+    newPaths.push(toUploadsRelativePath(arr[0]));
+  }
 
   const conn = await getConnection();
 
@@ -486,18 +544,29 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
     await conn.beginTransaction();
 
     await assertProposalOwnership(conn, proposalId, userId);
-
-    const stepLower = String(step).toLowerCase();
     await assertUploadOrder(conn, proposalId, stepLower);
+
+    // We will delete these old paths only after successful commit
+    const oldPathsToDelete = [];
 
     // STEP 1: CNIC
     if (stepLower === 'cnic') {
       requireFiles(files, ['cnic_front', 'cnic_back']);
 
-      await upsertDocument(conn, proposalId, 'CNIC', 'front', toUploadsRelativePath(files.cnic_front[0]));
-      await upsertDocument(conn, proposalId, 'CNIC', 'back', toUploadsRelativePath(files.cnic_back[0]));
+      const newFront = toUploadsRelativePath(files.cnic_front[0]);
+      const newBack  = toUploadsRelativePath(files.cnic_back[0]);
+
+      const oldFront = await replaceMotorDocument(conn, proposalId, 'CNIC', 'front', newFront);
+      const oldBack  = await replaceMotorDocument(conn, proposalId, 'CNIC', 'back', newBack);
+
+      if (oldFront && oldFront !== newFront) oldPathsToDelete.push(oldFront);
+      if (oldBack && oldBack !== newBack) oldPathsToDelete.push(oldBack);
 
       await conn.commit();
+
+      // delete old files after commit
+      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
+
       return { proposalId, step: 'cnic', saved: ['cnic_front', 'cnic_back'] };
     }
 
@@ -505,50 +574,54 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
     if (stepLower === 'license') {
       requireFiles(files, ['license_front', 'license_back']);
 
-      await upsertDocument(conn, proposalId, 'DRIVING_LICENSE', 'front', toUploadsRelativePath(files.license_front[0]));
-      await upsertDocument(conn, proposalId, 'DRIVING_LICENSE', 'back', toUploadsRelativePath(files.license_back[0]));
+      const newFront = toUploadsRelativePath(files.license_front[0]);
+      const newBack  = toUploadsRelativePath(files.license_back[0]);
+
+      const oldFront = await replaceMotorDocument(conn, proposalId, 'DRIVING_LICENSE', 'front', newFront);
+      const oldBack  = await replaceMotorDocument(conn, proposalId, 'DRIVING_LICENSE', 'back', newBack);
+
+      if (oldFront && oldFront !== newFront) oldPathsToDelete.push(oldFront);
+      if (oldBack && oldBack !== newBack) oldPathsToDelete.push(oldBack);
 
       await conn.commit();
+
+      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
+
       return { proposalId, step: 'license', saved: ['license_front', 'license_back'] };
     }
 
     // STEP 3: VEHICLE + REG BOOK
     if (stepLower === 'vehicle') {
-      // You said reg book/card images must be uploaded at the end of vehicle step
       requireFiles(files, ['regbook_front', 'regbook_back']);
 
-      // save reg book docs
-      await upsertDocument(conn, proposalId, 'REGISTRATION_BOOK', 'front', toUploadsRelativePath(files.regbook_front[0]));
-      await upsertDocument(conn, proposalId, 'REGISTRATION_BOOK', 'back', toUploadsRelativePath(files.regbook_back[0]));
+      // regbook docs
+      const newRegFront = toUploadsRelativePath(files.regbook_front[0]);
+      const newRegBack  = toUploadsRelativePath(files.regbook_back[0]);
 
-      // save vehicle images (optional but controlled)
-      const supportedTypes = new Set([
-        'front_side',
-        'back_side',
-        'right_side',
-        'left_side',
-        'dashboard',
-        'engine_bay',
-        'boot',
-        'engine_number',
-        // 'registration_front',
-        // 'registration_back',
-      ]);
+      const oldRegFront = await replaceMotorDocument(conn, proposalId, 'REGISTRATION_BOOK', 'front', newRegFront);
+      const oldRegBack  = await replaceMotorDocument(conn, proposalId, 'REGISTRATION_BOOK', 'back', newRegBack);
 
+      if (oldRegFront && oldRegFront !== newRegFront) oldPathsToDelete.push(oldRegFront);
+      if (oldRegBack && oldRegBack !== newRegBack) oldPathsToDelete.push(oldRegBack);
+
+      // vehicle images (optional fields)
       const savedVehicleImages = [];
 
       for (const [field, arr] of Object.entries(files || {})) {
-        if (!supportedTypes.has(field)) continue;
+        if (!VEHICLE_IMAGE_FIELDS.has(field)) continue;
         if (!arr || !arr[0]) continue;
 
-        const file = arr[0];
+        const newImgPath = toUploadsRelativePath(arr[0]);
 
-        await upsertVehicleImage(conn, proposalId, field, toUploadsRelativePath(file));
+        const oldImgPath = await replaceMotorVehicleImage(conn, proposalId, field, newImgPath);
+        if (oldImgPath && oldImgPath !== newImgPath) oldPathsToDelete.push(oldImgPath);
 
         savedVehicleImages.push(field);
       }
 
       await conn.commit();
+
+      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
       return {
         proposalId,
@@ -563,11 +636,19 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
     throw httpError(400, 'Invalid step. Use: cnic, license, vehicle');
   } catch (err) {
     await conn.rollback();
+
+    // IMPORTANT: delete newly uploaded files if DB failed
+    // (otherwise you’ll have orphan files on disk)
+    for (const p of newPaths) {
+      try { await deleteFileIfExists(p); } catch (_) {}
+    }
+    
     throw err;
   } finally {
     conn.release();
   }
 }
+
 
 /**
  * Reupload assets:
@@ -580,6 +661,9 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
   if (!uploadedFields.length) throw httpError(400, 'No files uploaded');
 
   const conn = await getConnection();
+
+  // collect new paths (if rollback, delete them)
+  const newPaths = [];
   try {
     await conn.beginTransaction();
 
@@ -636,19 +720,33 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
       throw httpError(400, `Unexpected field: ${field}`);
     }
 
-    // replace in DB
+    for (const field of uploadedFields) {
+      const f = files[field]?.[0];
+      if (f) newPaths.push(toUploadsRelativePath(f));
+    }
+
+    // collect old paths (delete after commit)
+    const oldPathsToDelete = [];
+
     const saved = { documents: [], vehicleImages: [] };
 
     for (const field of uploadedFields) {
       const file = files[field]?.[0];
       if (!file) continue;
 
+      const newPath = toUploadsRelativePath(file);
+
       if (DOC_FIELD_MAP[field]) {
         const { docType, side } = DOC_FIELD_MAP[field];
-        await upsertDocument(conn, proposalId, docType, side, toUploadsRelativePath(file));
+
+        const oldPath = await replaceMotorDocument(conn, proposalId, docType, side, newPath);
+        if (oldPath && oldPath !== newPath) oldPathsToDelete.push(oldPath);
+
         saved.documents.push(field);
       } else if (VEHICLE_IMAGE_FIELDS.has(field)) {
-        await upsertVehicleImage(conn, proposalId, field, toUploadsRelativePath(file));
+        const oldPath = await replaceMotorVehicleImage(conn, proposalId, field, newPath);
+        if (oldPath && oldPath !== newPath) oldPathsToDelete.push(oldPath);
+
         saved.vehicleImages.push(field);
       }
     }
@@ -663,9 +761,20 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
     );
 
     await conn.commit();
+
+    // delete old files after commit
+    for (const p of oldPathsToDelete) {
+      await deleteFileIfExists(p);
+    }
     return { proposalId, saved };
   } catch (err) {
     await conn.rollback();
+
+    // if transaction failed, delete newly uploaded files (avoid storage junk)
+    for (const p of newPaths) {
+      try { await deleteFileIfExists(p); } catch (_) { }
+    }
+
     throw err;
   } finally {
     conn.release();
@@ -752,7 +861,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
   // required docs JSON might come as string depending on mysql driver/settings
   let requiredDocs = p.reupload_required_docs ?? null;
   if (typeof requiredDocs === 'string') {
-    try { requiredDocs = JSON.parse(requiredDocs); } catch (_) {}
+    try { requiredDocs = JSON.parse(requiredDocs); } catch (_) { }
   }
 
   return {
@@ -777,8 +886,8 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       lastActionAt: p.admin_last_action_at,
       lastActionAdmin: p.lastActionAdminId
         ? {
-            id: p.lastActionAdminId
-          }
+          id: p.lastActionAdminId
+        }
         : null,
     },
 
