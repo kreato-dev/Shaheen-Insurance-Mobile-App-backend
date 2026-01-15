@@ -635,7 +635,53 @@
           }
         },
         {
-          "name": "Upload Vehicle Images + Reg Book (front + back) - step=vehicle",
+          "name": "Upload Reg Book (front + back) - step=regbook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "regbook_front",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "regbook_back",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/{{motorProposalId}}/uploads?step=regbook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "{{motorProposalId}}",
+                "uploads"
+              ],
+              "query": [
+                {
+                  "key": "step",
+                  "value": "regbook"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Vehicle Images - step=vehicle",
           "request": {
             "method": "POST",
             "header": [
@@ -685,16 +731,6 @@
                 },
                 {
                   "key": "engine_number",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "regbook_front",
-                  "type": "file",
-                  "src": ""
-                },
-                {
-                  "key": "regbook_back",
                   "type": "file",
                   "src": ""
                 }

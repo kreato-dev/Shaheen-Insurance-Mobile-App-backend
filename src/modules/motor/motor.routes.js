@@ -6,7 +6,7 @@ const path = require('path');
 const motorController = require('./motor.controller');
 
 // motor.routes.js is inside src/modules/motor → go up 3 levels: motor → modules → src → root
-const projectRoot = path.join(__dirname, '..', '..', '..'); 
+const projectRoot = path.join(__dirname, '..', '..', '..');
 
 // --- Multer config: jpg/png only + keep extension ---
 function httpError(status, message) {
@@ -55,14 +55,14 @@ router.post('/market-value', motorController.getMarketValue);
 // POST /api/motor/submit-proposal (no images)
 router.post('/submit-proposal', motorController.submitProposal);
 
-// POST /api/motor/:proposalId/uploads?step=cnic|license|vehicle
+// POST /api/motor/:proposalId/uploads?step=cnic|license|regbook|vehicle
 router.post(
   '/:proposalId/uploads',
   (req, res, next) => {
     const step = String(req.query.step || '').toLowerCase();
 
     if (!step) {
-      return next(Object.assign(new Error('step is required (cnic|license|vehicle)'), { status: 400 }));
+      return next(Object.assign(new Error('step is required (cnic|license|regbook|vehicle)'), { status: 400 }));
     }
 
     if (step === 'cnic') {
@@ -79,9 +79,17 @@ router.post(
       ])(req, res, next);
     }
 
-    if (step === 'vehicle') {
+    if (step === 'regbook') {
+      // ONLY regbook images here
       return upload.fields([
-        // vehicle images
+        { name: 'regbook_front', maxCount: 1 },
+        { name: 'regbook_back', maxCount: 1 },
+      ])(req, res, next);
+    }
+
+    if (step === 'vehicle') {
+      // ONLY vehicle images here
+      return upload.fields([
         { name: 'front_side', maxCount: 1 },
         { name: 'back_side', maxCount: 1 },
         { name: 'right_side', maxCount: 1 },
@@ -90,16 +98,10 @@ router.post(
         { name: 'engine_bay', maxCount: 1 },
         { name: 'boot', maxCount: 1 },
         { name: 'engine_number', maxCount: 1 },
-        // { name: 'registration_front', maxCount: 1 },
-        // { name: 'registration_back', maxCount: 1 },
-
-        // registration book/card
-        { name: 'regbook_front', maxCount: 1 },
-        { name: 'regbook_back', maxCount: 1 },
       ])(req, res, next);
     }
 
-    return next(Object.assign(new Error('Invalid step. Use: cnic, license, vehicle'), { status: 400 }));
+    return next(Object.assign(new Error('Invalid step. Use: cnic, license, regbook, vehicle'), { status: 400 }));
   },
   motorController.uploadMotorAssets
 );

@@ -574,7 +574,8 @@ async function replaceMotorVehicleImage(conn, proposalId, imageType, newFilePath
  * Upload assets by step:
  * - step=cnic: cnic_front + cnic_back => motor_documents (CNIC)
  * - step=license: license_front + license_back => motor_documents (DRIVING_LICENSE)
- * - step=vehicle: vehicle images => motor_vehicle_images AND regbook_front/back => motor_documents (REGISTRATION_BOOK)
+ * - step=regbook: regbook_front + regbook_back => motor_documents (REGISTRATION_BOOK)
+ * - step=vehicle: vehicle images => motor_vehicle_images (ONLY)
  *
  * Also deletes old files from storage after successful DB commit
  * If DB fails, deletes newly uploaded files to avoid junk in storage
@@ -618,7 +619,7 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       if (oldBack && oldBack !== newBack) oldPathsToDelete.push(oldBack);
 
       await conn.commit();
-
+      
       // delete old files after commit
       for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
@@ -639,17 +640,16 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       if (oldBack && oldBack !== newBack) oldPathsToDelete.push(oldBack);
 
       await conn.commit();
-
+      
       for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
       return { proposalId, step: 'license', saved: ['license_front', 'license_back'] };
     }
 
-    // STEP 3: VEHICLE + REG BOOK
-    if (stepLower === 'vehicle') {
+    // STEP 3: REGISTRATION BOOK ONLY
+    if (stepLower === 'regbook') {
       requireFiles(files, ['regbook_front', 'regbook_back']);
 
-      // regbook docs
       const newRegFront = toUploadsRelativePath(files.regbook_front[0]);
       const newRegBack = toUploadsRelativePath(files.regbook_back[0]);
 
@@ -659,7 +659,14 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       if (oldRegFront && oldRegFront !== newRegFront) oldPathsToDelete.push(oldRegFront);
       if (oldRegBack && oldRegBack !== newRegBack) oldPathsToDelete.push(oldRegBack);
 
-      // vehicle images (optional fields)
+      await conn.commit();
+      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
+
+      return { proposalId, step: 'regbook', saved: ['regbook_front', 'regbook_back'] };
+    }
+
+    // STEP 4: VEHICLE IMAGES ONLY (NO regbook here)
+    if (stepLower === 'vehicle') {
       const savedVehicleImages = [];
 
       for (const [field, arr] of Object.entries(files || {})) {
@@ -674,28 +681,27 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
         savedVehicleImages.push(field);
       }
 
-      await conn.commit();
+      if (!savedVehicleImages.length) {
+        throw httpError(400, 'No vehicle images uploaded');
+      }
 
+      await conn.commit();
       for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
       return {
         proposalId,
         step: 'vehicle',
-        saved: {
-          regbook: ['regbook_front', 'regbook_back'],
-          vehicleImages: savedVehicleImages,
-        },
+        saved: { vehicleImages: savedVehicleImages },
       };
     }
 
-    throw httpError(400, 'Invalid step. Use: cnic, license, vehicle');
+    throw httpError(400, 'Invalid step. Use: cnic, license, regbook, vehicle');
   } catch (err) {
     await conn.rollback();
 
-    // IMPORTANT: delete newly uploaded files if DB failed
-    // (otherwise you’ll have orphan files on disk)
+    // IMPORTANT: delete newly uploaded files if DB failed (avoid orphan files)
     for (const p of newPaths) {
-      try { await deleteFileIfExists(p); } catch (_) { }
+      try { await deleteFileIfExists(p); } catch (_) {}
     }
 
     throw err;
