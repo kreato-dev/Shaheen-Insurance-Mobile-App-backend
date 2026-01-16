@@ -279,6 +279,11 @@ async function getMotorProposalDetail(proposalId) {
 
   const proposal = rows[0];
 
+  // reupload_required_docs JSON come as string so parsing it as json
+  if (typeof proposal.reupload_required_docs === 'string') {
+    try { proposal.reupload_required_docs = JSON.parse(proposal.reupload_required_docs); } catch (_) { }
+  }
+
   const rawDocuments = await query(
     `SELECT id, doc_type, side, file_path, created_at
    FROM motor_documents
@@ -334,6 +339,11 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
   if (!proposalRows.length) throw httpError(404, 'Travel proposal not found');
 
   const proposal = proposalRows[0];
+
+  // reupload_required_docs JSON come as string so parsing it as json
+  if (typeof proposal.reupload_required_docs === 'string') {
+    try { proposal.reupload_required_docs = JSON.parse(proposal.reupload_required_docs); } catch (_) { }
+  }
 
   const destinations = await query(
     `SELECT d.id, d.name, d.region
