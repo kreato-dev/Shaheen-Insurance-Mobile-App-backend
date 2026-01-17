@@ -62,7 +62,7 @@ router.post(
     const step = String(req.query.step || '').toLowerCase();
 
     if (!step) {
-      return next(Object.assign(new Error('step is required (cnic|license|regbook|vehicle)'), { status: 400 }));
+      return next(Object.assign(new Error('step is required (cnic|license|vehicle|regbook)'), { status: 400 }));
     }
 
     if (step === 'cnic') {
@@ -76,14 +76,6 @@ router.post(
       return upload.fields([
         { name: 'license_front', maxCount: 1 },
         { name: 'license_back', maxCount: 1 },
-      ])(req, res, next);
-    }
-
-    if (step === 'regbook') {
-      // ONLY regbook images here
-      return upload.fields([
-        { name: 'regbook_front', maxCount: 1 },
-        { name: 'regbook_back', maxCount: 1 },
       ])(req, res, next);
     }
 
@@ -101,7 +93,15 @@ router.post(
       ])(req, res, next);
     }
 
-    return next(Object.assign(new Error('Invalid step. Use: cnic, license, regbook, vehicle'), { status: 400 }));
+    if (step === 'regbook') {
+      // ONLY regbook images here
+      return upload.fields([
+        { name: 'regbook_front', maxCount: 1 },
+        { name: 'regbook_back', maxCount: 1 },
+      ])(req, res, next);
+    }
+
+    return next(Object.assign(new Error('Invalid step. Use: cnic, license, vehicle, regbook'), { status: 400 }));
   },
   motorController.uploadMotorAssets
 );

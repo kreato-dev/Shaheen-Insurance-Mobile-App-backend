@@ -39,11 +39,19 @@ CREATE TABLE vehicle_submakes (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE vehicle_body_types (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(50) NOT NULL UNIQUE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE vehicle_variants (
   id INT AUTO_INCREMENT PRIMARY KEY,
   make_id INT NOT NULL,
   submake_id INT NOT NULL,
   model_year INT NOT NULL,
+  body_type_id INT NOT NULL,
+  engine_cc INT NOT NULL,
+  seating_capacity TINYINT UNSIGNED NOT NULL,
   name VARCHAR(150) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -53,8 +61,13 @@ CREATE TABLE vehicle_variants (
   CONSTRAINT fk_vehicle_variants_submake
     FOREIGN KEY (submake_id) REFERENCES vehicle_submakes(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_vehicle_variants_body_type
+    FOREIGN KEY (body_type_id) REFERENCES vehicle_body_types(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
   UNIQUE KEY uq_vehicle_variant (make_id, submake_id, model_year, name),
-  INDEX idx_vehicle_variants_filter (make_id, submake_id, model_year)
+  INDEX idx_vehicle_variants_filter (make_id, submake_id, model_year),
+  INDEX idx_vehicle_variants_body_type (body_type_id),
+  INDEX idx_vehicle_variants_engine_cc (engine_cc)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE tracker_companies (
@@ -182,6 +195,7 @@ CREATE TABLE motor_proposals (
   -- Vehicle
   product_type ENUM('private','commercial') NOT NULL,
   registration_number VARCHAR(50) NULL,
+  registration_province ENUM( 'PUNJAB','SINDH','KPK','BALOCHISTAN','AZAD_KASHMIR','GILGIT_BALTISTAN', 'ISLAMABAD' ) NULL,
   applied_for TINYINT(1) DEFAULT 0,
   is_owner TINYINT(1) NOT NULL,
   owner_relation ENUM('father', 'mother', 'brother', 'sister', 'spouse', 'son', 'daughter') NULL,
@@ -240,7 +254,7 @@ CREATE TABLE motor_proposals (
 
   -- registration number issue module if vehicle is applied
   registration_updated_at DATETIME NULL,
-  registration_updated_by ENUM('user','admin') NULL
+  registration_updated_by ENUM('user','admin') NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

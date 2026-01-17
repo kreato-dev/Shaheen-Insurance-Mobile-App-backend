@@ -34,6 +34,26 @@ function toUploadsRelativePath(file) {
 }
 
 /**
+ * Registration Province enum allow-list
+ * We store this in motor_proposals.registration_province
+ *
+ * UI labels:
+ * Punjab · Sindh · Khyber Pakhtunkhwa · Balouchistan · Azad Kashmir · Gilgit Baltistan, Islamabad
+ *
+ * DB enum codes:
+ * PUNJAB, SINDH, KPK, BALOCHISTAN, AZAD_KASHMIR, GILGIT_BALTISTAN, ISLAMABAD
+ */
+const REGISTRATION_PROVINCES = new Set([
+  'PUNJAB',
+  'SINDH',
+  'KPK',
+  'BALOCHISTAN',
+  'AZAD_KASHMIR',
+  'GILGIT_BALTISTAN',
+  'ISLAMABAD',
+]);
+
+/**
  * Calculate motor premium and sum insured
  * Very simple sample logic:
  *  - sumInsured = vehicleValue + accessoriesValue (default = 0 from frontend)
@@ -175,6 +195,29 @@ function validateVehicleDetails(vehicle) {
   vehicle.assembly = assembly;
 
   /* =========================================================
+      Registration Province (optional)
+      - Stored in motor_proposals.registration_province
+      - If appliedFor = true, province may still be provided (optional)
+     ========================================================= */
+
+  if (vehicle.registrationProvince !== undefined && vehicle.registrationProvince !== null && String(vehicle.registrationProvince).trim() !== '') {
+    const rp = String(vehicle.registrationProvince).trim().toUpperCase();
+
+    if (!REGISTRATION_PROVINCES.has(rp)) {
+      throw httpError(
+        400,
+        `vehicleDetails.registrationProvince must be one of: ${[...REGISTRATION_PROVINCES].join(', ')}`
+      );
+    }
+
+    // normalize
+    vehicle.registrationProvince = rp;
+  } else {
+    // keep null if not provided
+    vehicle.registrationProvince = null;
+  }
+
+  /* =========================================================
       Applied-for-registration handling RULE
      ========================================================= */
 
@@ -230,7 +273,7 @@ function validateVehicleDetails(vehicle) {
   }
 
   // Ownership rule:
-  // if applicant is not the vehicle owner, then it must be registered under the blood relation of the owner 
+  // if applicant is not the vehicle owner, then it must be registered under the blood relation of the owner
   const rawIsOwner = vehicle.isOwner;
 
   const isOwner =
@@ -275,6 +318,62 @@ function validateVehicleDetails(vehicle) {
 }
 
 /**
+ * ✅ NEW (Recommended):
+ * We do NOT trust user for:
+ *  - Type of body
+ *  - Engine cc
+ *  - Seating capacity
+ *
+ * Because these are variant-level properties in DB now.
+ * We always fetch them from vehicle_variants joined with vehicle_body_types.
+ */
+async function getVariantMeta({ makeId, submakeId, variantId, modelYear }) {
+  const rows = await query(
+    `
+    SELECT
+      vv.id AS variantId,
+      vv.engine_cc AS engineCc,
+      vv.seating_capacity AS seatingCapacity,
+      vv.body_type_id AS bodyTypeId,
+      vbt.name AS bodyTypeName
+    FROM vehicle_variants vv
+    LEFT JOIN vehicle_body_types vbt ON vbt.id = vv.body_type_id
+    WHERE vv.id = ?
+      AND vv.make_id = ?
+      AND vv.submake_id = ?
+      AND vv.model_year = ?
+    LIMIT 1
+    `,
+    [variantId, makeId, submakeId, modelYear]
+  );
+
+  if (!rows.length) {
+    throw httpError(400, 'Invalid variantId for given makeId/submakeId/modelYear');
+  }
+
+  const v = rows[0];
+
+  // Defensive checks (since schema changes might be mid-way)
+  if (!v.engineCc || Number(v.engineCc) <= 0) {
+    throw httpError(500, 'Variant engine_cc is missing or invalid in DB');
+  }
+  if (!v.seatingCapacity || Number(v.seatingCapacity) <= 0) {
+    throw httpError(500, 'Variant seating_capacity is missing or invalid in DB');
+  }
+  if (!v.bodyTypeId) {
+    throw httpError(500, 'Variant body_type_id is missing in DB');
+  }
+
+  return {
+    variantId: v.variantId,
+    engineCc: Number(v.engineCc),
+    seatingCapacity: Number(v.seatingCapacity),
+    bodyTypeId: Number(v.bodyTypeId),
+    bodyTypeName: v.bodyTypeName || null,
+  };
+}
+
+/**
  * Validate foreign keys exist (city, make, submake, tracker)
  */
 async function validateForeignKeys({ cityId, makeId, submakeId, variantId, modelYear, trackerCompanyId, }) {
@@ -298,6 +397,8 @@ async function validateForeignKeys({ cityId, makeId, submakeId, variantId, model
     throw httpError(400, 'Invalid submakeId for given makeId');
   }
 
+  // NOTE: variant validity is now checked again in getVariantMeta() as well.
+  // Keeping the old logic here because you asked not to remove old ones.
   const variant = await query(
     `SELECT id FROM vehicle_variants
       WHERE id = ? AND make_id = ? AND submake_id = ? AND model_year = ?
@@ -346,6 +447,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
   const {
     productType,
     registrationNumber = null,
+    registrationProvince = null,
     appliedFor = false,
     isOwner,
     ownerRelation,
@@ -371,6 +473,21 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     trackerCompanyId,
   });
 
+  /* =========================================================
+      ✅ NEW (Recommended):
+      Derive vehicle meta from variant (single source of truth)
+      - bodyTypeId
+      - engineCc
+      - seatingCapacity
+     ========================================================= */
+
+  const variantMeta = await getVariantMeta({
+    makeId,
+    submakeId,
+    variantId,
+    modelYear,
+  });
+
   // calculate premium if vehicleValue provided
   let sumInsured = null;
   let premium = null;
@@ -394,8 +511,9 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     const [result] = await conn.execute(
       `INSERT INTO motor_proposals
        (user_id, name, address, city_id, cnic, cnic_expiry, dob, nationality, gender,
-        product_type, registration_number, applied_for, is_owner, owner_relation, engine_number, chassis_number,
+        product_type, registration_number, registration_province, applied_for, is_owner, owner_relation, engine_number, chassis_number,
         make_id, submake_id, model_year, assembly, variant_id, colour, tracker_company_id, accessories_value,
+
         sum_insured, premium,
 
         submission_status,
@@ -406,14 +524,19 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         expires_at,
 
         created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-        'submitted',
-        'unpaid',
-        'not_applicable',
-        'not_applicable',
-        NOW(),
-        DATE_ADD(NOW(), INTERVAL 7 DAY),
-        NOW(), NOW())`,
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?, ?, ?, ?,
+              ?, ?, ?, ?, ?, ?, ?, ?,
+
+              ?, ?,
+
+              'submitted',
+              'unpaid',
+              'not_applicable',
+              'not_applicable',
+              NOW(),
+              DATE_ADD(NOW(), INTERVAL 7 DAY),
+              NOW(), NOW())`,
       [
         userId,
         name,
@@ -424,13 +547,16 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         dob,
         nationality,
         gender,
+
         productType,
         registrationNumber,
+        registrationProvince, // NEW
         appliedFor ? 1 : 0,
         isOwner ? 1 : 0,
         isOwner ? null : ownerRelation,
         engineNumber,
         chassisNumber,
+
         makeId,
         submakeId,
         modelYear,
@@ -439,6 +565,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         colour,
         trackerCompanyId,
         accessoriesValue || 0,
+
         sumInsured,
         premium,
       ]
@@ -494,13 +621,42 @@ async function assertUploadOrder(conn, proposalId, step) {
 
   const cnicDone = has('CNIC', 'front') && has('CNIC', 'back');
   const licenseDone = has('DRIVING_LICENSE', 'front') && has('DRIVING_LICENSE', 'back');
+  const regbookDone = has('REGISTRATION_BOOK', 'front') && has('REGISTRATION_BOOK', 'back');
+
+  /* =========================================================
+      Upload order rules (UPDATED)
+      - 1) CNIC must be uploaded before LICENSE
+      - 2) CNIC + LICENSE must be uploaded before VEHICLE images
+      - 3) REGBOOK is now the LAST step:
+           ✅ requires CNIC + LICENSE
+           ✅ requires at least 1 vehicle image (strict rule enabled)
+     ========================================================= */
 
   if (step === 'license' && !cnicDone) {
     throw httpError(400, 'Upload CNIC (front/back) before driving license.');
   }
+
   if (step === 'vehicle' && (!cnicDone || !licenseDone)) {
     throw httpError(400, 'Upload CNIC + driving license before vehicle uploads.');
   }
+
+  if (step === 'regbook' && (!cnicDone || !licenseDone)) {
+    throw httpError(400, 'Upload CNIC + driving license before registration book uploads.');
+  }
+
+  // ✅ strict rule: regbook only after at least 1 vehicle image exists
+  if (step === 'regbook') {
+    const [imgs] = await conn.execute(
+      `SELECT id FROM motor_vehicle_images WHERE proposal_id = ? LIMIT 1`,
+      [proposalId]
+    );
+    if (!imgs.length) {
+      throw httpError(400, 'Upload vehicle images before registration book uploads.');
+    }
+  }
+
+  // NOTE: regbookDone variable is kept for future rules/UX (admin flows etc.)
+  // currently unused, but intentionally left here
 }
 
 async function upsertDocument(conn, proposalId, docType, side, filePath) {
@@ -548,7 +704,6 @@ async function replaceMotorDocument(conn, proposalId, docType, side, newFilePath
 /**
  * replace the old vehicle images with new one, also return the old file path so we can delete it from storage
 */
-
 async function replaceMotorVehicleImage(conn, proposalId, imageType, newFilePath) {
   const [rows] = await conn.execute(
     `SELECT file_path
@@ -574,8 +729,8 @@ async function replaceMotorVehicleImage(conn, proposalId, imageType, newFilePath
  * Upload assets by step:
  * - step=cnic: cnic_front + cnic_back => motor_documents (CNIC)
  * - step=license: license_front + license_back => motor_documents (DRIVING_LICENSE)
- * - step=regbook: regbook_front + regbook_back => motor_documents (REGISTRATION_BOOK)
  * - step=vehicle: vehicle images => motor_vehicle_images (ONLY)
+ * - step=regbook: regbook_front + regbook_back => motor_documents (REGISTRATION_BOOK)
  *
  * Also deletes old files from storage after successful DB commit
  * If DB fails, deletes newly uploaded files to avoid junk in storage
@@ -619,7 +774,7 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       if (oldBack && oldBack !== newBack) oldPathsToDelete.push(oldBack);
 
       await conn.commit();
-      
+
       // delete old files after commit
       for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
@@ -640,32 +795,13 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       if (oldBack && oldBack !== newBack) oldPathsToDelete.push(oldBack);
 
       await conn.commit();
-      
+
       for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
       return { proposalId, step: 'license', saved: ['license_front', 'license_back'] };
     }
 
-    // STEP 3: REGISTRATION BOOK ONLY
-    if (stepLower === 'regbook') {
-      requireFiles(files, ['regbook_front', 'regbook_back']);
-
-      const newRegFront = toUploadsRelativePath(files.regbook_front[0]);
-      const newRegBack = toUploadsRelativePath(files.regbook_back[0]);
-
-      const oldRegFront = await replaceMotorDocument(conn, proposalId, 'REGISTRATION_BOOK', 'front', newRegFront);
-      const oldRegBack = await replaceMotorDocument(conn, proposalId, 'REGISTRATION_BOOK', 'back', newRegBack);
-
-      if (oldRegFront && oldRegFront !== newRegFront) oldPathsToDelete.push(oldRegFront);
-      if (oldRegBack && oldRegBack !== newRegBack) oldPathsToDelete.push(oldRegBack);
-
-      await conn.commit();
-      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
-
-      return { proposalId, step: 'regbook', saved: ['regbook_front', 'regbook_back'] };
-    }
-
-    // STEP 4: VEHICLE IMAGES ONLY (NO regbook here)
+    // STEP 3: VEHICLE IMAGES ONLY (NO regbook here)
     if (stepLower === 'vehicle') {
       const savedVehicleImages = [];
 
@@ -695,13 +831,32 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       };
     }
 
-    throw httpError(400, 'Invalid step. Use: cnic, license, regbook, vehicle');
+    // STEP 4: REGISTRATION BOOK ONLY
+    if (stepLower === 'regbook') {
+      requireFiles(files, ['regbook_front', 'regbook_back']);
+
+      const newRegFront = toUploadsRelativePath(files.regbook_front[0]);
+      const newRegBack = toUploadsRelativePath(files.regbook_back[0]);
+
+      const oldRegFront = await replaceMotorDocument(conn, proposalId, 'REGISTRATION_BOOK', 'front', newRegFront);
+      const oldRegBack = await replaceMotorDocument(conn, proposalId, 'REGISTRATION_BOOK', 'back', newRegBack);
+
+      if (oldRegFront && oldRegFront !== newRegFront) oldPathsToDelete.push(oldRegFront);
+      if (oldRegBack && oldRegBack !== newRegBack) oldPathsToDelete.push(oldRegBack);
+
+      await conn.commit();
+      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
+
+      return { proposalId, step: 'regbook', saved: ['regbook_front', 'regbook_back'] };
+    }
+
+    throw httpError(400, 'Invalid step. Use: cnic, license, vehicle, regbook');
   } catch (err) {
     await conn.rollback();
 
     // IMPORTANT: delete newly uploaded files if DB failed (avoid orphan files)
     for (const p of newPaths) {
-      try { await deleteFileIfExists(p); } catch (_) {}
+      try { await deleteFileIfExists(p); } catch (_) { }
     }
 
     throw err;
@@ -709,7 +864,6 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
     conn.release();
   }
 }
-
 
 /**
  * Reupload assets:
@@ -842,7 +996,6 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
   }
 }
 
-
 /**
  * ✅ Get full motor proposal details for logged-in user
  * Includes:
@@ -864,14 +1017,28 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       vm.name AS makeName,
       vsm.name AS submakeName,
       tc.name AS trackerCompanyName,
+
       vv.name AS variantName,
+
+      -- ✅ New: read these from vehicle_variants (Option A)
+      vv.body_type_id AS bodyTypeId,
+      vbt.name AS bodyTypeName,
+      vv.engine_cc AS engineCc,
+      vv.seating_capacity AS seatingCapacity,
+
       a.id AS lastActionAdminId
     FROM motor_proposals mp
     LEFT JOIN cities c ON c.id = mp.city_id
     LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
     LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
     LEFT JOIN tracker_companies tc ON tc.id = mp.tracker_company_id
+
+    -- ✅ Variant join
     LEFT JOIN vehicle_variants vv ON vv.id = mp.variant_id
+
+    -- ✅ Body type join (via variant)
+    LEFT JOIN vehicle_body_types vbt ON vbt.id = vv.body_type_id
+
     LEFT JOIN admins a ON a.id = mp.admin_last_action_by
     WHERE mp.id = ? AND mp.user_id = ?
     LIMIT 1
@@ -946,9 +1113,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       lastActionBy: p.admin_last_action_by,
       lastActionAt: p.admin_last_action_at,
       lastActionAdmin: p.lastActionAdminId
-        ? {
-          id: p.lastActionAdminId
-        }
+        ? { id: p.lastActionAdminId }
         : null,
     },
 
@@ -992,6 +1157,10 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
     vehicleDetails: {
       productType: p.product_type,
       registrationNumber: p.registration_number,
+
+      // ✅ NEW: registration province
+      registrationProvince: p.registration_province || null,
+
       appliedFor: p.applied_for === 1,
       isOwner: p.is_owner === 1,
       ownerRelation: p.owner_relation,
@@ -1008,6 +1177,12 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
       variantId: p.variant_id,
       variantName: p.variantName || null,
+
+      // ✅ NEW (from variant meta)
+      bodyTypeId: p.bodyTypeId || null,
+      bodyTypeName: p.bodyTypeName || null,
+      engineCc: p.engineCc || null,
+      seatingCapacity: p.seatingCapacity || null,
 
       colour: p.colour,
       trackerCompanyId: p.tracker_company_id,
@@ -1114,7 +1289,6 @@ async function updateMotorRegistrationNumberService({ userId, proposalId, regist
     conn.release();
   }
 }
-
 
 module.exports = {
   calculatePremiumService,
