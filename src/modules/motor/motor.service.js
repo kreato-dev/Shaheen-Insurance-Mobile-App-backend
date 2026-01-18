@@ -227,6 +227,26 @@ function validatePersonalDetails(personal) {
   }
 }
 
+
+function validateInsuranceStartDate(insuranceStartDate) {
+  if (!insuranceStartDate) {
+    throw httpError(400, 'insuranceStartDate is required');
+  }
+
+  const start = new Date(insuranceStartDate);
+  if (Number.isNaN(start.getTime())) {
+    throw httpError(400, 'insuranceStartDate is invalid date');
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  start.setHours(0, 0, 0, 0);
+
+  if (start < today) {
+    throw httpError(400, 'insuranceStartDate cannot be in the past');
+  }
+}
+
 /*** Validate vehicle details*/
 function validateVehicleDetails(vehicle) {
   const required = [
@@ -495,8 +515,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
 
   validatePersonalDetails(personalDetails);
   validateKycDetails({ occupation: personalDetails.occupation });
-  validateVehicleDetails(vehicleDetails);
-
+  
   const {
     name,
     address,
@@ -506,15 +525,16 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     dob,
     nationality = null,
     gender = null,
-
+    
     occupation, // will be normalized by validateKycDetails()
   } = personalDetails;
-
+  
   const {
     productType,
     registrationNumber = null,
     registrationProvince = null,
     appliedFor = false,
+    insuranceStartDate,
     isOwner,
     ownerRelation,
     engineNumber,
@@ -529,6 +549,9 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     accessoriesValue,
     vehicleValue, // for premium calc
   } = vehicleDetails;
+  
+  validateInsuranceStartDate(insuranceStartDate);
+  validateVehicleDetails(vehicleDetails);
 
   await validateForeignKeys({
     cityId,
@@ -589,6 +612,9 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         payment_status,
         review_status,
         refund_status,
+
+        insurance_start_date,
+        
         submitted_at,
         expires_at,
 
@@ -606,6 +632,9 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
               'unpaid',
               'not_applicable',
               'not_applicable',
+
+              ?,
+
               NOW(),
               DATE_ADD(NOW(), INTERVAL 7 DAY),
               NOW(), NOW())`,
@@ -642,6 +671,8 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
 
         sumInsured,
         premium,
+
+        insuranceStartDate,
       ]
     );
 

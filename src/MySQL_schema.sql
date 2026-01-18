@@ -226,6 +226,8 @@ CREATE TABLE motor_proposals (
   review_status ENUM('not_applicable','pending_review','reupload_required','approved','rejected')
     NOT NULL DEFAULT 'not_applicable',
 
+  insurance_start_date DATE NULL,
+
   submitted_at DATETIME NULL,
   expires_at DATETIME NULL, -- set when submitted & unpaid: NOW()+INTERVAL 7 DAY
 
