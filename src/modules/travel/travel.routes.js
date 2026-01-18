@@ -52,18 +52,24 @@ router.post('/quote-premium', travelController.quotePremium);
 // POST /api/travel/submit-proposal
 router.post('/submit-proposal', travelController.submitProposal);
 
-// POST /api/travel/:packageCode/:proposalId/uploads?step=identity|ticket
+// POST /api/travel/:packageCode/:proposalId/uploads?step=identity|ticket|kyc
 router.post(
   '/:packageCode/:proposalId/uploads',
   (req, res, next) => {
     const step = String(req.query.step || '').toLowerCase();
 
     if (!step) {
-      return next(Object.assign(new Error('step is required (identity|ticket)'), { status: 400 }));
+      return next(
+        Object.assign(
+          new Error('step is required (identity|ticket|kyc)'),
+          { status: 400 }
+        )
+      );
     }
 
+    // STEP 1: Identity
+    // CNIC (front + back) OR Passport (single)
     if (step === 'identity') {
-      // allow either CNIC (front/back) OR Passport (single)
       return upload.fields([
         { name: 'cnic_front', maxCount: 1 },
         { name: 'cnic_back', maxCount: 1 },
@@ -71,12 +77,27 @@ router.post(
       ])(req, res, next);
     }
 
+    // STEP 2: Ticket (optional)
     if (step === 'ticket') {
-      // optional
-      return upload.fields([{ name: 'ticket_image', maxCount: 1 }])(req, res, next);
+      return upload.fields([
+        { name: 'ticket_image', maxCount: 1 },
+      ])(req, res, next);
     }
 
-    return next(Object.assign(new Error('Invalid step. Use: identity, ticket'), { status: 400 }));
+    // STEP 3: KYC (Employment / Visiting Card)
+    // Optional overall, but if step=kyc then file is required
+    if (step === 'kyc') {
+      return upload.fields([
+        { name: 'employment_proof', maxCount: 1 },
+      ])(req, res, next);
+    }
+
+    return next(
+      Object.assign(
+        new Error('Invalid step. Use: identity, ticket, kyc'),
+        { status: 400 }
+      )
+    );
   },
   travelController.uploadTravelAssets
 );
@@ -90,6 +111,7 @@ router.post(
       { name: 'cnic_back', maxCount: 1 },
       { name: 'passport_image', maxCount: 1 },
       { name: 'ticket_image', maxCount: 1 },
+      { name: 'kyc', maxCount: 1 },
     ])(req, res, next);
   },
   travelController.reuploadTravelAssets

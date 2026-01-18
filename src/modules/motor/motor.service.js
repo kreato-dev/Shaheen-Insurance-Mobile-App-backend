@@ -18,6 +18,8 @@ const DOC_FIELD_MAP = {
   license_back: { docType: 'DRIVING_LICENSE', side: 'back' },
   regbook_front: { docType: 'REGISTRATION_BOOK', side: 'front' },
   regbook_back: { docType: 'REGISTRATION_BOOK', side: 'back' },
+
+  employment_proof: { docType: 'EMPLOYMENT_PROOF', side: 'single' },
 };
 
 const VEHICLE_IMAGE_FIELDS = new Set([
@@ -52,6 +54,67 @@ const REGISTRATION_PROVINCES = new Set([
   'GILGIT_BALTISTAN',
   'ISLAMABAD',
 ]);
+
+/* =========================================================
+   KYC Validation (Motor)
+   - Occupation is required as part of KYC.
+   - Allowed options:
+     PRIVATE_JOB, GOVERNMENT_JOB, SELF_EMPLOYED, UNEMPLOYED,
+     HOUSEWIFE, RETIRED, STUDENT
+   - Note:
+     Employment/visiting card upload rules will be enforced in upload endpoint,
+     not here (because upload is a separate API call).
+========================================================= */
+
+function normalizeOccupation(occupation) {
+  // Accept: "Private Job", "private_job", "PRIVATE_JOB", "private job"
+  const raw = String(occupation || '').trim();
+  if (!raw) return null;
+
+  const key = raw
+    .toUpperCase()
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '_');
+
+  const allowed = new Set([
+    'PRIVATE_JOB',
+    'GOVERNMENT_JOB',
+    'SELF_EMPLOYED',
+    'UNEMPLOYED',
+    'HOUSEWIFE',
+    'RETIRED',
+    'STUDENT',
+  ]);
+
+  if (!allowed.has(key)) return null;
+  return key;
+}
+
+/**
+ * Validate KYC details according to FRD-style requirements
+ * Motor: Occupation is required
+ */
+function validateKycDetails(kyc) {
+  // If you’re passing occupation inside personalDetails, you can call this like:
+  // validateKycDetails({ occupation: personalDetails.occupation })
+  const occupationNormalized = normalizeOccupation(kyc?.occupation);
+
+  if (!occupationNormalized) {
+    throw httpError(
+      400,
+      'kycDetails.occupation is required and must be one of: PRIVATE_JOB, GOVERNMENT_JOB, SELF_EMPLOYED, UNEMPLOYED, HOUSEWIFE, RETIRED, STUDENT'
+    );
+  }
+
+  // Normalize so DB always gets clean enum code
+  kyc.occupation = occupationNormalized;
+
+  // NOTE:
+  // Employment proof requirement is not validated here because:
+  // 1) Upload is a separate endpoint
+  // 2) You said "may be required" (soft requirement)
+  // We’ll enforce it (strict/soft) inside uploadKycDoc endpoint.
+}
 
 /**
  * Calculate motor premium and sum insured
@@ -431,6 +494,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
   }
 
   validatePersonalDetails(personalDetails);
+  validateKycDetails({ occupation: personalDetails.occupation });
   validateVehicleDetails(vehicleDetails);
 
   const {
@@ -442,6 +506,8 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     dob,
     nationality = null,
     gender = null,
+
+    occupation, // will be normalized by validateKycDetails()
   } = personalDetails;
 
   const {
@@ -511,6 +577,9 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     const [result] = await conn.execute(
       `INSERT INTO motor_proposals
        (user_id, name, address, city_id, cnic, cnic_expiry, dob, nationality, gender,
+
+        occupation, occupation_updated_at,
+
         product_type, registration_number, registration_province, applied_for, is_owner, owner_relation, engine_number, chassis_number,
         make_id, submake_id, model_year, assembly, variant_id, colour, tracker_company_id, accessories_value,
 
@@ -525,6 +594,9 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
 
         created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
+
+              ?, NOW(),
+
               ?, ?, ?, ?, ?, ?, ?, ?,
               ?, ?, ?, ?, ?, ?, ?, ?,
 
@@ -547,6 +619,8 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         dob,
         nationality,
         gender,
+
+        occupation,
 
         productType,
         registrationNumber,
@@ -726,6 +800,42 @@ async function replaceMotorVehicleImage(conn, proposalId, imageType, newFilePath
 }
 
 /**
+ * Replace KYC document (stored in kyc_documents table)
+ * Returns old file path so we can delete it after commit
+ *
+ * Expected table columns (recommended):
+ *  - proposal_type (ENUM or VARCHAR) e.g. 'MOTOR'
+ *  - proposal_id (INT)
+ *  - doc_type (ENUM) e.g. 'EMPLOYMENT_PROOF'
+ *  - side (ENUM) e.g. 'single'
+ *  - file_path (TEXT/VARCHAR)
+ *  - created_at, updated_at
+ *
+ * Recommended unique key:
+ * UNIQUE(proposal_type, proposal_id, doc_type)
+ */
+async function replaceKycDocument(conn, proposalType, proposalId, docType, side, newFilePath) {
+  const [rows] = await conn.execute(
+    `SELECT file_path
+     FROM kyc_documents
+     WHERE proposal_type = ? AND proposal_id = ? AND doc_type = ? AND side = ?
+     LIMIT 1`,
+    [proposalType, proposalId, docType, side]
+  );
+
+  const oldPath = rows.length ? rows[0].file_path : null;
+
+  await conn.execute(
+    `INSERT INTO kyc_documents (proposal_type, proposal_id, doc_type, side, file_path, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, NOW(), NOW())
+     ON DUPLICATE KEY UPDATE file_path = VALUES(file_path), updated_at = NOW()`,
+    [proposalType, proposalId, docType, side, newFilePath]
+  );
+
+  return oldPath;
+}
+
+/**
  * Upload assets by step:
  * - step=cnic: cnic_front + cnic_back => motor_documents (CNIC)
  * - step=license: license_front + license_back => motor_documents (DRIVING_LICENSE)
@@ -799,6 +909,29 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
       for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
       return { proposalId, step: 'license', saved: ['license_front', 'license_back'] };
+    }
+
+    // STEP X: KYC (EMPLOYMENT / VISITING CARD) OPTIONAL
+    // step=kyc, field: employment_proof
+    if (stepLower === 'kyc') {
+      const hasProof = !!(files.employment_proof && files.employment_proof[0]);
+
+      if (!hasProof) {
+        throw httpError(400, 'employment_proof file is required for kyc step');
+      }
+
+      const newProofPath = toUploadsRelativePath(files.employment_proof[0]);
+
+      // save into kyc_documents
+      const oldProofPath = await replaceKycDocument(conn, 'MOTOR', proposalId, 'EMPLOYMENT_PROOF', 'single', newProofPath);
+
+      if (oldProofPath && oldProofPath !== newProofPath) oldPathsToDelete.push(oldProofPath);
+
+      await conn.commit();
+
+      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
+
+      return { proposalId, step: 'kyc', saved: ['employment_proof'] };
     }
 
     // STEP 3: VEHICLE IMAGES ONLY (NO regbook here)
@@ -954,7 +1087,16 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
       if (DOC_FIELD_MAP[field]) {
         const { docType, side } = DOC_FIELD_MAP[field];
 
-        const oldPath = await replaceMotorDocument(conn, proposalId, docType, side, newPath);
+        let oldPath = null;
+
+        // KYC doc goes to kyc_documents table
+        if (docType === 'EMPLOYMENT_PROOF') {
+          oldPath = await replaceKycDocument(conn, 'MOTOR', proposalId, docType, side, newPath);
+        } else {
+          // normal motor docs go to motor_documents
+          oldPath = await replaceMotorDocument(conn, proposalId, docType, side, newPath);
+        }
+
         if (oldPath && oldPath !== newPath) oldPathsToDelete.push(oldPath);
 
         saved.documents.push(field);
@@ -1086,6 +1228,40 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
     [id]
   );
 
+  /* =========================
+   KYC (Motor)
+   - occupation is stored in motor_proposals
+   - employment proof is stored in kyc_documents table
+   ========================= */
+
+  const kycRows = await query(
+    `
+  SELECT
+    id,
+    doc_type AS docType,
+    side,
+    file_path AS filePath,
+    created_at AS createdAt
+  FROM kyc_documents
+  WHERE proposal_type = 'MOTOR'
+    AND proposal_id = ?
+    AND doc_type = 'EMPLOYMENT_PROOF'
+    AND side = 'single'
+  ORDER BY id DESC
+  LIMIT 1
+  `,
+    [id]
+  );
+
+
+  const employmentProof = kycRows.length
+    ? {
+      filePath: kycRows[0].filePath,
+      url: buildUrl(kycRows[0].filePath),
+      createdAt: kycRows[0].createdAt,
+    }
+    : null;
+
   // required docs JSON might come as string depending on mysql driver/settings
   let requiredDocs = p.reupload_required_docs ?? null;
   if (typeof requiredDocs === 'string') {
@@ -1142,6 +1318,11 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       policyExpiresAt: p.policy_expires_at,
     },
 
+    kyc: {
+      occupation: p.occupation || null,
+      employmentProof, // ✅ { filePath, url, createdAt } or null
+    },
+
     personalDetails: {
       name: p.name,
       address: p.address,
@@ -1152,6 +1333,8 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       dob: p.dob,
       nationality: p.nationality,
       gender: p.gender,
+
+      occupation: p.occupation || null,
     },
 
     vehicleDetails: {

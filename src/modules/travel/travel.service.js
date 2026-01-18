@@ -20,6 +20,8 @@ const TRAVEL_FIELD_MAP = {
   cnic_back: { docType: 'CNIC', side: 'back' },
   passport_image: { docType: 'PASSPORT', side: 'single' },
   ticket_image: { docType: 'TICKET', side: 'single' },
+
+  employment_proof: { docType: 'EMPLOYMENT_PROOF', side: 'single' },
 };
 
 
@@ -101,6 +103,80 @@ async function replaceTravelDocument(conn, { packageCode, proposalId, docType, s
     `INSERT INTO travel_documents (package_code, proposal_id, doc_type, side, file_path, created_at)
      VALUES (?, ?, ?, ?, ?, NOW())
      ON DUPLICATE KEY UPDATE file_path=VALUES(file_path), created_at=NOW()`,
+    [packageCode, proposalId, docType, side, newFilePath]
+  );
+
+  return oldPath;
+}
+
+/**
+ * Replace KYC document (stored in kyc_documents table)
+ * Returns old file path so we can delete it after commit
+ *
+ * Expected table columns (recommended):
+ *  - proposal_type (ENUM or VARCHAR) e.g. 'TRAVEL'
+ *  - package_code (ENUM) e.g. 'DOMESTIC'
+ *  - proposal_id (INT)
+ *  - doc_type (ENUM) e.g. 'EMPLOYMENT_PROOF'
+ *  - side (ENUM) e.g. 'single'
+ *  - file_path (TEXT/VARCHAR)
+ *  - created_at, updated_at
+ *
+ * Recommended unique key:
+ * UNIQUE(proposal_type, proposal_id, doc_type)
+ */
+async function replaceTravelKycDocument(
+  conn,
+  {
+    proposalId,
+    packageCode,   // DOMESTIC | HAJJ_UMRAH_ZIARAT | INTERNATIONAL | STUDENT_GUARD
+    docType,       // e.g. EMPLOYMENT_PROOF
+    side,          // front | back | single
+    newFilePath,
+  }
+) {
+  if (!packageCode) {
+    throw new Error('packageCode is required for travel KYC document');
+  }
+
+  const [rows] = await conn.execute(
+    `SELECT file_path
+     FROM kyc_documents
+     WHERE proposal_type = 'TRAVEL'
+       AND package_code = ?
+       AND proposal_id = ?
+       AND doc_type = ?
+       AND side = ?
+     LIMIT 1`,
+    [packageCode, proposalId, docType, side]
+  );
+
+  const oldPath = rows.length ? rows[0].file_path : null;
+
+  await conn.execute(
+    `INSERT INTO kyc_documents (
+        proposal_type,
+        package_code,
+        proposal_id,
+        doc_type,
+        side,
+        file_path,
+        created_at,
+        updated_at
+     )
+     VALUES (
+        'TRAVEL',
+        ?,
+        ?,
+        ?,
+        ?,
+        ?,
+        NOW(),
+        NOW()
+     )
+     ON DUPLICATE KEY UPDATE
+       file_path = VALUES(file_path),
+       updated_at = NOW()`,
     [packageCode, proposalId, docType, side, newFilePath]
   );
 
@@ -398,7 +474,7 @@ async function quoteTravelPremiumService(data) {
    Submit validations
 ------------------------------ */
 function validateApplicantInfo(applicantInfo) {
-  const required = ['firstName', 'lastName', 'address', 'cityId', 'cnic', 'mobile', 'email', 'dob'];
+  const required = ['firstName', 'lastName', 'address', 'cityId', 'cnic', 'mobile', 'email', 'dob', 'occupation'];
   for (const field of required) {
     if (!applicantInfo?.[field]) throw httpError(400, `applicantInfo.${field} is required`);
   }
@@ -555,6 +631,9 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         (user_id, plan_id, start_date, end_date, tenure_days,
          is_multi_trip, max_trip_days_applied, age_loading_percent,
          first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
+
+         occupation, occupation_updated_at,
+
          beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
          base_premium, final_premium,
 
@@ -568,6 +647,9 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         VALUES (?, ?, ?, ?, ?,
                 ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
+
+                ?, NOW(),
+
                 ?, ?, ?, ?, ?,
                 ?, ?,
                 'submitted',
@@ -598,6 +680,8 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         applicantInfo.email,
         applicantInfo.dob,
 
+        applicantInfo.occupation,
+
         beneficiary.beneficiaryName,
         beneficiary.beneficiaryAddress,
         beneficiary.beneficiaryCnic,
@@ -615,6 +699,9 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
          university_name,
          parent_name, parent_address, parent_cnic, parent_cnic_issue_date, parent_relation,
          first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
+
+         occupation, occupation_updated_at,
+
          beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
          base_premium, final_premium,
 
@@ -630,6 +717,9 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
                 ?,
                 ?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
+
+                ?, NOW(),
+
                 ?, ?, ?, ?, ?,
                 ?, ?,
 
@@ -666,6 +756,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         applicantInfo.mobile,
         applicantInfo.email,
         applicantInfo.dob,
+        applicantInfo.occupation,
 
         beneficiary.beneficiaryName,
         beneficiary.beneficiaryAddress,
@@ -682,6 +773,9 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         INSERT INTO ${proposalTable}
         (user_id, plan_id, start_date, end_date, tenure_days,
          first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
+
+         occupation, occupation_updated_at,
+
          beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
          base_premium, final_premium,
 
@@ -695,6 +789,9 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         created_at, updated_at)
         VALUES (?, ?, ?, ?, ?,
                 ?, ?, ?, ?, ?, ?, ?, ?, ?,
+
+                ?,NOW(),
+
                 ?, ?, ?, ?, ?,
                 ?, ?,
 
@@ -723,6 +820,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         applicantInfo.mobile,
         applicantInfo.email,
         applicantInfo.dob,
+        applicantInfo.occupation,
 
         beneficiary.beneficiaryName,
         beneficiary.beneficiaryAddress,
@@ -921,6 +1019,42 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
       };
     }
 
+    // Step: kyc (optional) -> employment proof / visiting card (single)
+    // Save KYC docs in kyc_documents (not travel_documents)
+    // Rule: optional for everyone, admin can ask later if needed
+    if (stepLower === 'kyc') {
+      const hasProof = !!(files.employment_proof && files.employment_proof[0]);
+
+      if (!hasProof) {
+        throw httpError(400, 'employment_proof is required for kyc step');
+      }
+
+      const newProofPath = toUploadsRelativePathTravel(files.employment_proof[0]);
+
+      // Replace existing KYC doc (unique key handles upsert)
+      const oldProofPath = await replaceTravelKycDocument(conn, {
+        proposalId,
+        packageCode, // 
+        docType: 'EMPLOYMENT_PROOF',
+        side: 'single',
+        newFilePath: newProofPath,
+      });
+
+      if (oldProofPath && oldProofPath !== newProofPath) oldPathsToDelete.push(oldProofPath);
+
+      await conn.commit();
+
+      // delete old file after commit
+      for (const p of oldPathsToDelete) await deleteFileIfExists(p);
+
+      return {
+        proposalId,
+        packageCode,
+        step: 'kyc',
+        saved: ['employment_proof'],
+      };
+    }
+
     throw httpError(400, 'Invalid step. Use: identity, ticket');
   } catch (err) {
     await conn.rollback();
@@ -1009,7 +1143,7 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
       }
     }
 
-    // replace in travel_documents and collect old paths to delete after commit
+    // replace in travel_documents OR kyc_documents and collect old paths to delete after commit
     const oldPathsToDelete = [];
     const saved = [];
 
@@ -1020,6 +1154,22 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
       const { docType, side } = TRAVEL_FIELD_MAP[field];
       const newPath = toUploadsRelativePathTravel(file);
 
+      // employment proof goes to kyc_documents (not travel_documents)
+      if (docType === 'EMPLOYMENT_PROOF') {
+        const oldPath = await replaceTravelKycDocument(conn, {
+          proposalId,
+          packageCode,
+          docType,
+          side,
+          newFilePath: newPath,
+        });
+
+        if (oldPath && oldPath !== newPath) oldPathsToDelete.push(oldPath);
+        saved.push(field);
+        continue;
+      }
+
+      // existing behavior for normal travel documents
       const oldPath = await replaceTravelDocument(conn, {
         packageCode,
         proposalId,
@@ -1247,6 +1397,40 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
   const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
   const buildUrl = (filePath) => (filePath ? `${baseUrl}/${String(filePath).replace(/^\//, '')}` : null);
 
+  /* =========================
+   KYC (Travel)
+   - occupation is stored in travel_*_proposals
+   - employment proof is stored in kyc_documents table
+   ========================= */
+
+  const kycRows = await query(
+    `
+    SELECT
+      id,
+      doc_type AS docType,
+      side,
+      file_path AS filePath,
+      created_at AS createdAt
+    FROM kyc_documents
+    WHERE proposal_type = 'TRAVEL'
+      AND package_code = ?
+      AND proposal_id = ?
+      AND doc_type = 'EMPLOYMENT_PROOF'
+      AND side = 'single'
+    ORDER BY id DESC
+    LIMIT 1
+    `,
+    [packageCode, id]
+  );
+
+  const employmentProof = kycRows.length
+    ? {
+        filePath: kycRows[0].filePath,
+        url: buildUrl(kycRows[0].filePath),
+        createdAt: kycRows[0].createdAt,
+      }
+    : null;
+
   // required docs JSON might come as string depending on mysql driver/settings
   let requiredDocs = p.reupload_required_docs ?? null;
   if (typeof requiredDocs === 'string') {
@@ -1290,6 +1474,11 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       policyExpiresAt: p.policy_expires_at,
     },
 
+    kyc: {
+      occupation: p.occupation || null,
+      employmentProof, // ✅ { filePath, url, createdAt } or null
+    },
+
     createdAt: p.created_at,
     updatedAt: p.updated_at,
 
@@ -1320,6 +1509,8 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       mobile: p.mobile,
       email: p.email,
       dob: p.dob,
+
+      occupation: p.occupation || null,
 
       // only exists on STUDENT
       universityName: p.university_name ?? null,

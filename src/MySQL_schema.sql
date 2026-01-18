@@ -191,6 +191,9 @@ CREATE TABLE motor_proposals (
   dob DATE NOT NULL,
   nationality VARCHAR(100) NULL,
   gender ENUM('male','female','other') NULL,
+  occupation ENUM(
+    'PRIVATE_JOB','GOVERNMENT_JOB','SELF_EMPLOYED','UNEMPLOYED','HOUSEWIFE','RETIRED','STUDENT') NULL,
+  occupation_updated_at DATETIME NULL,
 
   -- Vehicle
   product_type ENUM('private','commercial') NOT NULL,
@@ -292,7 +295,7 @@ CREATE TABLE motor_documents (
   id INT AUTO_INCREMENT PRIMARY KEY,
   proposal_id INT NOT NULL,
   doc_type ENUM('CNIC','DRIVING_LICENSE','REGISTRATION_BOOK') NOT NULL,
-  side ENUM('front','back') NOT NULL,
+  side ENUM('front','back','single') NOT NULL,
   file_path VARCHAR(255) NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
@@ -423,6 +426,11 @@ CREATE TABLE travel_domestic_proposals (
   mobile VARCHAR(30) NOT NULL,
   email VARCHAR(150) NOT NULL,
   dob DATE NOT NULL,
+  occupation ENUM(
+    'PRIVATE_JOB','GOVERNMENT_JOB','SELF_EMPLOYED','UNEMPLOYED',
+    'HOUSEWIFE','RETIRED','STUDENT'
+  ) NULL,
+  occupation_updated_at DATETIME NULL,
 
   beneficiary_name VARCHAR(150) NOT NULL,
   beneficiary_address VARCHAR(255) NOT NULL,
@@ -534,6 +542,11 @@ CREATE TABLE travel_huj_proposals (
   mobile VARCHAR(30) NOT NULL,
   email VARCHAR(150) NOT NULL,
   dob DATE NOT NULL,
+  occupation ENUM(
+    'PRIVATE_JOB','GOVERNMENT_JOB','SELF_EMPLOYED','UNEMPLOYED',
+    'HOUSEWIFE','RETIRED','STUDENT'
+  ) NULL,
+  occupation_updated_at DATETIME NULL,
 
   beneficiary_name VARCHAR(150) NOT NULL,
   beneficiary_address VARCHAR(255) NOT NULL,
@@ -647,6 +660,11 @@ CREATE TABLE travel_international_proposals (
   mobile VARCHAR(30) NOT NULL,
   email VARCHAR(150) NOT NULL,
   dob DATE NOT NULL,
+  occupation ENUM(
+    'PRIVATE_JOB','GOVERNMENT_JOB','SELF_EMPLOYED','UNEMPLOYED',
+    'HOUSEWIFE','RETIRED','STUDENT'
+  ) NULL,
+  occupation_updated_at DATETIME NULL,
 
   beneficiary_name VARCHAR(150) NOT NULL,
   beneficiary_address VARCHAR(255) NOT NULL,
@@ -764,6 +782,11 @@ CREATE TABLE travel_student_proposals (
   mobile VARCHAR(30) NOT NULL,
   email VARCHAR(150) NOT NULL,
   dob DATE NOT NULL,
+  occupation ENUM(
+    'PRIVATE_JOB','GOVERNMENT_JOB','SELF_EMPLOYED','UNEMPLOYED',
+    'HOUSEWIFE','RETIRED','STUDENT'
+  ) NULL,
+  occupation_updated_at DATETIME NULL,
 
   beneficiary_name VARCHAR(150) NOT NULL,
   beneficiary_address VARCHAR(255) NOT NULL,
@@ -967,6 +990,22 @@ CREATE TABLE claims_cache (
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE,
   UNIQUE KEY uq_claims_cache (user_id, claim_no)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 9) KYC document table (scalable so can add salary slip, bank statement etc.)
+CREATE TABLE kyc_documents (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_type ENUM('MOTOR','TRAVEL') NOT NULL,
+  package_code ENUM('DOMESTIC','HAJJ_UMRAH_ZIARAT','INTERNATIONAL','STUDENT_GUARD') NULL, -- only for travel
+  proposal_id INT NOT NULL,
+  doc_type ENUM('EMPLOYMENT_PROOF') NOT NULL,
+  side ENUM('front','back','single') NOT NULL,
+  file_path VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_kyc_doc (proposal_type, package_code, proposal_id, doc_type, side),
+  INDEX idx_kyc_lookup (proposal_type, proposal_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ADMIN DASHBOARD
