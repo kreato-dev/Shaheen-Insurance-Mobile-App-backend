@@ -534,6 +534,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
   } = personalDetails;
 
   const {
+    insuranceType,
     productType,
     registrationNumber = null,
     registrationProvince = null,
@@ -603,7 +604,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
 
     const [result] = await conn.execute(
       `INSERT INTO motor_proposals
-       (user_id, name, 
+       (user_id, insurance_type, name, 
        
        address, city_id, latitude, longitude,
        
@@ -628,7 +629,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
 
         created_at, updated_at)
       VALUES (
-              ?, ?, 
+              ?, ?, ?,
               
               ?, ?, ?, ?,
               
@@ -653,6 +654,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
               NOW(), NOW())`,
       [
         userId,
+        insuranceType,
         name,
         address,
         cityId,
