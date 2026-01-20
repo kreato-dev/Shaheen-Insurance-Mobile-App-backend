@@ -278,11 +278,13 @@ async function getMotorProposalDetail(proposalId) {
   }
 
   const proposal = rows[0];
-
+  
   // reupload_required_docs JSON come as string so parsing it as json
   if (typeof proposal.reupload_required_docs === 'string') {
     try { proposal.reupload_required_docs = JSON.parse(proposal.reupload_required_docs); } catch (_) { }
   }
+
+  const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
 
   const rawDocuments = await query(
     `SELECT id, doc_type, side, file_path, created_at
@@ -292,18 +294,29 @@ async function getMotorProposalDetail(proposalId) {
     [proposalId]
   );
 
-  const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
-
   const documents = rawDocuments.map(doc => ({
+    ...doc,
+    file_url: `${APP_BASE_URL}/${doc.file_path}`,
+  }));
+
+  const rawKYCdocuments = await query(
+    `SELECT id, doc_type, side, file_path, created_at, updated_at
+    FROM kyc_documents
+    WHERE proposal_id = ? AND proposal_type = 'MOTOR' 
+    ORDER BY created_at ASC`,
+    [proposalId]
+  );
+
+  const KYCdocuments = rawKYCdocuments.map(doc => ({
     ...doc,
     file_url: `${APP_BASE_URL}/${doc.file_path}`,
   }));
 
   const rawVehicleImages = await query(
     `SELECT id, image_type, file_path, created_at
-   FROM motor_vehicle_images
-   WHERE proposal_id = ?
-   ORDER BY created_at ASC`,
+    FROM motor_vehicle_images
+    WHERE proposal_id = ?
+    ORDER BY created_at ASC`,
     [proposalId]
   );
 
@@ -316,6 +329,7 @@ async function getMotorProposalDetail(proposalId) {
   return {
     proposal,
     documents,
+    KYCdocuments,
     vehicleImages,
   };
 }
@@ -365,6 +379,8 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     );
   }
 
+  const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
+
   const rawDocuments = await query(
     `SELECT id, doc_type, side, file_path, created_at
    FROM travel_documents
@@ -373,13 +389,23 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     [id]
   );
 
-  const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
-
   const documents = rawDocuments.map(doc => ({
     ...doc,
     file_url: `${APP_BASE_URL}/${doc.file_path}`,
   }));
 
+  const rawKYCdocuments = await query(
+    `SELECT id, package_code, doc_type, side, file_path, created_at, updated_at
+    FROM kyc_documents
+    WHERE proposal_id = ? AND proposal_type = 'TRAVEL' AND package_code = ? 
+    ORDER BY created_at ASC`,
+    [proposalId, t.travelType]
+  );
+
+  const KYCdocuments = rawKYCdocuments.map(doc => ({
+    ...doc,
+    file_url: `${APP_BASE_URL}/${doc.file_path}`,
+  }));
 
   return {
     travelSubtype: String(travelSubtype).toLowerCase(),
@@ -388,6 +414,7 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     destinations,
     familyMembers,
     documents,
+    KYCdocuments,
   };
 }
 

@@ -111,7 +111,7 @@ router.post(
       { name: 'cnic_back', maxCount: 1 },
       { name: 'passport_image', maxCount: 1 },
       { name: 'ticket_image', maxCount: 1 },
-      { name: 'kyc', maxCount: 1 },
+      { name: 'employment_proof', maxCount: 1 },
     ])(req, res, next);
   },
   travelController.reuploadTravelAssets

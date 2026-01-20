@@ -182,10 +182,18 @@ CREATE TABLE motor_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
 
+  -- insurance type
+  insurance_type ENUM('GENERAL','TAKAFUL') NOT NULL,
+
+
   -- Personal
   name VARCHAR(150) NOT NULL,
+
   address VARCHAR(255) NOT NULL,
   city_id INT NOT NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+  
   cnic VARCHAR(25) NOT NULL,
   cnic_expiry DATE NOT NULL,
   dob DATE NOT NULL,
@@ -414,15 +422,23 @@ CREATE TABLE travel_domestic_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   plan_id INT NOT NULL,
+  insurance_type ENUM('GENERAL','TAKAFUL') NOT NULL,
 
+  purpose_of_visit ENUM('BUSINESS','PLEASURE') NULL,
+  accommodation ENUM('PRIVATE','HOTEL') NULL,
+  travel_mode ENUM('ROAD','TRAIN','AIR') NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   tenure_days INT NOT NULL,
 
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
+
   address VARCHAR(255) NOT NULL,
   city_id INT NOT NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+
   cnic VARCHAR(25) NOT NULL,
   passport_number VARCHAR(50) NULL,
   mobile VARCHAR(30) NOT NULL,
@@ -530,15 +546,22 @@ CREATE TABLE travel_huj_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   plan_id INT NOT NULL,
+  insurance_type ENUM('GENERAL','TAKAFUL') NOT NULL,
 
+  purpose_of_visit VARCHAR(100) NULL,
+  accommodation ENUM('PRIVATE','HOTEL') NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   tenure_days INT NOT NULL,
 
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
+
   address VARCHAR(255) NOT NULL,
   city_id INT NOT NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+
   cnic VARCHAR(25) NOT NULL,
   passport_number VARCHAR(50) NULL,
   mobile VARCHAR(30) NOT NULL,
@@ -644,7 +667,10 @@ CREATE TABLE travel_international_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   plan_id INT NOT NULL,
+  insurance_type ENUM('GENERAL','TAKAFUL') NOT NULL,
 
+  purpose_of_visit ENUM('BUSINESS','PLEASURE') NULL,
+  accommodation ENUM('PRIVATE','HOTEL') NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   tenure_days INT NOT NULL,
@@ -655,8 +681,12 @@ CREATE TABLE travel_international_proposals (
 
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
+
   address VARCHAR(255) NOT NULL,
   city_id INT NOT NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+
   cnic VARCHAR(25) NOT NULL,
   passport_number VARCHAR(50) NULL,
   mobile VARCHAR(30) NOT NULL,
@@ -762,7 +792,10 @@ CREATE TABLE travel_student_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   plan_id INT NOT NULL,
+  insurance_type ENUM('GENERAL','TAKAFUL') NOT NULL,
 
+  purpose_of_visit VARCHAR(100) NULL,
+  accommodation ENUM('PRIVATE','HOTEL') NULL,
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   tenure_days INT NOT NULL,
@@ -777,8 +810,12 @@ CREATE TABLE travel_student_proposals (
 
   first_name VARCHAR(100) NOT NULL,
   last_name VARCHAR(100) NOT NULL,
+
   address VARCHAR(255) NOT NULL,
   city_id INT NOT NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+  
   cnic VARCHAR(25) NOT NULL,
   passport_number VARCHAR(50) NULL,
   mobile VARCHAR(30) NOT NULL,

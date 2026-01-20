@@ -515,20 +515,24 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
 
   validatePersonalDetails(personalDetails);
   validateKycDetails({ occupation: personalDetails.occupation });
-  
+
   const {
     name,
+
     address,
     cityId,
+    latitude = null,
+    longitude = null,
+
     cnic,
     cnicExpiry,
     dob,
     nationality = null,
     gender = null,
-    
+
     occupation, // will be normalized by validateKycDetails()
   } = personalDetails;
-  
+
   const {
     productType,
     registrationNumber = null,
@@ -549,7 +553,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     accessoriesValue,
     vehicleValue, // for premium calc
   } = vehicleDetails;
-  
+
   validateInsuranceStartDate(insuranceStartDate);
   validateVehicleDetails(vehicleDetails);
 
@@ -599,7 +603,11 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
 
     const [result] = await conn.execute(
       `INSERT INTO motor_proposals
-       (user_id, name, address, city_id, cnic, cnic_expiry, dob, nationality, gender,
+       (user_id, name, 
+       
+       address, city_id, latitude, longitude,
+       
+       cnic, cnic_expiry, dob, nationality, gender,
 
         occupation, occupation_updated_at,
 
@@ -619,7 +627,12 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         expires_at,
 
         created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,
+      VALUES (
+              ?, ?, 
+              
+              ?, ?, ?, ?,
+              
+              ?, ?, ?, ?, ?,
 
               ?, NOW(),
 
@@ -643,6 +656,8 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         name,
         address,
         cityId,
+        latitude,
+        longitude,
         cnic,
         cnicExpiry,
         dob,
@@ -1287,6 +1302,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
   const employmentProof = kycRows.length
     ? {
+      docType: kycRows[0].docType,
       filePath: kycRows[0].filePath,
       url: buildUrl(kycRows[0].filePath),
       createdAt: kycRows[0].createdAt,
@@ -1301,6 +1317,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
   return {
     id: p.id,
+    insuranceType:p.insurance_type,
     proposalType: 'MOTOR',
 
     createdAt: p.created_at,
@@ -1351,7 +1368,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
     kyc: {
       occupation: p.occupation || null,
-      employmentProof, // ✅ { filePath, url, createdAt } or null
+      employmentProof, // ✅ { docType, filePath, url, createdAt } or null
     },
 
     personalDetails: {

@@ -225,7 +225,7 @@ function normalizePackageCode(packageType) {
   if (s.includes('domestic')) return 'DOMESTIC';
 
   // includes both "ziarat" and "ziyarat"
-  if (s.includes('hajj') || s.includes('umrah') || s.includes('ziarat') || s.includes('ziyarat')) {
+  if (s.includes('hajj') || s.includes('hujj') || s.includes('umrah') || s.includes('ziarat') || s.includes('ziyarat')) {
     return 'HAJJ_UMRAH_ZIARAT';
   }
 
@@ -561,6 +561,10 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
     packageType,
     coverageType,
     productPlan,
+    insuranceType,
+    purposeOfVisit,
+    accommodation,
+    travelMode,
     startDate,
     endDate,
     destinationIds,
@@ -628,9 +632,15 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
     if (packageCode === 'INTERNATIONAL') {
       insertSql = `
         INSERT INTO ${proposalTable}
-        (user_id, plan_id, start_date, end_date, tenure_days,
+        (user_id, plan_id, insurance_type,
+        purpose_of_visit, accommodation,
+        start_date, end_date, tenure_days,
          is_multi_trip, max_trip_days_applied, age_loading_percent,
-         first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
+         first_name, last_name, 
+         
+         address, city_id, latitude, longitude,
+         
+         cnic, passport_number, mobile, email, dob,
 
          occupation, occupation_updated_at,
 
@@ -644,9 +654,15 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         submitted_at,
         expires_at,
         created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?,
+        VALUES (?, ?, ?,
+                ?, ?,
                 ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?, ?,
+                ?, ?, 
+                
+                ?, ?, ?, ?, 
+                
+                ?, ?, ?, ?, ?,
 
                 ?, NOW(),
 
@@ -663,6 +679,9 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       insertParams = [
         userId,
         quote.planId,
+        insuranceType,
+        purposeOfVisit,
+        accommodation,
         startDate,
         endDate,
         tenureDays,
@@ -672,8 +691,12 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
 
         applicantInfo.firstName,
         applicantInfo.lastName,
+
         applicantInfo.address,
         applicantInfo.cityId,
+        applicantInfo.latitude,
+        applicantInfo.longitude,
+
         applicantInfo.cnic,
         applicantInfo.passportNumber || null,
         applicantInfo.mobile,
@@ -695,10 +718,16 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       // Student has optional parent info + university name
       insertSql = `
         INSERT INTO ${proposalTable}
-        (user_id, plan_id, start_date, end_date, tenure_days,
+        (user_id, plan_id, insurance_type,
+         purpose_of_visit, accommodation,
+         start_date, end_date, tenure_days,
          university_name,
          parent_name, parent_address, parent_cnic, parent_cnic_issue_date, parent_relation,
-         first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
+         first_name, last_name,
+         
+         address, city_id, latitude, longitude,
+         
+         cnic, passport_number, mobile, email, dob,
 
          occupation, occupation_updated_at,
 
@@ -713,10 +742,16 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         expires_at,
 
         created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?,
+        VALUES (?, ?, ?,
+                'STUDY', ?,
+                ?, ?, ?,
                 ?,
                 ?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                ?, ?,
+                
+                ?, ?, ?, ?,
+                
+                ?, ?, ?, ?, ?,
 
                 ?, NOW(),
 
@@ -735,6 +770,8 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       insertParams = [
         userId,
         quote.planId,
+        insuranceType,
+        accommodation,
         startDate,
         endDate,
         tenureDays,
@@ -749,8 +786,12 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
 
         applicantInfo.firstName,
         applicantInfo.lastName,
+
         applicantInfo.address,
         applicantInfo.cityId,
+        applicantInfo.latitude,
+        applicantInfo.longitude,
+
         applicantInfo.cnic,
         applicantInfo.passportNumber || null,
         applicantInfo.mobile,
@@ -771,8 +812,14 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       // Domestic / HUJ (common structure)
       insertSql = `
         INSERT INTO ${proposalTable}
-        (user_id, plan_id, start_date, end_date, tenure_days,
-         first_name, last_name, address, city_id, cnic, passport_number, mobile, email, dob,
+        (user_id, plan_id, insurance_type,
+         purpose_of_visit, accommodation, travel_mode,
+         start_date, end_date, tenure_days,
+         first_name, last_name, 
+         
+         address, city_id, latitude, longitude,
+         
+         cnic, passport_number, mobile, email, dob,
 
          occupation, occupation_updated_at,
 
@@ -787,8 +834,14 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         expires_at,
 
         created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?,
-                ?, ?, ?, ?, ?, ?, ?, ?, ?,
+        VALUES (?, ?, ?,
+                ?, ?, ?,
+                ?, ?, ?,
+                ?, ?, 
+                
+                ?, ?, ?, ?,
+                
+                ?, ?, ?, ?, ?,
 
                 ?,NOW(),
 
@@ -807,14 +860,22 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       insertParams = [
         userId,
         quote.planId,
+        insuranceType,
+        purposeOfVisit || `RELIGIOUS`,
+        accommodation,
+        travelMode || null,
         startDate,
         endDate,
         tenureDays,
 
         applicantInfo.firstName,
         applicantInfo.lastName,
+
         applicantInfo.address,
         applicantInfo.cityId,
+        applicantInfo.latitude,
+        applicantInfo.longitude,
+
         applicantInfo.cnic,
         applicantInfo.passportNumber || null,
         applicantInfo.mobile,
@@ -1425,10 +1486,11 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
 
   const employmentProof = kycRows.length
     ? {
-        filePath: kycRows[0].filePath,
-        url: buildUrl(kycRows[0].filePath),
-        createdAt: kycRows[0].createdAt,
-      }
+      docType: kycRows[0].docType,
+      filePath: kycRows[0].filePath,
+      url: buildUrl(kycRows[0].filePath),
+      createdAt: kycRows[0].createdAt,
+    }
     : null;
 
   // required docs JSON might come as string depending on mysql driver/settings
@@ -1438,6 +1500,8 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
   }
 
   return {
+    id: p.id,
+    insuranceType:p.insurance_type,
     packageCode: p.packageCode || packageCode, // fallback
     proposalId: p.id,
 
@@ -1476,13 +1540,16 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
 
     kyc: {
       occupation: p.occupation || null,
-      employmentProof, // ✅ { filePath, url, createdAt } or null
+      employmentProof, // ✅ { docType, filePath, url, createdAt } or null
     },
 
     createdAt: p.created_at,
     updatedAt: p.updated_at,
 
     tripDetails: {
+      PurposeOfVisit: p.purpose_of_visit,
+      accommodation: p.accommodation,
+      travelMode: p.travel_mode || null,
       packageCode: p.packageCode || packageCode,
       coverageType: p.coverageType || null,
       productPlan: p.productPlan || null,
