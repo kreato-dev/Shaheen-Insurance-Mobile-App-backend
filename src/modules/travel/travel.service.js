@@ -808,8 +808,96 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         quote.basePremium,
         quote.finalPremium,
       ];
+    } else if (packageCode === 'HAJJ_UMRAH_ZIARAT') {
+      // HUJJ (common structure as domestic but no travel_mode)
+      insertSql = `
+        INSERT INTO ${proposalTable}
+        (user_id, plan_id, insurance_type,
+
+         purpose_of_visit,
+
+         accommodation,
+         start_date, end_date, tenure_days,
+         first_name, last_name, 
+         
+         address, city_id, latitude, longitude,
+         
+         cnic, passport_number, mobile, email, dob,
+
+         occupation, occupation_updated_at,
+
+         beneficiary_name, beneficiary_address, beneficiary_cnic, beneficiary_cnic_issue_date, beneficiary_relation,
+         base_premium, final_premium,
+
+        submission_status,
+        payment_status,
+        review_status,
+        refund_status,
+        submitted_at,
+        expires_at,
+
+        created_at, updated_at)
+        VALUES (?, ?, ?,
+
+                'RELIGIOUS',
+
+                ?,
+                ?, ?, ?,
+                ?, ?, 
+                
+                ?, ?, ?, ?,
+                
+                ?, ?, ?, ?, ?,
+
+                ?,NOW(),
+
+                ?, ?, ?, ?, ?,
+                ?, ?,
+
+                'submitted',
+                'unpaid',
+                'not_applicable',
+                'not_applicable',
+                NOW(),
+                DATE_ADD(NOW(), INTERVAL 7 DAY),
+
+                NOW(), NOW())
+      `;
+      insertParams = [
+        userId,
+        quote.planId,
+        insuranceType,
+        accommodation,
+        startDate,
+        endDate,
+        tenureDays,
+
+        applicantInfo.firstName,
+        applicantInfo.lastName,
+
+        applicantInfo.address,
+        applicantInfo.cityId,
+        applicantInfo.latitude,
+        applicantInfo.longitude,
+
+        applicantInfo.cnic,
+        applicantInfo.passportNumber || null,
+        applicantInfo.mobile,
+        applicantInfo.email,
+        applicantInfo.dob,
+        applicantInfo.occupation,
+
+        beneficiary.beneficiaryName,
+        beneficiary.beneficiaryAddress,
+        beneficiary.beneficiaryCnic,
+        beneficiary.beneficiaryCnicIssueDate,
+        beneficiary.beneficiaryRelation,
+
+        quote.basePremium,
+        quote.finalPremium,
+      ];
     } else {
-      // Domestic / HUJ (common structure)
+      // Domestic
       insertSql = `
         INSERT INTO ${proposalTable}
         (user_id, plan_id, insurance_type,
@@ -861,7 +949,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         userId,
         quote.planId,
         insuranceType,
-        purposeOfVisit || `RELIGIOUS`,
+        purposeOfVisit,
         accommodation,
         travelMode || null,
         startDate,
@@ -1501,7 +1589,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
 
   return {
     id: p.id,
-    insuranceType:p.insurance_type,
+    insuranceType: p.insurance_type,
     packageCode: p.packageCode || packageCode, // fallback
     proposalId: p.id,
 
