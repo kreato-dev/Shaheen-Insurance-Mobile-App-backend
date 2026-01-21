@@ -23,6 +23,9 @@ function buildTravelSelect() {
       v.submitted_at,
       v.expires_at,
 
+      policy_status,
+      policy_no,
+      
       v.admin_last_action_by,
       v.admin_last_action_at,
       v.rejection_reason,

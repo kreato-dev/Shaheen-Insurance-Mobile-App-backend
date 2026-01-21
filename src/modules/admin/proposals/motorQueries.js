@@ -23,6 +23,9 @@ function buildMotorSelect() {
       p.submitted_at,
       p.expires_at,
 
+      policy_status,
+      policy_no,
+
       p.admin_last_action_by,
       p.admin_last_action_at,
       p.rejection_reason,
