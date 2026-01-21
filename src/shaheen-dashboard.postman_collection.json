@@ -375,7 +375,7 @@
       "name": "Admin - Policies",
       "item": [
         {
-          "name": "Issue Policy (MOTOR) + Upload 2 PDFs",
+          "name": "Issue Policy (MOTOR) + Upload Schedule",
           "request": {
             "method": "POST",
             "header": [
@@ -399,12 +399,12 @@
                   "type": "text"
                 },
                 {
-                  "key": "policy_pdf",
-                  "type": "file",
-                  "src": ""
+                  "key": "policy_no",
+                  "value": "SIC-MOT-2026-0001",
+                  "type": "text"
                 },
                 {
-                  "key": "schedule_pdf",
+                  "key": "policy_schedule",
                   "type": "file",
                   "src": ""
                 }
@@ -423,10 +423,10 @@
               ]
             }
           },
-          "description": "Uploads 2 PDFs (policy_pdf + schedule_pdf) and issues a Motor policy. Motor duration expected to be fixed 1 year (as per your logic)."
+          "description": "Uploads policy schedule (PDF/JPG/PNG) and issues a Motor policy. Policy start date uses insurance_start_date from proposal and expires after 1 year. Admin manually enters policy_no."
         },
         {
-          "name": "Issue Policy (TRAVEL) + Upload 2 PDFs",
+          "name": "Issue Policy (TRAVEL) + Upload Schedule",
           "request": {
             "method": "POST",
             "header": [
@@ -455,12 +455,12 @@
                   "type": "text"
                 },
                 {
-                  "key": "policy_pdf",
-                  "type": "file",
-                  "src": ""
+                  "key": "policy_no",
+                  "value": "SIC-TRV-INT-2026-0010",
+                  "type": "text"
                 },
                 {
-                  "key": "schedule_pdf",
+                  "key": "policy_schedule",
                   "type": "file",
                   "src": ""
                 }
@@ -479,7 +479,7 @@
               ]
             }
           },
-          "description": "Uploads 2 PDFs (policy_pdf + schedule_pdf) and issues a Travel policy. travelPackageCode is required for TRAVEL (DOMESTIC / HAJJ_UMRAH_ZIARAT / INTERNATIONAL / STUDENT_GUARD)."
+          "description": "Uploads policy schedule (PDF/JPG/PNG) and issues a Travel policy. Policy tenure uses proposal start_date and end_date. travelPackageCode is required for TRAVEL (DOMESTIC / HAJJ_UMRAH_ZIARAT / INTERNATIONAL / STUDENT_GUARD). Admin manually enters policy_no."
         }
       ]
     },

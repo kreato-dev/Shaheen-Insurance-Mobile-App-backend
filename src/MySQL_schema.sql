@@ -264,6 +264,7 @@ CREATE TABLE motor_proposals (
   policy_no VARCHAR(100) NULL,
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
+  policy_schedule_path VARCHAR(255) NULL,
 
   -- registration number issue module if vehicle is applied
   registration_updated_at DATETIME NULL,
@@ -492,6 +493,7 @@ CREATE TABLE travel_domestic_proposals (
   policy_no VARCHAR(100) NULL,
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
+  policy_schedule_path VARCHAR(255) NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -613,6 +615,7 @@ CREATE TABLE travel_huj_proposals (
   policy_no VARCHAR(100) NULL,
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
+  policy_schedule_path VARCHAR(255) NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -738,6 +741,7 @@ CREATE TABLE travel_international_proposals (
   policy_no VARCHAR(100) NULL,
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
+  policy_schedule_path VARCHAR(255) NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -867,6 +871,7 @@ CREATE TABLE travel_student_proposals (
   policy_no VARCHAR(100) NULL,
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
+  policy_schedule_path VARCHAR(255) NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

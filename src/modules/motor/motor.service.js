@@ -1301,6 +1301,12 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
     [id]
   );
 
+  const policyDocuments = rows.length
+    ? {
+      docType: "Policy Schedule Document",
+      url: buildUrl(rows[0].policy_schedule_path),
+    }
+    : null;
 
   const employmentProof = kycRows.length
     ? {
@@ -1319,7 +1325,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
   return {
     id: p.id,
-    insuranceType:p.insurance_type,
+    insuranceType: p.insurance_type,
     proposalType: 'MOTOR',
 
     createdAt: p.created_at,
@@ -1331,6 +1337,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       paymentStatus: p.payment_status,               // unpaid|paid
       paidAt: p.paid_at,
       reviewStatus: p.review_status,                 // not_applicable|pending_review|reupload_required|approved|rejected
+      insuranceStartDate: p.insurance_start_date,
       submittedAt: p.submitted_at,
       expiresAt: p.expires_at,
     },
@@ -1366,6 +1373,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       policyNo: p.policy_no,
       policyIssuedAt: p.policy_issued_at,
       policyExpiresAt: p.policy_expires_at,
+      policyDocuments,
     },
 
     kyc: {

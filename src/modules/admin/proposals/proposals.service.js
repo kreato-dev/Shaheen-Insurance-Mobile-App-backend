@@ -278,7 +278,7 @@ async function getMotorProposalDetail(proposalId) {
   }
 
   const proposal = rows[0];
-  
+
   // reupload_required_docs JSON come as string so parsing it as json
   if (typeof proposal.reupload_required_docs === 'string') {
     try { proposal.reupload_required_docs = JSON.parse(proposal.reupload_required_docs); } catch (_) { }
@@ -325,12 +325,16 @@ async function getMotorProposalDetail(proposalId) {
     image_url: `${APP_BASE_URL}/${img.file_path}`,
   }));
 
+  const policyDocuments = rows.map(img => ({
+    policy_schedule_url: `${APP_BASE_URL}/${img.policy_schedule_path}`,
+  }));
 
   return {
     proposal,
     documents,
     KYCdocuments,
     vehicleImages,
+    policyDocuments,
   };
 }
 
@@ -407,6 +411,11 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     file_url: `${APP_BASE_URL}/${doc.file_path}`,
   }));
 
+  //policy schedule path from motor_proposal
+  const policyDocuments = proposalRows.map(doc => ({
+    policy_schedule_url: `${APP_BASE_URL}/${doc.policy_schedule_path}`,
+  }));
+
   return {
     travelSubtype: String(travelSubtype).toLowerCase(),
     travelType: t.travelType,
@@ -415,6 +424,7 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     familyMembers,
     documents,
     KYCdocuments,
+    policyDocuments,
   };
 }
 

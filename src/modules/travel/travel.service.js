@@ -1572,6 +1572,13 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     [packageCode, id]
   );
 
+    const policyDocuments = rows.length
+    ? {
+      docType: "Policy Schedule Document",
+      url: buildUrl(rows[0].policy_schedule_path),
+    }
+    : null;
+
   const employmentProof = kycRows.length
     ? {
       docType: kycRows[0].docType,
@@ -1624,6 +1631,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       policyNo: p.policy_no,
       policyIssuedAt: p.policy_issued_at,
       policyExpiresAt: p.policy_expires_at,
+      policyDocuments,
     },
 
     kyc: {
