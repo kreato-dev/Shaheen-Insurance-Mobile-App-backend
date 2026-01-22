@@ -441,18 +441,11 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
   }));
 
   //policy schedule path from motor_proposal
-  const policyDocuments = (rows && rows.length > 0)
-    ? rows
+  const policyDocuments = (proposalRows && proposalRows.length > 0)
+    ? proposalRows
       .filter(doc => doc.policy_schedule_path) // Only keep rows with a value
       .map(doc => ({
         policy_schedule_url: `${APP_BASE_URL}/${doc.policy_schedule_path}`,
-      })) : [];
-
-  const renewalDocuments = (rows && rows.length > 0)
-    ? rows
-      .filter(doc => doc.renewal_document_path) // Only keep rows with a value
-      .map(doc => ({
-        renewal_document_url: `${APP_BASE_URL}/${doc.renewal_document_path}`,
       })) : [];
 
   return {
@@ -464,7 +457,6 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     documents,
     KYCdocuments,
     policyDocuments,
-    renewalDocuments,
   };
 }
 
