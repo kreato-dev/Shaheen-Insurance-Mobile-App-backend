@@ -119,9 +119,15 @@ async function getVehicleVariants(req, res, next) {
     }
 
     const rows = await query(
-      `SELECT id, name, model_year AS modelYear
-         FROM vehicle_variants
-        WHERE make_id = ? AND submake_id = ? AND model_year = ?
+      // `SELECT id, name, model_year AS modelYear
+      //    FROM vehicle_variants
+      //   WHERE make_id = ? AND submake_id = ? AND model_year = ?
+      //   ORDER BY name ASC`,
+      `SELECT vv.*,
+      vbt.name AS bodyTypeName
+         FROM vehicle_variants vv
+      LEFT JOIN vehicle_body_types vbt ON vbt.id = vv.body_type_id
+        WHERE vv.make_id = ? AND vv.submake_id = ? AND vv.model_year = ?
         ORDER BY name ASC`,
       [makeId, submakeId, modelYear]
     );

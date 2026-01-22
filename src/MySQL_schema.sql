@@ -234,6 +234,7 @@ CREATE TABLE motor_proposals (
   review_status ENUM('not_applicable','pending_review','reupload_required','approved','rejected')
     NOT NULL DEFAULT 'not_applicable',
 
+  -- insurance start date will be start of policy 
   insurance_start_date DATE NULL,
 
   submitted_at DATETIME NULL,
@@ -259,12 +260,18 @@ CREATE TABLE motor_proposals (
   refund_processed_at DATETIME NULL,
   closed_at DATETIME NULL,
 
-  -- Future: policy issue module
+  -- policy issue module
   policy_status ENUM('not_issued','active','expired') NOT NULL DEFAULT 'not_issued',
   policy_no VARCHAR(100) NULL,
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
   policy_schedule_path VARCHAR(255) NULL,
+
+  -- policy renewal module
+  renewal_document_path VARCHAR(255) NULL,
+  renewal_sent_at DATETIME NULL,
+  renewal_sent_by_admin_id INT NULL,
+  renewal_notes TEXT NULL;
 
   -- registration number issue module if vehicle is applied
   registration_updated_at DATETIME NULL,

@@ -1572,10 +1572,17 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     [packageCode, id]
   );
 
-    const policyDocuments = rows.length
+  const policyDocuments = rows.length
     ? {
       docType: "Policy Schedule Document",
       url: buildUrl(rows[0].policy_schedule_path),
+    }
+    : null;
+
+  const renewalDocuments = rows.length
+    ? {
+      docType: "Renewal Document",
+      url: buildUrl(rows[0].renewal_document_path),
     }
     : null;
 
@@ -1632,6 +1639,11 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       policyIssuedAt: p.policy_issued_at,
       policyExpiresAt: p.policy_expires_at,
       policyDocuments,
+    },
+
+    renewal: {
+      renewalNotes: p.renewal_notes,
+      renewalDocuments,
     },
 
     kyc: {

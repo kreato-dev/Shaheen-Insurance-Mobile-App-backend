@@ -484,6 +484,54 @@
       ]
     },
     {
+      "name": "Admin - Policy Renewal (Motor)",
+      "item": [
+        {
+          "name": "Send Renewal Document (MOTOR) - Upload PDF/JPG/PNG",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "renewal_notes",
+                  "value": "Renewal document for expired motor policy",
+                  "type": "text"
+                },
+                {
+                  "key": "renewal_document",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/policies/motor/{{motorProposalId}}/renewal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "policies",
+                "motor",
+                "{{motorProposalId}}",
+                "renewal"
+              ]
+            }
+          },
+          "description": "Uploads renewal document (PDF/JPG/PNG) for an expired Motor policy. Allowed only if policy_status=expired OR policy_expires_at < CURDATE()."
+        }
+      ]
+    },
+    {
       "name": "Admin Refunds (Phase 3)",
       "item": [
         {

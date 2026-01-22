@@ -261,10 +261,28 @@ async function getMotorProposalDetail(proposalId) {
     `
     SELECT
       p.*,
+      -- user details
       u.email AS user_email,
-      u.mobile AS user_mobile
+      u.mobile AS user_mobile,
+      
+      -- vehicle info
+      vm.name AS makeName,
+      vsm.name AS submakeName,
+      vv.name AS variantName,
+      vbt.name AS bodyTypeName,
+      vv.engine_cc AS engineCc,
+      vv.seating_capacity AS seatingCapacity,
+      tc.name AS trackerCompanyName
+
     FROM motor_proposals p
+    
     LEFT JOIN users u ON u.id = p.user_id
+    
+    LEFT JOIN vehicle_makes vm ON vm.id = p.make_id
+    LEFT JOIN vehicle_submakes vsm ON vsm.id = p.submake_id
+    LEFT JOIN vehicle_variants vv ON vv.id = p.variant_id
+    LEFT JOIN vehicle_body_types vbt ON vbt.id = vv.body_type_id
+    LEFT JOIN tracker_companies tc ON tc.id = p.tracker_company_id
     WHERE p.id = ?
     LIMIT 1
     `,
@@ -325,9 +343,19 @@ async function getMotorProposalDetail(proposalId) {
     image_url: `${APP_BASE_URL}/${img.file_path}`,
   }));
 
-  const policyDocuments = rows.map(img => ({
-    policy_schedule_url: `${APP_BASE_URL}/${img.policy_schedule_path}`,
-  }));
+  const policyDocuments = (rows && rows.length > 0)
+    ? rows
+      .filter(doc => doc.policy_schedule_path) // Only keep rows with a value
+      .map(doc => ({
+        policy_schedule_url: `${APP_BASE_URL}/${doc.policy_schedule_path}`,
+      })) : [];
+
+  const renewalDocuments = (rows && rows.length > 0)
+    ? rows
+      .filter(doc => doc.renewal_document_path) // Only keep rows with a value
+      .map(doc => ({
+        renewal_document_url: `${APP_BASE_URL}/${doc.renewal_document_path}`,
+      })) : [];
 
   return {
     proposal,
@@ -335,6 +363,7 @@ async function getMotorProposalDetail(proposalId) {
     KYCdocuments,
     vehicleImages,
     policyDocuments,
+    renewalDocuments,
   };
 }
 
@@ -412,9 +441,19 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
   }));
 
   //policy schedule path from motor_proposal
-  const policyDocuments = proposalRows.map(doc => ({
-    policy_schedule_url: `${APP_BASE_URL}/${doc.policy_schedule_path}`,
-  }));
+  const policyDocuments = (rows && rows.length > 0)
+    ? rows
+      .filter(doc => doc.policy_schedule_path) // Only keep rows with a value
+      .map(doc => ({
+        policy_schedule_url: `${APP_BASE_URL}/${doc.policy_schedule_path}`,
+      })) : [];
+
+  const renewalDocuments = (rows && rows.length > 0)
+    ? rows
+      .filter(doc => doc.renewal_document_path) // Only keep rows with a value
+      .map(doc => ({
+        renewal_document_url: `${APP_BASE_URL}/${doc.renewal_document_path}`,
+      })) : [];
 
   return {
     travelSubtype: String(travelSubtype).toLowerCase(),
@@ -425,6 +464,7 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     documents,
     KYCdocuments,
     policyDocuments,
+    renewalDocuments,
   };
 }
 

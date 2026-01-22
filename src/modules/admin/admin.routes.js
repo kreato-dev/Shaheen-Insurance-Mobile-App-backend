@@ -6,6 +6,7 @@ const adminAuthRoutes = require('./auth/adminAuth.routes');
 const refundsRoutes = require('./refunds/refunds.routes');
 const usersRoutes = require('./users/users.routes')
 const policiesRoutes = require('./policies/admin.policy.routes')
+const policyRenewralRoutes = require('./policies/admin.policy.renewal.routes')
 
 router.use('/auth', adminAuthRoutes );
 
@@ -15,6 +16,6 @@ router.use('/refunds', refundsRoutes);
 
 router.use('/users', usersRoutes);
 
-router.use('/policies', policiesRoutes);
+router.use('/policies', policiesRoutes, policyRenewralRoutes);
 
 module.exports = router;

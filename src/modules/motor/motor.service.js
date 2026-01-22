@@ -1308,6 +1308,13 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
     }
     : null;
 
+  const renewalDocuments = rows.length
+    ? {
+      docType: "Renewal Document",
+      url: buildUrl(rows[0].renewal_document_path),
+    }
+    : null;
+
   const employmentProof = kycRows.length
     ? {
       docType: kycRows[0].docType,
@@ -1374,6 +1381,11 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       policyIssuedAt: p.policy_issued_at,
       policyExpiresAt: p.policy_expires_at,
       policyDocuments,
+    },
+
+    renewal: {
+      renewalNotes: p.renewal_notes,
+      renewalDocuments,
     },
 
     kyc: {
