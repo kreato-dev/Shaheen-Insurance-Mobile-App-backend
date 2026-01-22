@@ -1124,6 +1124,229 @@
               ]
             }
           }
+        },
+        {
+          "name": "Claim Entry Prefill (Motor)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/claims/motor/entry?proposalId={{motorProposalId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "claims",
+                "motor",
+                "entry"
+              ],
+              "query": [
+                {
+                  "key": "proposalId",
+                  "value": "{{motorProposalId}}"
+                }
+              ]
+            }
+          },
+          "description": "Fetches prefilled info from motor_proposals (policy_no, insured info, vehicle details, coverage dates). No policy_type included."
+        },
+        {
+          "name": "Submit Claim (Motor FNOL) - multipart (mandatory vehicle images)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  if (json && json.claimId) {",
+                  "    pm.collectionVariables.set('claimId', String(json.claimId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "motor_proposal_id",
+                  "value": "{{motorProposalId}}",
+                  "type": "text"
+                },
+                {
+                  "key": "claim_type",
+                  "value": "accident",
+                  "type": "text"
+                },
+                {
+                  "key": "incident_date",
+                  "value": "2026-01-22",
+                  "type": "text"
+                },
+                {
+                  "key": "incident_time",
+                  "value": "14:30",
+                  "type": "text"
+                },
+                {
+                  "key": "city_id",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "location_text",
+                  "value": "Karachi",
+                  "type": "text"
+                },
+                {
+                  "key": "latitude",
+                  "value": "24.8607",
+                  "type": "text"
+                },
+                {
+                  "key": "longitude",
+                  "value": "67.0011",
+                  "type": "text"
+                },
+                {
+                  "key": "vehicle_drivable",
+                  "value": "0",
+                  "type": "text"
+                },
+                {
+                  "key": "police_report_lodged",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "claim_description",
+                  "value": "What happened: Rear collision.\nHow it happened: Car hit from behind.\nDamages observed: Rear bumper and lights damaged.",
+                  "type": "text"
+                },
+                {
+                  "key": "vehicle_front",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "vehicle_back",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "vehicle_left",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "vehicle_right",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "vehicle_damaged",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "police_report",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/claims/motor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "claims",
+                "motor"
+              ]
+            }
+          },
+          "description": "Creates FNOL + claim record. Mandatory: vehicle_front/back/left/right/damaged. Optional: police_report."
+        },
+        {
+          "name": "My Claims (Motor) - list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/claims/motor?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "claims",
+                "motor"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "My Claim Detail (Motor)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/claims/motor/{{claimId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "claims",
+                "motor",
+                "{{claimId}}"
+              ]
+            }
+          },
+          "description": "Returns claim + documents. Download URL can be built by APP_BASE_URL + file_path."
         }
       ]
     },
@@ -1735,6 +1958,10 @@
     {
       "key": "travelPackageCode",
       "value": "INTERNATIONAL"
+    },
+    {
+      "key": "claimId",
+      "value": ""
     }
   ]
 }

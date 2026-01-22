@@ -14,7 +14,7 @@ const motorRoutes = require('./modules/motor/motor.routes');
 const travelRoutes = require('./modules/travel/travel.routes');
 const paymentRoutes = require('./modules/payment/payment.routes');
 const policyRoutes = require('./modules/policy/policy.routes');
-const claimRoutes = require('./modules/claim/claim.routes');
+const claimRoutes = require('./modules/claim/claim.motor.routes');
 const proposalsRoutes = require('./modules/proposals/proposals.routes');
 
 // Admin

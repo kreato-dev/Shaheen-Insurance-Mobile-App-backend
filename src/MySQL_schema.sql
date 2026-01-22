@@ -1028,22 +1028,86 @@ CREATE TABLE policies (
   INDEX idx_policy_lookup (proposal_type, travel_package_code, proposal_id)
 );
 
--- 8) Claim Cache
-CREATE TABLE claims_cache (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  claim_no VARCHAR(100) NOT NULL,
-  status VARCHAR(50) NOT NULL,
-  incident_date DATE NULL,
-  last_synced_at DATETIME NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_claims_cache_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE CASCADE ON UPDATE CASCADE,
-  UNIQUE KEY uq_claims_cache (user_id, claim_no)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- 8) Motor Claims
+-- FNOL master table
+CREATE TABLE motor_claims (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
 
--- 9) KYC document table (scalable so can add salary slip, bank statement etc.)
+  user_id BIGINT NOT NULL,
+  motor_proposal_id BIGINT NOT NULL,
+
+  fnol_no VARCHAR(50) NULL UNIQUE,
+
+  claim_status ENUM(
+    'submitted',
+    'pending_review',
+    'reupload_required',
+    'approved',
+    'rejected',
+    'closed'
+  ) NOT NULL DEFAULT 'pending_review',
+
+  claim_type ENUM(
+    'accident','theft','third_party','total_loss','fire','natural_calamity','other'
+  ) NOT NULL,
+  claim_type_other_desc VARCHAR(255) NULL,
+
+  incident_date DATE NOT NULL,
+  incident_time TIME NULL,
+
+  city_id BIGINT NULL,
+  location_text VARCHAR(255) NULL,
+  latitude DECIMAL(10,7) NULL,
+  longitude DECIMAL(10,7) NULL,
+
+  vehicle_drivable TINYINT(1) NOT NULL DEFAULT 0,
+  police_report_lodged TINYINT(1) NOT NULL DEFAULT 0,
+
+  claim_description TEXT NOT NULL,
+
+  reupload_notes TEXT NULL,
+  required_docs JSON NULL,
+  rejection_reason TEXT NULL,
+
+  proposal_snapshot_json JSON NULL,
+
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_motor_claims_user (user_id),
+  INDEX idx_motor_claims_proposal (motor_proposal_id),
+  INDEX idx_motor_claims_status (claim_status),
+  INDEX idx_motor_claims_fnol (fnol_no)
+);
+
+-- 9) Motor Claims Documents
+-- Evidence uploads
+CREATE TABLE motor_claim_documents (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  claim_id BIGINT NOT NULL,
+
+  doc_type ENUM(
+    'vehicle_front',
+    'vehicle_back',
+    'vehicle_left',
+    'vehicle_right',
+    'vehicle_damaged',
+    'police_report'
+  ) NOT NULL,
+
+  file_path VARCHAR(255) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uniq_claim_doc (claim_id, doc_type),
+  INDEX idx_claim_docs_claim (claim_id),
+
+  CONSTRAINT fk_claim_docs_claim
+    FOREIGN KEY (claim_id) REFERENCES motor_claims(id)
+    ON DELETE CASCADE
+);
+
+
+-- 10) KYC document table (scalable so can add salary slip, bank statement etc.)
 CREATE TABLE kyc_documents (
   id INT AUTO_INCREMENT PRIMARY KEY,
   proposal_type ENUM('MOTOR','TRAVEL') NOT NULL,

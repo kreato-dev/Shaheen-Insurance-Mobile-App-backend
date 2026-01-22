@@ -33,6 +33,10 @@
     {
       "key": "travelPackageCode",
       "value": "INTERNATIONAL"
+    },
+    {
+      "key": "claimId",
+      "value": "1"
     }
   ],
   "item": [
@@ -692,6 +696,182 @@
             }
           },
           "description": "Upload refund evidence file. Field name: evidence. Set collection var refundEvidenceFile to an absolute path on your machine."
+        }
+      ]
+    },
+    {
+      "name": "Admin - Claims (Motor FNOL)",
+      "item": [
+        {
+          "name": "Claims Inbox (Motor) - list",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/claims/motor?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "claims",
+                "motor"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "description": "Admin inbox listing all Motor claims (FNOL)."
+        },
+        {
+          "name": "Claim Detail (Motor) by Claim ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/claims/motor/{{claimId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "claims",
+                "motor",
+                "{{claimId}}"
+              ]
+            }
+          },
+          "description": "Admin view of a Motor claim including FNOL ref and evidence urls."
+        },
+        {
+          "name": "Review Claim (Motor) - Approve",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/claims/motor/{{claimId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "claims",
+                "motor",
+                "{{claimId}}",
+                "review"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"approve\"\n}"
+            }
+          },
+          "description": "Approve a claim (sets review_status=approved)."
+        },
+        {
+          "name": "Review Claim (Motor) - Reject",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/claims/motor/{{claimId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "claims",
+                "motor",
+                "{{claimId}}",
+                "review"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reject\",\n  \"rejection_reason\": \"Insufficient evidence provided.\"\n}"
+            }
+          },
+          "description": "Reject a claim (sets review_status=rejected + reason)."
+        },
+        {
+          "name": "Review Claim (Motor) - Reupload Required",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/claims/motor/{{claimId}}/review",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "claims",
+                "motor",
+                "{{claimId}}",
+                "review"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"reupload_required\",\n  \"reupload_notes\": \"Please upload clearer damaged area image.\",\n  \"required_docs\": [\n    { \"doc_type\": \"vehicle_damaged\" }\n  ]\n}"
+            }
+          },
+          "description": "Marks claim as reupload_required and sets required_docs for user reupload flow (Phase-2 style)."
         }
       ]
     },
