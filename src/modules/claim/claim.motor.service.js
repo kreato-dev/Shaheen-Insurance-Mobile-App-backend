@@ -338,15 +338,22 @@ async function getMyMotorClaimDetail({ userId, claimId }) {
 
     const claim = rows[0];
 
-  // proposal_snapshot_json JSON come as string so parsing it as json
-  if (typeof claim.proposal_snapshot_json === 'string') {
-    try { claim.proposal_snapshot_json = JSON.parse(claim.proposal_snapshot_json); } catch (_) { }
-  }
+    // proposal_snapshot_json JSON come as string so parsing it as json
+    if (typeof claim.proposal_snapshot_json === 'string') {
+      try { claim.proposal_snapshot_json = JSON.parse(claim.proposal_snapshot_json); } catch (_) { }
+    }
 
-    const [docs] = await conn.execute(
+    const [rawDocs] = await conn.execute(
       `SELECT id, doc_type, file_path, created_at FROM motor_claim_documents WHERE claim_id = ? ORDER BY id ASC`,
       [id]
     );
+
+    const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
+
+    const docs = rawDocs.map(doc => ({
+      ...doc,
+      file_url: `${APP_BASE_URL}/${doc.file_path}`,
+    }));
 
     return {
       claim,
