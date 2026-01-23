@@ -24,6 +24,10 @@ const adminAuthRoutes = require('./modules/admin/auth/adminAuth.routes');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authMiddleware } = require('./middleware/auth');
 
+const { registerNotificationCrons } = require('./jobs/notification.cron');
+
+registerNotificationCrons();
+
 const app = express();
 
 app.use(helmet());

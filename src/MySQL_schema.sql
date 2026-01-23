@@ -208,6 +208,7 @@ CREATE TABLE motor_proposals (
   registration_number VARCHAR(50) NULL,
   registration_province ENUM( 'PUNJAB','SINDH','KPK','BALOCHISTAN','AZAD_KASHMIR','GILGIT_BALTISTAN', 'ISLAMABAD' ) NULL,
   applied_for TINYINT(1) DEFAULT 0,
+  registration_applied_at DATETIME NULL,
   is_owner TINYINT(1) NOT NULL,
   owner_relation ENUM('father', 'mother', 'brother', 'sister', 'spouse', 'son', 'daughter') NULL,
   engine_number VARCHAR(100) NOT NULL,
@@ -284,6 +285,7 @@ CREATE TABLE motor_proposals (
   INDEX idx_motor_payment (payment_status),
   INDEX idx_motor_review (review_status),
   INDEX idx_motor_expires (expires_at),
+  INDEX idx_motor_reg_applied_at (applied_for, registration_applied_at),
 
   CONSTRAINT fk_motor_proposals_user
     FOREIGN KEY (user_id) REFERENCES users(id)
@@ -951,12 +953,23 @@ CREATE TABLE payments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 6) Notifications / FAQs / Support
+-- =========================
+-- Notifications
+-- =========================
+
+-- 1)  user notifications table
 CREATE TABLE notifications (
   id INT AUTO_INCREMENT PRIMARY KEY,
   user_id INT NOT NULL,
   title VARCHAR(150) NOT NULL,
   body TEXT NOT NULL,
   type VARCHAR(50) NULL,
+  event_key VARCHAR(80) NULL,
+  ref_type VARCHAR(50) NULL,
+  ref_id BIGINT NULL,
+  data_json JSON NULL,
+  email_sent TINYINT(1) DEFAULT 0,
+  email_sent_at DATETIME NULL,
   is_read TINYINT(1) DEFAULT 0,
   sent_at DATETIME NOT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -964,6 +977,34 @@ CREATE TABLE notifications (
     FOREIGN KEY (user_id) REFERENCES users(id)
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX idx_notifications_user_event_ref
+  ON notifications(user_id, event_key, ref_type, ref_id);
+
+-- 2) Create admin notifications table
+CREATE TABLE admin_notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_id INT NOT NULL,
+  title VARCHAR(150) NOT NULL,
+  body TEXT NOT NULL,
+  type VARCHAR(50) NULL,
+  event_key VARCHAR(80) NULL,
+  ref_type VARCHAR(50) NULL,
+  ref_id BIGINT NULL,
+  data_json JSON NULL,
+  is_read TINYINT(1) DEFAULT 0,
+  sent_at DATETIME NOT NULL,
+  email_sent TINYINT(1) DEFAULT 0,
+  email_sent_at DATETIME NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+  CONSTRAINT fk_admin_notifications_admin
+    FOREIGN KEY (admin_id) REFERENCES admins(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE INDEX idx_admin_notifications_admin_event_ref
+  ON admin_notifications(admin_id, event_key, ref_type, ref_id);
 
 CREATE TABLE faqs (
   id INT AUTO_INCREMENT PRIMARY KEY,
