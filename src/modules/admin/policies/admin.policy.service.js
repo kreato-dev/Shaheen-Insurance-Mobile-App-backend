@@ -1,4 +1,6 @@
 const { getConnection } = require('../../../config/db');
+const { fireUser, fireAdmin } = require('../../notifications/notification.service');
+const E = require('../../notifications/notification.events');
 
 function httpError(status, message) {
     const err = new Error(message);
@@ -57,7 +59,7 @@ async function issuePolicyService({
     if (!scheduleFile) throw httpError(400, 'policy_schedule file is required');
 
     const schedulePath = toPolicyScheduleRelativePath(scheduleFile);
-    
+
     const pkgCode =
         type === 'TRAVEL' ? normalizeTravelPackageCode(travelPackageCode) : 'NA';
     if (type === 'TRAVEL' && !pkgCode) throw httpError(400, 'travelPackageCode is required for TRAVEL');
@@ -73,9 +75,20 @@ async function issuePolicyService({
 
         // Lock proposal row
         const [rows] = await conn.execute(
-            `SELECT * FROM ${tableName} WHERE id = ? LIMIT 1 FOR UPDATE`,
+            `
+            SELECT
+                p.*,
+                u.email AS user_email,
+                u.full_name AS user_name
+            FROM ${tableName} p
+            LEFT JOIN users u ON u.id = p.user_id
+            WHERE p.id = ?
+            LIMIT 1
+            FOR UPDATE
+            `,
             [id]
         );
+
         if (!rows.length) throw httpError(404, `${type} proposal not found`);
 
         const proposal = rows[0];
@@ -144,6 +157,86 @@ async function issuePolicyService({
         );
 
         await conn.commit();
+
+        // ✅ AFTER COMMIT: notifications + email (never block issuance)
+        try {
+            const userId = Number(proposal.user_id);
+            const userEmail = proposal.user_email || null;
+
+            // 1) USER: Policy Issued
+            await fireUser(E.POLICY_ISSUED, {
+                user_id: userId,
+                entity_type: 'policy',
+                entity_id: id,
+                data: {
+                    proposal_type: type,
+                    proposal_id: id,
+                    policy_no: cleanPolicyNo,
+                    policy_expires_at: endDate,
+                    policy_schedule_path: schedulePath,
+                    travel_package_code: type === 'TRAVEL' ? pkgCode : null,
+                },
+                email: userEmail
+                    ? {
+                        to: userEmail,
+                        subject: `Policy Issued: ${cleanPolicyNo}`,
+                        text:
+                            `Your policy has been issued.\n` +
+                            `Policy No: ${cleanPolicyNo}\n` +
+                            `Proposal: ${type}-${id}\n` +
+                            `Expires At: ${endDate}\n`,
+                        html: `
+            <div style="font-family: Arial, sans-serif; line-height:1.6;">
+              <h2>Policy Issued</h2>
+              <p><b>Policy No:</b> ${cleanPolicyNo}</p>
+              <p><b>Proposal:</b> ${type}-${id}</p>
+              <p><b>Expires At:</b> ${endDate}</p>
+              <p>Your policy schedule document is available in the app.</p>
+            </div>
+          `,
+                    }
+                    : null,
+            });
+
+            // 2) MOTOR ONLY: if applied_for=1 -> immediate motor reg number reminder
+            // (You also want reminders while submitted+paid not issued -> cron will handle that separately)
+            if (type === 'MOTOR' && Number(proposal.applied_for) === 1) {
+                await fireUser(E.MOTOR_REG_NO_UPLOAD_REMINDER, {
+                    user_id: userId,
+                    entity_type: 'proposal',
+                    entity_id: id,
+                    data: {
+                        proposal_type: 'MOTOR',
+                        proposal_id: id,
+                        registration_number: proposal.registration_number || 'APPLIED',
+                        policy_no: cleanPolicyNo,
+                        policy_issued: true,
+                    },
+                    email: userEmail
+                        ? {
+                            to: userEmail,
+                            subject: `Reminder: Upload Vehicle Registration Number (MOTOR-${id})`,
+                            text:
+                                `Your policy is issued but your vehicle registration number is still pending.\n` +
+                                `Proposal: MOTOR-${id}\n` +
+                                `Policy No: ${cleanPolicyNo}\n` +
+                                `Please upload the registration number from the app.\n`,
+                            html: `
+              <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                <h2>Upload Registration Number</h2>
+                <p>Your policy is issued, but your registration number is still pending.</p>
+                <p><b>Proposal:</b> MOTOR-${id}</p>
+                <p><b>Policy No:</b> ${cleanPolicyNo}</p>
+                <p>Please open the app and upload the registration number.</p>
+              </div>
+            `,
+                        }
+                        : null,
+                });
+            }
+        } catch (_) {
+            // don't block policy issuance response
+        }
 
         return {
             proposalType: type,

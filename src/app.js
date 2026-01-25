@@ -24,7 +24,9 @@ const adminAuthRoutes = require('./modules/admin/auth/adminAuth.routes');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authMiddleware } = require('./middleware/auth');
 
-const { registerNotificationCrons } = require('./jobs/notification.cron');
+// notification
+const notificationRoutes = require('./modules/notifications/notification.routes');
+const { registerNotificationCrons } = require('./modules/notifications/notification.cron');
 
 registerNotificationCrons();
 
@@ -62,6 +64,9 @@ app.use('/api/payment', authMiddleware, paymentRoutes);
 // Admin routes (new)
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin', adminRoutes);
+
+// notification routes
+app.use(notificationRoutes);
 
 // Shortcut route to open the API playground
 app.get('/playground', (req, res) => {

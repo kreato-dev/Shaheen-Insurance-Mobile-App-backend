@@ -1,6 +1,9 @@
 const { query, getConnection } = require('../../../config/db');
 const { buildMotorSelect } = require('./motorQueries');
 const { buildTravelSelect } = require('./travelQueries');
+const { fireUser, fireAdmin } = require('../../notifications/notification.service');
+const E = require('../../notifications/notification.events');
+
 
 //Phase 1
 const ALLOWED_TYPES = new Set(['MOTOR', 'TRAVEL']);
@@ -89,6 +92,14 @@ function buildWhereAndParams(filters) {
     params,
   };
 }
+
+function parseAdminEmails() {
+  return (process.env.ADMIN_ALERT_EMAILS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 
 async function getUnifiedProposals(qp) {
   // ✅ includeTotal must be computed BEFORE queries
@@ -478,14 +489,27 @@ async function reviewMotorProposal(
   }
 
   const conn = await getConnection();
+
+  let notifCtx = null;
+
   try {
     await conn.beginTransaction();
 
     const [rows] = await conn.execute(
-      `SELECT id, submission_status, payment_status, review_status
-       FROM motor_proposals
-       WHERE id = ?
-       LIMIT 1`,
+      `SELECT
+     p.id,
+     p.user_id,
+     p.submission_status,
+     p.payment_status,
+     p.review_status,
+     p.applied_for,
+     p.registration_number,
+     u.email AS user_email,
+     u.full_name AS user_name
+   FROM motor_proposals p
+   LEFT JOIN users u ON u.id = p.user_id
+   WHERE p.id = ?
+   LIMIT 1`,
       [proposalId]
     );
 
@@ -552,7 +576,133 @@ async function reviewMotorProposal(
       ]
     );
 
+    notifCtx = {
+      proposalType: 'MOTOR',
+      proposalId: Number(proposalId),
+      userId: Number(p.user_id),
+      userEmail: p.user_email || null,
+      userName: p.user_name || null,
+      action: normalizedAction,
+      newReviewStatus,
+      rejectionReason: normalizedAction === 'reject' ? rejectionReason : null,
+      reuploadNotes: normalizedAction === 'reupload_required' ? reuploadNotes : null,
+      requiredDocs: normalizedAction === 'reupload_required' ? (requiredDocs || []) : null,
+      refundInitiated: normalizedAction === 'reject',
+      appliedFor: Number(p.applied_for) === 1,
+      registrationNumber: p.registration_number || null,
+    };
+
+
     await conn.commit();
+
+    // ✅ AFTER COMMIT: notifications + emails (NO policy issued here)
+    try {
+      // 1) REUPLOAD REQUIRED -> user notif + email
+      if (notifCtx.action === 'reupload_required') {
+        await fireUser(E.PROPOSAL_REUPLOAD_REQUIRED, {
+          user_id: notifCtx.userId,
+          entity_type: 'proposal',
+          entity_id: notifCtx.proposalId,
+          data: {
+            proposal_type: 'MOTOR',
+            proposal_id: notifCtx.proposalId,
+            reupload_notes: notifCtx.reuploadNotes,
+            required_docs: notifCtx.requiredDocs,
+          },
+          email: notifCtx.userEmail
+            ? {
+              to: notifCtx.userEmail,
+              subject: `Action Required: Re-upload Documents (MOTOR-${notifCtx.proposalId})`,
+              text:
+                `Admin requested document re-upload for your proposal.\n` +
+                `Proposal: MOTOR-${notifCtx.proposalId}\n` +
+                `Notes: ${notifCtx.reuploadNotes || 'N/A'}\n`,
+              html: `
+              <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                <h2>Action Required: Re-upload Documents</h2>
+                <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
+                <p><b>Notes:</b> ${notifCtx.reuploadNotes || 'N/A'}</p>
+                <p>Please open the app and re-upload the requested documents.</p>
+              </div>
+            `,
+            }
+            : null,
+        });
+      }
+
+      // 2) REJECTED -> user combined notif + email (rejection + refund initiated)
+      if (notifCtx.action === 'reject') {
+        await fireUser(E.PROPOSAL_REJECTED_REFUND_INITIATED, {
+          user_id: notifCtx.userId,
+          entity_type: 'proposal',
+          entity_id: notifCtx.proposalId,
+          data: {
+            proposal_type: 'MOTOR',
+            proposal_id: notifCtx.proposalId,
+            rejection_reason: notifCtx.rejectionReason,
+            refund_status: 'refund_initiated',
+          },
+          email: notifCtx.userEmail
+            ? {
+              to: notifCtx.userEmail,
+              subject: `Proposal Rejected + Refund Initiated (MOTOR-${notifCtx.proposalId})`,
+              text:
+                `Your proposal was rejected.\n` +
+                `Proposal: MOTOR-${notifCtx.proposalId}\n` +
+                `Reason: ${notifCtx.rejectionReason || 'N/A'}\n` +
+                `Refund: Initiated\n`,
+              html: `
+              <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                <h2>Proposal Rejected</h2>
+                <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
+                <p><b>Reason:</b> ${notifCtx.rejectionReason || 'N/A'}</p>
+                <hr/>
+                <h3>Refund Initiated</h3>
+                <p>Your refund process has been initiated. You will be notified once processed.</p>
+              </div>
+            `,
+            }
+            : null,
+        });
+
+        // 3) ADMIN reminder -> refund needs processing (notif + email)
+        const adminEmails = parseAdminEmails();
+        await fireAdmin(E.ADMIN_REFUND_ACTION_REQUIRED, {
+          entity_type: 'proposal',
+          entity_id: notifCtx.proposalId,
+          data: {
+            proposal_type: 'MOTOR',
+            proposal_id: notifCtx.proposalId,
+            user_id: notifCtx.userId,
+            user_name: notifCtx.userName,
+            refund_status: 'refund_initiated',
+          },
+          email:
+            adminEmails.length > 0
+              ? {
+                to: adminEmails.join(','),
+                subject: `Refund Needs Processing (MOTOR-${notifCtx.proposalId})`,
+                text:
+                  `Refund initiated due to proposal rejection.\n` +
+                  `Proposal: MOTOR-${notifCtx.proposalId}\n` +
+                  `User: ${notifCtx.userName || notifCtx.userId}\n`,
+                html: `
+                <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                  <h2>Refund Needs Processing</h2>
+                  <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
+                  <p><b>User:</b> ${notifCtx.userName || notifCtx.userId}</p>
+                  <p>Refund status is now <b>refund_initiated</b>. Please process and upload evidence.</p>
+                </div>
+              `,
+              }
+              : null,
+        });
+      }
+
+      // NOTE: approve -> no emails here (policy issuance module will handle user notification)
+    } catch (_) {
+      // never block admin action response
+    }
 
     return {
       ok: true,
@@ -588,16 +738,28 @@ async function reviewTravelProposal(
   }
 
   const conn = await getConnection();
+
+  let notifCtx = null;
+
   try {
     await conn.beginTransaction();
 
     const [rows] = await conn.execute(
-      `SELECT id, submission_status, payment_status, review_status
-       FROM ${table}
-       WHERE id = ?
-       LIMIT 1`,
+      `SELECT
+     p.id,
+     p.user_id,
+     p.submission_status,
+     p.payment_status,
+     p.review_status,
+     u.email AS user_email,
+     u.full_name AS user_name
+   FROM ${table} p
+   LEFT JOIN users u ON u.id = p.user_id
+   WHERE p.id = ?
+   LIMIT 1`,
       [proposalId]
     );
+
 
     if (!rows.length) throw httpError(404, 'Travel proposal not found');
 
@@ -655,7 +817,126 @@ async function reviewTravelProposal(
       ]
     );
 
+    notifCtx = {
+      proposalType: 'TRAVEL',
+      travelSubtype: String(travelSubtype).toLowerCase(),
+      proposalId: Number(proposalId),
+      userId: Number(p.user_id),
+      userEmail: p.user_email || null,
+      userName: p.user_name || null,
+      action: normalizedAction,
+      newReviewStatus,
+      rejectionReason: normalizedAction === 'reject' ? rejectionReason : null,
+      reuploadNotes: normalizedAction === 'reupload_required' ? reuploadNotes : null,
+      requiredDocs: normalizedAction === 'reupload_required' ? (requiredDocs || []) : null,
+      refundInitiated: normalizedAction === 'reject',
+    };
+
     await conn.commit();
+
+    try {
+      if (notifCtx.action === 'reupload_required') {
+        await fireUser(E.PROPOSAL_REUPLOAD_REQUIRED, {
+          user_id: notifCtx.userId,
+          entity_type: 'proposal',
+          entity_id: notifCtx.proposalId,
+          data: {
+            proposal_type: 'TRAVEL',
+            travel_subtype: notifCtx.travelSubtype,
+            proposal_id: notifCtx.proposalId,
+            reupload_notes: notifCtx.reuploadNotes,
+            required_docs: notifCtx.requiredDocs,
+          },
+          email: notifCtx.userEmail
+            ? {
+              to: notifCtx.userEmail,
+              subject: `Action Required: Re-upload Documents (TRAVEL-${notifCtx.proposalId})`,
+              text:
+                `Admin requested document re-upload for your travel proposal.\n` +
+                `Proposal: TRAVEL-${notifCtx.proposalId}\n` +
+                `Notes: ${notifCtx.reuploadNotes || 'N/A'}\n`,
+              html: `
+              <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                <h2>Action Required: Re-upload Documents</h2>
+                <p><b>Proposal:</b> TRAVEL-${notifCtx.proposalId}</p>
+                <p><b>Notes:</b> ${notifCtx.reuploadNotes || 'N/A'}</p>
+                <p>Please open the app and re-upload the requested documents.</p>
+              </div>
+            `,
+            }
+            : null,
+        });
+      }
+
+      if (notifCtx.action === 'reject') {
+        await fireUser(E.PROPOSAL_REJECTED_REFUND_INITIATED, {
+          user_id: notifCtx.userId,
+          entity_type: 'proposal',
+          entity_id: notifCtx.proposalId,
+          data: {
+            proposal_type: 'TRAVEL',
+            travel_subtype: notifCtx.travelSubtype,
+            proposal_id: notifCtx.proposalId,
+            rejection_reason: notifCtx.rejectionReason,
+            refund_status: 'refund_initiated',
+          },
+          email: notifCtx.userEmail
+            ? {
+              to: notifCtx.userEmail,
+              subject: `Proposal Rejected + Refund Initiated (TRAVEL-${notifCtx.proposalId})`,
+              text:
+                `Your travel proposal was rejected.\n` +
+                `Proposal: TRAVEL-${notifCtx.proposalId}\n` +
+                `Reason: ${notifCtx.rejectionReason || 'N/A'}\n` +
+                `Refund: Initiated\n`,
+              html: `
+              <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                <h2>Proposal Rejected</h2>
+                <p><b>Proposal:</b> TRAVEL-${notifCtx.proposalId}</p>
+                <p><b>Reason:</b> ${notifCtx.rejectionReason || 'N/A'}</p>
+                <hr/>
+                <h3>Refund Initiated</h3>
+                <p>Your refund process has been initiated. You will be notified once processed.</p>
+              </div>
+            `,
+            }
+            : null,
+        });
+
+        const adminEmails = parseAdminEmails();
+        await fireAdmin(E.ADMIN_REFUND_ACTION_REQUIRED, {
+          entity_type: 'proposal',
+          entity_id: notifCtx.proposalId,
+          data: {
+            proposal_type: 'TRAVEL',
+            travel_subtype: notifCtx.travelSubtype,
+            proposal_id: notifCtx.proposalId,
+            user_id: notifCtx.userId,
+            user_name: notifCtx.userName,
+            refund_status: 'refund_initiated',
+          },
+          email:
+            adminEmails.length > 0
+              ? {
+                to: adminEmails.join(','),
+                subject: `Refund Needs Processing (TRAVEL-${notifCtx.proposalId})`,
+                text:
+                  `Refund initiated due to proposal rejection.\n` +
+                  `Proposal: TRAVEL-${notifCtx.proposalId}\n` +
+                  `User: ${notifCtx.userName || notifCtx.userId}\n`,
+                html: `
+                <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                  <h2>Refund Needs Processing</h2>
+                  <p><b>Proposal:</b> TRAVEL-${notifCtx.proposalId}</p>
+                  <p><b>User:</b> ${notifCtx.userName || notifCtx.userId}</p>
+                  <p>Refund status is now <b>refund_initiated</b>. Please process and upload evidence.</p>
+                </div>
+              `,
+              }
+              : null,
+        });
+      }
+    } catch (_) { }
 
     return {
       ok: true,

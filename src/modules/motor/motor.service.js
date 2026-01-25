@@ -1,6 +1,9 @@
 // src/modules/motor/motor.service.js
 const { query, getConnection } = require('../../config/db');
 const { deleteFileIfExists } = require('../../utils/fileCleanup');
+const { fireUser, fireAdmin } = require('../notifications/notification.service');
+const E = require('../notifications/notification.events');
+const templates = require('../notifications/notification.templates');
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -697,11 +700,49 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
 
     await conn.commit();
 
+    // ✅ AFTER COMMIT: fire proposal submitted (unpaid)
+    try {
+      // get user info for email (optional)
+      const userRows = await query(`SELECT full_name, email FROM users WHERE id=? LIMIT 1`, [userId]);
+      const fullName = userRows?.[0]?.full_name || null;
+      const email = userRows?.[0]?.email || null;
+
+      // ADMIN: new proposal submitted (unpaid)
+      const adminEmails = (process.env.ADMIN_ALERT_EMAILS || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      await fireAdmin(E.ADMIN_PROPOSAL_SUBMITTED_UNPAID, {
+        entity_type: 'proposal',
+        entity_id: proposalId,
+        data: { proposal_type: 'MOTOR', proposal_id: proposalId, user_id: userId },
+        // admin email is optional; spec says admin unpaid submit is notif only
+        email: null,
+      });
+
+      // USER: (optional) in-app confirmation (if you want)
+      // Your provided spec doesn't require email for submit+unpaid, only payment reminder T+3 + expiry.
+      // If you want a basic in-app notif, uncomment:
+      /*
+      await fireUser('PROPOSAL_SUBMITTED_UNPAID', {
+        user_id: userId,
+        entity_type: 'proposal',
+        entity_id: proposalId,
+        data: { proposal_type: 'MOTOR', proposal_id: proposalId },
+        email: null,
+      });
+      */
+    } catch (_) {
+      // don’t block response if notifications fail
+    }
+
     return {
       proposalId,
       sumInsured,
       premium,
     };
+
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -1058,6 +1099,8 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
 
   const conn = await getConnection();
 
+  let notifCtx = null;
+
   // collect new paths (if rollback, delete them)
   const newPaths = [];
   try {
@@ -1165,12 +1208,70 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
       [proposalId]
     );
 
+    // ✅ fetch user info for admin email context
+    const [urows] = await conn.execute(
+      `SELECT u.full_name, u.email
+   FROM users u
+   WHERE u.id=? LIMIT 1`,
+      [userId]
+    );
+
+    notifCtx = {
+      proposalId: Number(proposalId),
+      userId: Number(userId),
+      userName: urows?.[0]?.full_name || null,
+      userEmail: urows?.[0]?.email || null,
+      saved, // includes which docs/images were reuploaded
+    };
+
     await conn.commit();
 
     // delete old files after commit
     for (const p of oldPathsToDelete) {
       await deleteFileIfExists(p);
     }
+
+    // ✅ AFTER COMMIT: notify admin that reupload docs were submitted
+    try {
+      const adminEmails = (process.env.ADMIN_ALERT_EMAILS || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      await fireAdmin(E.ADMIN_REUPLOAD_SUBMITTED, {
+        entity_type: 'proposal',
+        entity_id: notifCtx.proposalId,
+        data: {
+          proposal_type: 'MOTOR',
+          proposal_id: notifCtx.proposalId,
+          user_id: notifCtx.userId,
+          user_name: notifCtx.userName,
+          reupload_saved: notifCtx.saved,
+        },
+        email:
+          adminEmails.length > 0
+            ? {
+              to: adminEmails.join(','),
+              subject: `Reupload Submitted (MOTOR-${notifCtx.proposalId})`,
+              text: `User submitted requested reupload.\nProposal: MOTOR-${notifCtx.proposalId}\nUser: ${notifCtx.userName || notifCtx.userId}\nSaved: ${JSON.stringify(notifCtx.saved)}`,
+              html: `
+              <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                <h2>Reupload Submitted</h2>
+                <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
+                <p><b>User:</b> ${notifCtx.userName || notifCtx.userId}</p>
+                <p><b>Uploaded:</b></p>
+                <pre style="background:#f6f6f6;padding:10px;border-radius:8px;">${JSON.stringify(
+                notifCtx.saved,
+                null,
+                2
+              )}</pre>
+              </div>
+            `,
+            }
+            : null,
+      });
+    } catch (_) { }
+
     return { proposalId, saved };
   } catch (err) {
     await conn.rollback();
@@ -1476,10 +1577,13 @@ async function updateMotorRegistrationNumberService({ userId, proposalId, regist
 
   if (!reg) throw httpError(400, 'registrationNumber is required');
   if (reg === 'APPLIED') throw httpError(400, 'registrationNumber cannot be "APPLIED"');
-
   if (reg.length < 4) throw httpError(400, 'registrationNumber looks invalid');
 
   const conn = await getConnection();
+
+  // ✅ we'll fire after commit
+  let notifCtx = null;
+
   try {
     await conn.beginTransaction();
 
@@ -1508,7 +1612,8 @@ async function updateMotorRegistrationNumberService({ userId, proposalId, regist
     }
 
     // Optional safety: block if already approved/active etc.
-    // (keep or remove based on business flow)
+    // NOTE: Your current code blocks when policy_status=active or review_status=approved.
+    // We'll keep exactly as you have it.
     const reviewStatus = String(p.review_status || '');
     const policyStatus = String(p.policy_status || '');
 
@@ -1528,7 +1633,60 @@ async function updateMotorRegistrationNumberService({ userId, proposalId, regist
       [reg, proposalId, userId]
     );
 
+    // ✅ fetch details for admin notification
+    const [urows] = await conn.execute(
+      `SELECT u.full_name, u.email
+       FROM users u
+       WHERE u.id = ?
+       LIMIT 1`,
+      [userId]
+    );
+
+    notifCtx = {
+      proposalId: Number(proposalId),
+      userId: Number(userId),
+      regNo: reg,
+      userName: urows?.[0]?.full_name || null,
+      userEmail: urows?.[0]?.email || null,
+    };
+
     await conn.commit();
+
+    // ✅ AFTER COMMIT: ADMIN notify
+    if (notifCtx) {
+      const adminEmails = (process.env.ADMIN_ALERT_EMAILS || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      await fireAdmin(E.ADMIN_MOTOR_REG_NO_UPLOADED, {
+        entity_type: 'policy',
+        entity_id: notifCtx.proposalId,
+        data: {
+          proposal_type: 'MOTOR',
+          proposal_id: notifCtx.proposalId,
+          user_id: notifCtx.userId,
+          user_name: notifCtx.userName,
+          registration_number: notifCtx.regNo,
+        },
+        email:
+          adminEmails.length > 0
+            ? {
+              to: adminEmails.join(','),
+              subject: `Motor Registration Number Uploaded (MOTOR-${notifCtx.proposalId})`,
+              text: `User uploaded motor registration number.\nProposal: MOTOR-${notifCtx.proposalId}\nReg No: ${notifCtx.regNo}\nUser: ${notifCtx.userName || notifCtx.userId}`,
+              html: `
+                  <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                    <h2>Motor Registration Number Uploaded</h2>
+                    <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
+                    <p><b>Registration No:</b> ${notifCtx.regNo}</p>
+                    <p><b>User:</b> ${notifCtx.userName || notifCtx.userId}</p>
+                  </div>
+                `,
+            }
+            : null,
+      });
+    }
 
     return {
       proposalId,

@@ -952,60 +952,7 @@ CREATE TABLE payments (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 6) Notifications / FAQs / Support
--- =========================
--- Notifications
--- =========================
-
--- 1)  user notifications table
-CREATE TABLE notifications (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  title VARCHAR(150) NOT NULL,
-  body TEXT NOT NULL,
-  type VARCHAR(50) NULL,
-  event_key VARCHAR(80) NULL,
-  ref_type VARCHAR(50) NULL,
-  ref_id BIGINT NULL,
-  data_json JSON NULL,
-  email_sent TINYINT(1) DEFAULT 0,
-  email_sent_at DATETIME NULL,
-  is_read TINYINT(1) DEFAULT 0,
-  sent_at DATETIME NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT fk_notifications_user
-    FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE INDEX idx_notifications_user_event_ref
-  ON notifications(user_id, event_key, ref_type, ref_id);
-
--- 2) Create admin notifications table
-CREATE TABLE admin_notifications (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  admin_id INT NOT NULL,
-  title VARCHAR(150) NOT NULL,
-  body TEXT NOT NULL,
-  type VARCHAR(50) NULL,
-  event_key VARCHAR(80) NULL,
-  ref_type VARCHAR(50) NULL,
-  ref_id BIGINT NULL,
-  data_json JSON NULL,
-  is_read TINYINT(1) DEFAULT 0,
-  sent_at DATETIME NOT NULL,
-  email_sent TINYINT(1) DEFAULT 0,
-  email_sent_at DATETIME NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-
-  CONSTRAINT fk_admin_notifications_admin
-    FOREIGN KEY (admin_id) REFERENCES admins(id)
-    ON DELETE CASCADE ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-CREATE INDEX idx_admin_notifications_admin_event_ref
-  ON admin_notifications(admin_id, event_key, ref_type, ref_id);
-
+-- 6) FAQs / Support
 CREATE TABLE faqs (
   id INT AUTO_INCREMENT PRIMARY KEY,
   category VARCHAR(100) NULL,
@@ -1031,45 +978,8 @@ CREATE TABLE support_requests (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 7) Policies
-CREATE TABLE policies (
-  id BIGINT PRIMARY KEY AUTO_INCREMENT,
 
-  proposal_type ENUM('MOTOR','TRAVEL') NOT NULL,
-  proposal_id BIGINT NOT NULL,
-
-  -- for TRAVEL: DOMESTIC / HAJJ_UMRAH_ZIARAT / INTERNATIONAL / STUDENT_GUARD
-  -- for MOTOR: always 'NA'
-  travel_package_code VARCHAR(32) NOT NULL DEFAULT 'NA',
-
-  policy_no VARCHAR(64) NOT NULL UNIQUE,
-
-  policy_status ENUM('active','expired','cancelled') NOT NULL DEFAULT 'active',
-
-  issued_at DATETIME NOT NULL,
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-
-  currency VARCHAR(10) DEFAULT 'PKR',
-  sum_insured DECIMAL(12,2) NULL,
-  premium DECIMAL(12,2) NULL,
-
-  policy_pdf_path VARCHAR(255) NULL,
-  schedule_pdf_path VARCHAR(255) NULL,
-
-  issued_by_admin_id BIGINT NULL,
-
-  snapshot_json JSON NULL,
-
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-
-  UNIQUE KEY uq_policy_once (proposal_type, travel_package_code, proposal_id),
-  INDEX idx_policy_status (policy_status),
-  INDEX idx_policy_lookup (proposal_type, travel_package_code, proposal_id)
-);
-
--- 8) Motor Claims
+-- 7) Motor Claims
 -- FNOL master table
 CREATE TABLE motor_claims (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -1121,7 +1031,7 @@ CREATE TABLE motor_claims (
   INDEX idx_motor_claims_fnol (fnol_no)
 );
 
--- 9) Motor Claims Documents
+-- 8) Motor Claims Documents
 -- Evidence uploads
 CREATE TABLE motor_claim_documents (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -1147,8 +1057,7 @@ CREATE TABLE motor_claim_documents (
     ON DELETE CASCADE
 );
 
-
--- 10) KYC document table (scalable so can add salary slip, bank statement etc.)
+-- 9) KYC document table (scalable so can add salary slip, bank statement etc.)
 CREATE TABLE kyc_documents (
   id INT AUTO_INCREMENT PRIMARY KEY,
   proposal_type ENUM('MOTOR','TRAVEL') NOT NULL,
@@ -1162,6 +1071,59 @@ CREATE TABLE kyc_documents (
 
   UNIQUE KEY uq_kyc_doc (proposal_type, package_code, proposal_id, doc_type, side),
   INDEX idx_kyc_lookup (proposal_type, proposal_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 10) Notifications + Email Send Logs
+
+CREATE TABLE notifications (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  audience ENUM('USER','ADMIN') NOT NULL,
+
+  user_id INT NULL,
+  admin_id INT NULL,
+
+  event_key VARCHAR(80) NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  message TEXT NOT NULL,
+  data JSON NULL,
+
+  is_read TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_notif_user (user_id, is_read, created_at),
+  INDEX idx_notif_admin (admin_id, is_read, created_at),
+  INDEX idx_notif_event (event_key, created_at),
+
+  CONSTRAINT fk_notif_user FOREIGN KEY (user_id) REFERENCES users(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_notif_admin FOREIGN KEY (admin_id) REFERENCES admins(id)
+    ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE notification_send_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  notification_id INT NULL,
+
+  audience ENUM('USER','ADMIN') NOT NULL,
+  channel ENUM('EMAIL','PUSH') NOT NULL DEFAULT 'EMAIL',
+
+  event_key VARCHAR(80) NOT NULL,
+  entity_type VARCHAR(40) NOT NULL,  -- proposal/policy/claim/refund
+  entity_id INT NOT NULL,
+  milestone VARCHAR(40) NULL,        -- D30/D15/D5/D1 or ISO_WEEK_2026_04
+
+  status ENUM('SENT','FAILED','SKIPPED') NOT NULL DEFAULT 'SENT',
+  error_text TEXT NULL,
+
+  sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_sendlog_dedupe (audience, event_key, entity_type, entity_id, milestone, channel),
+  INDEX idx_sendlog_sentat (sent_at),
+
+  CONSTRAINT fk_sendlog_notif FOREIGN KEY (notification_id) REFERENCES notifications(id)
+    ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ADMIN DASHBOARD

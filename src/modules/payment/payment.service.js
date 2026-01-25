@@ -1,6 +1,10 @@
 // src/modules/payment/payment.service.js
 const crypto = require('crypto');
 const { query, getConnection } = require('../../config/db');
+const { fireUser, fireAdmin } = require('../notifications/notification.service');
+const E = require('../notifications/notification.events');
+const templates = require('../notifications/notification.templates');
+
 
 const PAYFAST_MERCHANT_ID = process.env.PAYFAST_MERCHANT_ID;
 const PAYFAST_MERCHANT_KEY = process.env.PAYFAST_MERCHANT_KEY;
@@ -335,6 +339,10 @@ async function markPaymentSuccessDev({ paymentId }) {
   if (!id || Number.isNaN(id)) throw httpError(400, 'Invalid paymentId');
 
   const conn = await getConnection();
+
+  // ✅ we'll collect needed info during the transaction
+  let notifCtx = null;
+
   try {
     await conn.beginTransaction();
 
@@ -359,6 +367,7 @@ async function markPaymentSuccessDev({ paymentId }) {
       [id]
     );
 
+    // ✅ Update proposal + build notif context (user details for email)
     if (payment.application_type === 'MOTOR') {
       await conn.execute(
         `UPDATE motor_proposals
@@ -370,6 +379,26 @@ async function markPaymentSuccessDev({ paymentId }) {
          WHERE id=?`,
         [payment.application_id]
       );
+
+      const [urows] = await conn.execute(
+        `SELECT mp.id AS proposal_id, mp.user_id, u.email, u.full_name
+         FROM motor_proposals mp
+         JOIN users u ON u.id = mp.user_id
+         WHERE mp.id = ?
+         LIMIT 1`,
+        [payment.application_id]
+      );
+
+      if (urows.length) {
+        notifCtx = {
+          proposalType: 'MOTOR',
+          travelSubtype: null,
+          proposalId: urows[0].proposal_id,
+          userId: urows[0].user_id,
+          userEmail: urows[0].email,
+          fullName: urows[0].full_name,
+        };
+      }
     } else if (payment.application_type === 'TRAVEL') {
       const subtype = payment.application_subtype;
       const table = getTravelProposalTableBySubtype(subtype);
@@ -385,9 +414,84 @@ async function markPaymentSuccessDev({ paymentId }) {
          WHERE id=?`,
         [payment.application_id]
       );
+
+      const [urows] = await conn.execute(
+        `SELECT tp.id AS proposal_id, tp.user_id, u.email, u.full_name
+         FROM ${table} tp
+         JOIN users u ON u.id = tp.user_id
+         WHERE tp.id = ?
+         LIMIT 1`,
+        [payment.application_id]
+      );
+
+      if (urows.length) {
+        notifCtx = {
+          proposalType: 'TRAVEL',
+          travelSubtype: subtype,
+          proposalId: urows[0].proposal_id,
+          userId: urows[0].user_id,
+          userEmail: urows[0].email,
+          fullName: urows[0].full_name,
+        };
+      }
     }
 
     await conn.commit();
+
+    // ✅ AFTER COMMIT: fire notifications + emails
+    if (notifCtx) {
+      const proposalLabel =
+        notifCtx.proposalType === 'MOTOR'
+          ? `MOTOR-${notifCtx.proposalId}`
+          : `TRAVEL-${notifCtx.travelSubtype}-${notifCtx.proposalId}`;
+
+      // USER: Payment confirmed + pending review
+      await fireUser(E.PROPOSAL_PAYMENT_CONFIRMED_REVIEW_PENDING, {
+        user_id: notifCtx.userId,
+        entity_type: 'proposal',
+        entity_id: notifCtx.proposalId,
+        data: {
+          proposal_type: notifCtx.proposalType,
+          travel_subtype: notifCtx.travelSubtype,
+          proposal_id: notifCtx.proposalId,
+        },
+        email: templates.makePaymentConfirmedReviewPendingEmail({
+          to: notifCtx.userEmail,
+          fullName: notifCtx.fullName,
+          proposalLabel,
+        }),
+      });
+
+      // ADMIN: proposal became paid (ready for review)
+      // ✅ For admin email recipients, use env ADMIN_ALERT_EMAILS="a@x.com,b@y.com"
+      const adminEmails = (process.env.ADMIN_ALERT_EMAILS || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      await fireAdmin(E.ADMIN_PROPOSAL_BECAME_PAID, {
+        entity_type: 'proposal',
+        entity_id: notifCtx.proposalId,
+        data: {
+          proposal_type: notifCtx.proposalType,
+          travel_subtype: notifCtx.travelSubtype,
+          proposal_id: notifCtx.proposalId,
+        },
+        email:
+          adminEmails.length > 0
+            ? {
+              to: adminEmails.join(','),
+              subject: `Paid Proposal Ready for Review (${proposalLabel})`,
+              text: `A paid proposal is ready for review: ${proposalLabel}`,
+              html: `<div style="font-family:Arial;line-height:1.6;">
+                        <h2>Paid Proposal Ready for Review</h2>
+                        <p><b>${proposalLabel}</b> is now paid and pending review.</p>
+                      </div>`,
+            }
+            : null,
+      });
+    }
+
     return { ok: true, paymentId: id, status: 'SUCCESS' };
   } catch (err) {
     await conn.rollback();

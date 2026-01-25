@@ -1,6 +1,9 @@
 // src/modules/travel/travel.service.js
 const { query, getConnection } = require('../../config/db');
 const { deleteFileIfExists } = require('../../utils/fileCleanup');
+const { fireAdmin } = require('../notifications/notification.service');
+const E = require('../notifications/notification.events');
+
 
 /**
  * Small helper to throw HTTP-like errors from service layer
@@ -1021,6 +1024,23 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
 
     await conn.commit();
 
+    // ✅ AFTER COMMIT: ADMIN notify (submitted + unpaid)
+    try {
+      await fireAdmin(E.ADMIN_PROPOSAL_SUBMITTED_UNPAID, {
+        entity_type: 'proposal',
+        entity_id: proposalId,
+        data: {
+          proposal_type: 'TRAVEL',
+          package_code: packageCode,
+          proposal_id: proposalId,
+          user_id: userId,
+        },
+        email: null, // spec says unpaid submit is notif-only for admin
+      });
+    } catch (_) {
+      // don't block response if notification fails
+    }
+
     // Return important computed values for frontend confirmation screen
     return {
       proposalId,
@@ -1034,6 +1054,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       maxTripDaysApplied: quote.maxTripDaysApplied,
       slab: quote.slab,
     };
+
   } catch (err) {
     await conn.rollback();
     throw err;
@@ -1244,7 +1265,11 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
 
   const conn = await getConnection();
 
+  // ✅ fire after commit
+  let notifCtx = null;
+
   try {
+
     await conn.beginTransaction();
 
     await assertTravelProposalOwnership(conn, packageCode, proposalId, userId);
@@ -1331,6 +1356,23 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
       saved.push(field);
     }
 
+    // ✅ fetch user info for admin email context
+    const [urows] = await conn.execute(
+      `SELECT u.full_name, u.email
+   FROM users u
+   WHERE u.id = ? LIMIT 1`,
+      [userId]
+    );
+
+    notifCtx = {
+      proposalId: Number(proposalId),
+      packageCode,
+      userId: Number(userId),
+      userName: urows?.[0]?.full_name || null,
+      userEmail: urows?.[0]?.email || null,
+      saved,
+    };
+
     // OPTIONAL: set review_status back to pending_review after reupload
     await conn.execute(
       `UPDATE ${tables.proposals}
@@ -1345,6 +1387,54 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
     // delete old files after commit
     for (const p of oldPathsToDelete) {
       await deleteFileIfExists(p);
+    }
+
+    // ✅ AFTER COMMIT: notify admin that reupload docs were submitted
+    try {
+      const adminEmails = (process.env.ADMIN_ALERT_EMAILS || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      await fireAdmin(E.ADMIN_REUPLOAD_SUBMITTED, {
+        entity_type: 'proposal',
+        entity_id: notifCtx?.proposalId || Number(proposalId),
+        data: {
+          proposal_type: 'TRAVEL',
+          package_code: packageCode,
+          proposal_id: Number(proposalId),
+          user_id: Number(userId),
+          user_name: notifCtx?.userName || null,
+          reupload_saved: notifCtx?.saved || saved,
+        },
+        email:
+          adminEmails.length > 0
+            ? {
+              to: adminEmails.join(','),
+              subject: `Travel Reupload Submitted (${packageCode}-${proposalId})`,
+              text:
+                `User submitted requested reupload.\n` +
+                `Proposal: ${packageCode}-${proposalId}\n` +
+                `User: ${notifCtx?.userName || userId}\n` +
+                `Saved: ${JSON.stringify(notifCtx?.saved || saved)}`,
+              html: `
+              <div style="font-family: Arial, sans-serif; line-height:1.6;">
+                <h2>Travel Reupload Submitted</h2>
+                <p><b>Proposal:</b> ${packageCode}-${proposalId}</p>
+                <p><b>User:</b> ${notifCtx?.userName || userId}</p>
+                <p><b>Uploaded:</b></p>
+                <pre style="background:#f6f6f6;padding:10px;border-radius:8px;">${JSON.stringify(
+                notifCtx?.saved || saved,
+                null,
+                2
+              )}</pre>
+              </div>
+            `,
+            }
+            : null,
+      });
+    } catch (_) {
+      // don't block response
     }
 
     return { proposalId, packageCode, saved };
