@@ -1,4 +1,14 @@
 const { getConnection } = require('../../../config/db');
+const {
+  fireUser,
+  buildPublicFileUrl,
+} = require('../../notifications/notification.service');
+
+const E = require('../../notifications/notification.events');
+
+const {
+  makeRenewalDocumentSentEmail,
+} = require('../../notifications/notification.templates');
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -69,11 +79,49 @@ async function sendMotorRenewalDocService({ adminId, proposalId, renewalFile, re
 
     await conn.commit();
 
+    // --------------------
+    // Notify user + email
+    // --------------------
+    const [uRows] = await conn.execute(
+      `SELECT u.email, u.full_name
+   FROM motor_proposals mp
+   JOIN users u ON u.id = mp.user_id
+   WHERE mp.id = ?
+   LIMIT 1`,
+      [id]
+    );
+
+    const user = uRows?.[0] || {};
+    const renewalUrl = buildPublicFileUrl(renewalPath);
+
+    await fireUser(E.RENEWAL_DOCUMENT_SENT, {
+      user_id: p.user_id,
+      entity_type: 'policy',
+      entity_id: id,
+      data: {
+        proposal_id: id,
+        policy_no: p.policy_no,
+        renewal_document_path: renewalPath,
+        renewal_document_url: renewalUrl,
+        renewal_notes: notes,
+      },
+      email: user.email
+        ? makeRenewalDocumentSentEmail({
+          to: user.email,
+          fullName: user.full_name,
+          policyNo: p.policy_no,
+          renewalDocumentUrl: renewalUrl,
+          renewalNotes: notes,
+        })
+        : null,
+    });
+
     return {
       proposalType: 'MOTOR',
       proposalId: id,
       renewalDocumentPath: renewalPath,
       renewalNotes: notes,
+      renewalDocumentUrl: renewalUrl,
     };
   } catch (err) {
     await conn.rollback();

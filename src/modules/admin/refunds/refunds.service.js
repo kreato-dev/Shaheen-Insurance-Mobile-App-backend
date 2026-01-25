@@ -1,5 +1,9 @@
 // src/modules/admin/refunds/refunds.service.js
 const { query, getConnection } = require('../../../config/db');
+const { fireUser } = require('../../notifications/notification.service');
+const EVENTS = require('../../notifications/notification.events');
+const templates = require('../../notifications/notification.templates');
+
 
 function httpError(status, message) {
   const e = new Error(message);
@@ -184,13 +188,15 @@ async function getMotorRefundDetail(proposalId, req) {
 
   const rows = await query(
     `SELECT
-      id, user_id, name, cnic,
-      payment_status, review_status,
-      refund_status, refund_amount, refund_reference, refund_remarks, refund_evidence_path,
-      refund_initiated_at, refund_processed_at, closed_at,
-      created_at, updated_at
-     FROM motor_proposals
-     WHERE id = ? LIMIT 1`,
+      mp.id, mp.user_id, mp.name, mp.cnic,
+      mp.payment_status, mp.review_status,
+      mp.refund_status, mp.refund_amount, mp.refund_reference, mp.refund_remarks, mp.refund_evidence_path,
+      mp.refund_initiated_at, mp.refund_processed_at, mp.closed_at,
+      mp.created_at, mp.updated_at,
+      u.email, u.full_name
+     FROM motor_proposals mp
+     JOIN users u ON u.id = mp.user_id
+     WHERE mp.id = ? LIMIT 1`,
     [id]
   );
 
@@ -211,13 +217,15 @@ async function getTravelRefundDetail(travelSubtype, proposalId, req) {
 
   const rows = await query(
     `SELECT
-      id, user_id, first_name, last_name, cnic,
-      payment_status, review_status,
-      refund_status, refund_amount, refund_reference, refund_remarks, refund_evidence_path,
-      refund_initiated_at, refund_processed_at, closed_at,
-      created_at, updated_at
-     FROM ${table}
-     WHERE id = ? LIMIT 1`,
+      t.id, t.user_id, t.first_name, t.last_name, t.cnic,
+      t.payment_status, t.review_status,
+      t.refund_status, t.refund_amount, t.refund_reference, t.refund_remarks, t.refund_evidence_path,
+      t.refund_initiated_at, t.refund_processed_at, t.closed_at,
+      t.created_at, t.updated_at,
+      u.email, u.full_name
+     FROM ${table} t
+     JOIN users u ON u.id = t.user_id
+     WHERE t.id = ? LIMIT 1`,
     [id]
   );
 
@@ -314,6 +322,42 @@ async function updateMotorRefund(proposalId, adminId, payload, req) {
     await conn.commit();
 
     const updated = await getMotorRefundDetail(id, req);
+    // ✅ notify user on refund update
+    try {
+      const p = updated.proposal;
+
+      const email = p?.user_id && payload?.refund_status
+        ? templates.makeUserRefundStatusUpdatedEmail({
+          proposalType: 'MOTOR',
+          travelSubtype: null,
+          proposalId: p.id,
+          refundStatus: payload.refund_status,
+          refundAmount: payload.refund_amount ?? p.refund_amount,
+          refundReference: payload.refund_reference ?? p.refund_reference,
+          refundRemarks: payload.refund_remarks ?? p.refund_remarks,
+          refundEvidenceUrl: p.refund_evidence_url,
+        })
+        : null;
+
+      await fireUser(EVENTS.REFUND_STATUS_UPDATED, {
+        user_id: p.user_id,
+        entity_type: 'PROPOSAL',
+        entity_id: p.id,
+        milestone: String(payload.refund_status || '').toUpperCase() || null,
+        data: {
+          proposal_type: 'MOTOR',
+          refund_status: payload.refund_status ?? p.refund_status,
+          refund_amount: payload.refund_amount ?? p.refund_amount,
+          refund_reference: payload.refund_reference ?? p.refund_reference,
+          refund_remarks: payload.refund_remarks ?? p.refund_remarks,
+          refund_evidence_url: p.refund_evidence_url,
+        },
+        email: p?.email ? { to: p.email, ...email } : null, // only if you have email on proposal/user
+      });
+    } catch (e) {
+      console.log('[NOTIF] REFUND_STATUS_UPDATED motor failed:', e?.message || e);
+    }
+
     return { ok: true, ...updated };
   } catch (err) {
     await conn.rollback();
@@ -406,6 +450,47 @@ async function updateTravelRefund(travelSubtype, proposalId, adminId, payload, r
     await conn.commit();
 
     const updated = await getTravelRefundDetail(travelSubtype, id, req);
+
+    // ✅ fire USER notification + EMAIL
+    try {
+      const u = updated?.proposal; // your getTravelRefundDetail returns { proposalType, travelSubtype, proposal }
+      if (u?.user_id) {
+        const email =
+          u.email
+            ? templates.makeUserRefundStatusUpdatedEmail({
+              proposalType: 'TRAVEL',
+              travelSubtype,
+              proposalId: u.id,
+              refundStatus: refund_status ?? u.refund_status,
+              refundAmount: refund_amount ?? u.refund_amount,
+              refundReference: refund_reference ?? u.refund_reference,
+              refundRemarks: refund_remarks ?? u.refund_remarks,
+              refundEvidenceUrl: u.refund_evidence_url,
+            })
+            : null;
+
+        await fireUser(EVENTS.REFUND_STATUS_UPDATED, {
+          user_id: u.user_id,
+          entity_type: 'PROPOSAL',
+          entity_id: u.id,
+          milestone: String(refund_status || u.refund_status || '').toUpperCase() || null,
+          data: {
+            proposal_type: 'TRAVEL',
+            travel_subtype: String(travelSubtype || '').toUpperCase(),
+            proposal_id: u.id,
+            refund_status: refund_status ?? u.refund_status,
+            refund_amount: refund_amount ?? u.refund_amount,
+            refund_reference: refund_reference ?? u.refund_reference,
+            refund_remarks: refund_remarks ?? u.refund_remarks,
+            refund_evidence_url: u.refund_evidence_url,
+          },
+          email: email ? { to: u.email, ...email } : null,
+        });
+      }
+    } catch (e) {
+      console.log('[NOTIF] REFUND_STATUS_UPDATED travel failed:', e?.message || e);
+    }
+
     return { ok: true, ...updated };
   } catch (err) {
     await conn.rollback();

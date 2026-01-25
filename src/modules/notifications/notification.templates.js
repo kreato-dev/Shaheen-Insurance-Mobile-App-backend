@@ -137,6 +137,49 @@ function makeRefundCaseClosedEmail({ to, fullName, proposalLabel }) {
   return { to, subject, text, html };
 }
 
+function makeUserRefundStatusUpdatedEmail({
+  proposalType,
+  travelSubtype,
+  proposalId,
+  refundStatus,
+  refundAmount,
+  refundReference,
+  refundRemarks,
+  refundEvidenceUrl,
+}) {
+  const typeText = proposalType === 'TRAVEL'
+    ? `TRAVEL (${String(travelSubtype || '').toUpperCase()})`
+    : 'MOTOR';
+
+  const statusText = String(refundStatus || '').toUpperCase();
+
+  return {
+    subject: `Refund Update - ${typeText} - ${statusText}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height:1.5">
+        <h2 style="margin:0 0 12px">Refund Status Updated</h2>
+        <p>Your refund status has been updated.</p>
+
+        <table cellpadding="6" cellspacing="0" border="0" style="border-collapse:collapse">
+          <tr><td><b>Type</b></td><td>${typeText}</td></tr>
+          <tr><td><b>Proposal ID</b></td><td>${proposalId}</td></tr>
+          <tr><td><b>Status</b></td><td>${statusText}</td></tr>
+          <tr><td><b>Amount</b></td><td>${refundAmount ?? '-'}</td></tr>
+          <tr><td><b>Reference</b></td><td>${refundReference ?? '-'}</td></tr>
+          <tr><td><b>Remarks</b></td><td>${refundRemarks ?? '-'}</td></tr>
+          <tr><td><b>Evidence</b></td><td>${
+            refundEvidenceUrl ? `<a href="${refundEvidenceUrl}" target="_blank">View Evidence</a>` : '-'
+          }</td></tr>
+        </table>
+
+        <p style="margin-top:12px">
+          If you have any questions, please contact support.
+        </p>
+      </div>
+    `,
+  };
+}
+
 function makeRenewalDocumentSentEmail({ to, fullName, policyNo }) {
   const subject = 'Renewal Document Available';
   const text = `Hi ${fullName || ''}, renewal document for policy ${policyNo} is available.`;
@@ -145,6 +188,101 @@ function makeRenewalDocumentSentEmail({ to, fullName, policyNo }) {
     `<p>Hi ${fullName || ''},</p>
      <p>Your renewal document for policy <b>${policyNo}</b> is available.</p>`
   );
+  return { to, subject, text, html };
+}
+
+// ------------------------
+// Claims (Motor) Emails
+// ------------------------
+
+function makeClaimSubmittedEmail({ to, fullName, fnolNo, policyNo }) {
+  const subject = 'Claim Submitted';
+  const text = `Hi ${fullName || ''}, your claim has been submitted. FNOL: ${fnolNo}${policyNo ? ` | Policy: ${policyNo}` : ''}.`;
+  const html = wrapHtml(
+    'Claim Submitted ✅',
+    `<p>Hi ${fullName || ''},</p>
+     <p>Your claim has been submitted successfully.</p>
+     <p><b>FNOL:</b> ${fnolNo}</p>
+     ${policyNo ? `<p><b>Policy No:</b> ${policyNo}</p>` : ''}
+     <p>Our team will review it shortly.</p>`
+  );
+  return { to, subject, text, html };
+}
+
+function makeAdminNewMotorClaimEmail({
+  to,
+  fnolNo,
+  policyNo,
+  registrationNumber,
+  claimType,
+  incidentDate,
+  userName,
+  userMobile,
+  userEmail,
+  claimId,
+}) {
+  const subject = `New Motor Claim Submitted — ${fnolNo}`;
+  const text =
+    `A new motor claim has been submitted.\n` +
+    `FNOL: ${fnolNo}\n` +
+    (policyNo ? `Policy: ${policyNo}\n` : '') +
+    (registrationNumber ? `Reg#: ${registrationNumber}\n` : '') +
+    `Type: ${claimType}\n` +
+    `Incident: ${incidentDate}\n` +
+    `User: ${userName || '-'} | ${userMobile || '-'} | ${userEmail || '-'}\n` +
+    `Claim ID: ${claimId}`;
+
+  const html = wrapHtml(
+    'New Motor Claim Submitted 🚨',
+    `<p>A new motor claim has been submitted.</p>
+     <p><b>FNOL:</b> ${fnolNo}</p>
+     ${policyNo ? `<p><b>Policy No:</b> ${policyNo}</p>` : ''}
+     ${registrationNumber ? `<p><b>Registration No:</b> ${registrationNumber}</p>` : ''}
+     <p><b>Claim Type:</b> ${claimType}</p>
+     <p><b>Incident Date:</b> ${incidentDate}</p>
+     <p><b>User:</b> ${userName || '-'} <br/>
+        <b>Mobile:</b> ${userMobile || '-'} <br/>
+        <b>Email:</b> ${userEmail || '-'}</p>
+     <p><b>Claim ID:</b> ${claimId}</p>`
+  );
+
+  return { to, subject, text, html };
+}
+
+function makeClaimDecisionEmail({
+  to,
+  fullName,
+  fnolNo,
+  status,
+  rejectionReason = null,
+  reuploadNotes = null,
+  requiredDocs = null,
+}) {
+  const pretty =
+    status === 'approved' ? 'Approved ✅' :
+      status === 'rejected' ? 'Rejected ❌' :
+        status === 'reupload_required' ? 'Reupload Required 📄' :
+          'Updated';
+
+  const subject = `Claim Update — ${pretty}`;
+  const text =
+    `Hi ${fullName || ''}, your claim (${fnolNo}) status is now: ${status}.\n` +
+    (rejectionReason ? `Reason: ${rejectionReason}\n` : '') +
+    (reuploadNotes ? `Notes: ${reuploadNotes}\n` : '');
+
+  const docsHtml = Array.isArray(requiredDocs) && requiredDocs.length
+    ? `<p><b>Required Documents:</b></p><ul>${requiredDocs.map(d => `<li>${d}</li>`).join('')}</ul>`
+    : '';
+
+  const html = wrapHtml(
+    'Claim Status Update',
+    `<p>Hi ${fullName || ''},</p>
+     <p>Your claim <b>${fnolNo}</b> status is now: <b>${pretty}</b></p>
+     ${rejectionReason ? `<p><b>Reason:</b> ${rejectionReason}</p>` : ''}
+     ${reuploadNotes ? `<p><b>Notes:</b> ${reuploadNotes}</p>` : ''}
+     ${docsHtml}`
+  );
+
   return { to, subject, text, html };
 }
 
@@ -160,5 +298,9 @@ module.exports = {
   makeMotorRegNoReminderEmail,
   makeRefundProcessedEmail,
   makeRefundCaseClosedEmail,
+  makeUserRefundStatusUpdatedEmail,
   makeRenewalDocumentSentEmail,
+  makeClaimSubmittedEmail,
+  makeAdminNewMotorClaimEmail,
+  makeClaimDecisionEmail,
 };

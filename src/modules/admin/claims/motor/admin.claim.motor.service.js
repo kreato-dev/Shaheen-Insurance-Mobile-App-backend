@@ -1,4 +1,7 @@
 const { getConnection } = require('../../../../config/db');
+const { fireUser } = require('../../../notifications/notification.service');
+const E = require('../../../notifications/notification.events');
+const templates = require('../../../notifications/notification.templates');
 
 function httpError(status, message) {
     const err = new Error(message);
@@ -214,7 +217,66 @@ async function adminReviewMotorClaim({ adminId, claimId, body }) {
             );
         }
 
+        const [infoRows] = await conn.execute(
+            `
+            SELECT
+                mc.fnol_no,
+                mc.user_id,
+                mc.reupload_notes,
+                mc.required_docs,
+                mc.rejection_reason,
+                u.email,
+                u.full_name
+            FROM motor_claims mc
+            JOIN users u ON u.id = mc.user_id
+            WHERE mc.id = ?
+            LIMIT 1
+            `,
+            [id]
+        );
+        const info = infoRows?.[0] || {};
+
         await conn.commit();
+
+        // Parse required_docs if string
+        let requiredDocsParsed = null;
+        if (typeof info.required_docs === 'string') {
+            try { requiredDocsParsed = JSON.parse(info.required_docs); } catch (_) { }
+        } else {
+            requiredDocsParsed = info.required_docs;
+        }
+
+        const eventKey =
+            action === 'approve' ? E.CLAIM_APPROVED :
+                action === 'reject' ? E.CLAIM_REJECTED :
+                    E.CLAIM_REUPLOAD_REQUIRED;
+
+        await fireUser(eventKey, {
+            user_id: info.user_id,
+            entity_type: 'claim',
+            entity_id: id,
+            data: {
+                fnol_no: info.fnol_no,
+                rejection_reason: info.rejection_reason,
+                reupload_notes: info.reupload_notes,
+                required_docs: requiredDocsParsed,
+            },
+            email: info.email
+                ? templates.makeClaimDecisionEmail({
+                    to: info.email,
+                    fullName: info.full_name,
+                    fnolNo: info.fnol_no,
+                    status:
+                        action === 'approve' ? 'approved' :
+                            action === 'reject' ? 'rejected' :
+                                'reupload_required',
+                    rejectionReason: info.rejection_reason,
+                    reuploadNotes: info.reupload_notes,
+                    requiredDocs: requiredDocsParsed,
+                })
+                : null,
+        });
+
         return { claimId: id, action };
     } catch (err) {
         await conn.rollback();

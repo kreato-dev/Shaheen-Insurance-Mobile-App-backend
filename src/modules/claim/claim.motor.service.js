@@ -1,4 +1,24 @@
 const { getConnection } = require('../../config/db');
+const { fireUser, fireAdmin } = require('../../modules/notifications/notification.service');
+const E = require('../../modules/notifications/notification.events');
+const templates = require('../../modules/notifications/notification.templates');
+
+function getAdminRecipients() {
+  const raw =
+    process.env.ADMIN_NOTIFY_EMAILS ||
+    process.env.ADMIN_ALERT_EMAILS ||
+    process.env.ADMIN_EMAILS ||
+    '';
+
+  const emails = raw
+    .split(',')
+    .map(s => s.trim())
+    .filter(Boolean);
+
+  // Nodemailer supports "to" as comma-separated
+  return emails.length ? emails.join(',') : null;
+}
+
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -147,9 +167,20 @@ async function submitMotorClaimService({ userId, body, files }) {
 
     // Lock motor proposal
     const [pRows] = await conn.execute(
-      `SELECT * FROM motor_proposals WHERE id = ? LIMIT 1 FOR UPDATE`,
+      `
+        SELECT
+          mp.*,
+          u.email AS user_email,
+          u.full_name AS user_name
+        FROM motor_proposals mp
+        LEFT JOIN users u ON u.id = mp.user_id
+        WHERE mp.id = ?
+        LIMIT 1
+        FOR UPDATE
+        `,
       [motorProposalId]
     );
+
     if (!pRows.length) throw httpError(404, 'Motor proposal not found');
 
     const p = pRows[0];
@@ -256,11 +287,75 @@ async function submitMotorClaimService({ userId, body, files }) {
 
     await conn.commit();
 
+    // ✅ AFTER COMMIT: notifications + emails (never block response)
+    try {
+      const userEmail = p.user_email || null;
+
+      const adminTo = getAdminRecipients();
+
+      // 1) USER: Claim submitted confirmation (notif + email)
+      await fireUser(E.CLAIM_SUBMITTED, {
+        user_id: Number(userId),
+        entity_type: 'claim',
+        entity_id: claimId,
+        data: {
+          claim_id: claimId,
+          fnol_no: fnolNo,
+          motor_proposal_id: motorProposalId,
+          policy_no: p.policy_no || null,
+          claim_type: claimType,
+          incident_date: incidentDate,
+          claim_status: 'pending_review',
+        },
+        email: userEmail
+          ? templates.makeClaimSubmittedEmail({
+            to: userEmail,
+            fullName: p.full_name,
+            fnolNo,
+            policyNo: p.policy_no,
+          })
+          : null,
+      });
+
+      // 2) ADMIN: New claim alert (notif + email)
+      await fireAdmin(E.ADMIN_NEW_CLAIM, {
+        entity_type: 'claim',
+        entity_id: claimId,
+        data: {
+          claim_id: claimId,
+          fnol_no: fnolNo,
+          motor_proposal_id: motorProposalId,
+          policy_no: p.policy_no || null,
+          user_id: Number(userId),
+          claim_type: claimType,
+          incident_date: incidentDate,
+          claim_status: 'pending_review',
+        },
+        email: adminTo
+          ? templates.makeAdminNewMotorClaimEmail({
+            to: adminTo,
+            fnolNo,
+            policyNo: p.policy_no,
+            registrationNumber: p.registration_number,
+            claimType,
+            incidentDate,
+            userName: p.full_name,
+            userMobile: p.mobile,
+            userEmail: p.email,
+            claimId,
+          })
+          : null,
+      });
+    } catch (e) {
+        console.log('[NOTIF] CLAIM_SUBMITTED failed:', e?.message || e);
+    }
+
     return {
       claimId,
       fnolNo,
       claimStatus: 'pending_review',
     };
+
   } catch (err) {
     await conn.rollback();
     throw err;

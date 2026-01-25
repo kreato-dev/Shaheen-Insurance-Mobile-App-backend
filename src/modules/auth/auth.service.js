@@ -5,6 +5,11 @@ const { query } = require('../../config/db');
 const { sendOtpEmail } = require('../../utils/mailer');
 const { createEmailOtp, verifyEmailOtp } = require('./otp.service');
 
+const { fireUser } = require('../notifications/notification.service');
+const EVENTS = require('../notifications/notification.events');
+const templates = require('../notifications/notification.templates');
+
+
 const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
@@ -54,12 +59,12 @@ async function registerUser({ fullName, email, mobile, password }) {
     LIMIT 1`,
     [mobile, email]
   );
-  
+
   // if (existingRows.length === 0) throw httpError(409, 'User with this mobile/email already exists');
-  
+
   if (existingRows1.length > 0) {
     const existing = existingRows1[0];
-    
+
     // If user exists but email not verified -> resend OTP instead of blocking register
     if (existing.email_verified === 0) {
       const { otp } = await createEmailOtp({
@@ -68,21 +73,21 @@ async function registerUser({ fullName, email, mobile, password }) {
         purpose: 'email_verify',
         expiresMinutes: 2,
       });
-      
+
       await sendOtpEmail({
         to: existing.email,
         otp,
         purpose: 'email_verify',
         expiresMinutes: 2,
       });
-      
+
       return {
         message: 'Account already exists but email not verified. OTP resent to email.',
         email: existing.email,
         needsEmailVerification: true,
       };
     }
-    
+
     // Verified user -> real conflict
     throw httpError(409, 'User with this mobile and email already exists');
   }
@@ -94,10 +99,10 @@ async function registerUser({ fullName, email, mobile, password }) {
     WHERE mobile = ? OR email = ?
     LIMIT 1`,
     [mobile, email]
-     );
+  );
 
   if (existingRows2.length > 0) throw httpError(409, 'User with this mobile or email already exists');
-  
+
   const passwordHash = await bcrypt.hash(password, 10);
 
   // IMPORTANT:
@@ -140,8 +145,10 @@ async function registerUser({ fullName, email, mobile, password }) {
 async function verifyEmailOtpService({ email, otp }) {
   if (!email || !otp) throw httpError(400, 'email and otp are required');
 
+  // Verify OTP from DB
   await verifyEmailOtp({ email, otp, purpose: 'email_verify' });
 
+  // Mark verified
   await query(
     `UPDATE users
         SET email_verified = 1,
@@ -151,6 +158,38 @@ async function verifyEmailOtpService({ email, otp }) {
       LIMIT 1`,
     [email]
   );
+
+  // ✅ Fetch user for welcome email + notification
+  const rows = await query(
+    `SELECT id, full_name, email
+       FROM users
+      WHERE email = ?
+      LIMIT 1`,
+    [email]
+  );
+
+  const u = rows?.[0];
+
+  // ✅ Fire welcome email only once (send-log prevents duplicates)
+  if (u?.id && u?.email) {
+    try {
+      const welcomeEmail = templates.makeWelcomeEmail({
+        to: u.email,
+        fullName: u.full_name,
+      });
+
+      await fireUser(EVENTS.USER_WELCOME_EMAIL, {
+        user_id: u.id,
+        entity_type: 'USER',
+        entity_id: u.id,
+        milestone: 'WELCOME', // 👈 important (dedupe key)
+        data: { full_name: u.full_name, email: u.email },
+        email: welcomeEmail, // already contains {to, subject, text, html}
+      });
+    } catch (e) {
+      console.log('[NOTIF] USER_WELCOME_EMAIL failed:', e?.message || e);
+    }
+  }
 
   return { message: 'Email verified successfully' };
 }
