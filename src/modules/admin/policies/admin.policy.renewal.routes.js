@@ -5,13 +5,15 @@ const { uploadRenewalDoc } = require('./admin.policy.renewal.upload');
 const { sendMotorRenewal } = require('./admin.policy.renewal.controller');
 
 // Plug your auth + RBAC here:
-// const requireAdminAuth = require('../auth/adminAuth.middleware');
-// const requirePermission = require('../../../middleware/rbac.middleware');
+const requireAdmin = require('../../../middleware/requireAdmin.middleware');
+const adminSession = require('../../../middleware/adminSession.middleware');
+const requirePermission = require('../../../middleware/rbac.middleware');
 
 router.post(
   '/motor/:proposalId/renewal',
-  // requireAdminAuth,
-  // requirePermission('POLICIES:RENEWAL_SEND'),
+  requireAdmin,
+  adminSession(),
+  requirePermission('POLICIES:RENEWAL_SEND'),
   uploadRenewalDoc,
   sendMotorRenewal
 );

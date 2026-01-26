@@ -16,6 +16,7 @@ const paymentRoutes = require('./modules/payment/payment.routes');
 const policyRoutes = require('./modules/policy/policy.routes');
 const claimRoutes = require('./modules/claim/claim.motor.routes');
 const proposalsRoutes = require('./modules/proposals/proposals.routes');
+const notificationRoutes = require('./modules/notifications/notification.routes');
 
 // Admin
 const adminRoutes = require('./modules/admin/admin.routes');
@@ -24,8 +25,7 @@ const adminAuthRoutes = require('./modules/admin/auth/adminAuth.routes');
 const { errorHandler } = require('./middleware/errorHandler');
 const { authMiddleware } = require('./middleware/auth');
 
-// notification
-const notificationRoutes = require('./modules/notifications/notification.routes');
+// notification crons
 const { registerNotificationCrons } = require('./modules/notifications/notification.cron');
 
 registerNotificationCrons();
@@ -57,6 +57,7 @@ app.use('/api/travel', authMiddleware, travelRoutes);
 app.use('/api/policies', authMiddleware, policyRoutes);
 app.use('/api/claims', authMiddleware, claimRoutes);
 app.use('/api/proposals', authMiddleware, proposalsRoutes);
+app.use('/api/notifications', authMiddleware, notificationRoutes);
 
 //payment.routes.js already does requireAuth on initiate and webhook is no-auth.
 app.use('/api/payment', authMiddleware, paymentRoutes);
@@ -65,11 +66,9 @@ app.use('/api/payment', authMiddleware, paymentRoutes);
 app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin', adminRoutes);
 
-// notification routes
-app.use(notificationRoutes);
 
 // Shortcut route to open the API playground
-app.get('/playground', (req, res) => {
+app.get('/playground', (_req, res) => {
   res.sendFile(path.join(__dirname, '..', 'public', 'playground.html'));
 });
 
