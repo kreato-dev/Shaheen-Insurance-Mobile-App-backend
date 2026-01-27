@@ -168,9 +168,10 @@ async function issuePolicyService({
             const userEmail = proposal.user_email || null;
 
             // 1) USER: Policy Issued
+            const entityType = type === 'MOTOR' ? 'policy_MOTOR' : `policy_TRAVEL_${pkgCode}`;
             fireUser(E.POLICY_ISSUED, {
                 user_id: userId,
-                entity_type: 'policy',
+                entity_type: entityType,
                 entity_id: id,
                 data: {
                     proposal_type: type,
@@ -196,7 +197,7 @@ async function issuePolicyService({
             if (type === 'MOTOR' && Number(proposal.applied_for) === 1) {
                 fireUser(E.MOTOR_REG_NO_UPLOAD_REMINDER, {
                     user_id: userId,
-                    entity_type: 'proposal',
+                    entity_type: 'proposal_MOTOR',
                     entity_id: id,
                     data: {
                         proposal_type: 'MOTOR',

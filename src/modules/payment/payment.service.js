@@ -443,12 +443,15 @@ async function markPaymentSuccessDev({ paymentId }) {
           ? `MOTOR-${notifCtx.proposalId}`
           : `TRAVEL-${notifCtx.travelSubtype}-${notifCtx.proposalId}`;
 
+      const entityType = notifCtx.proposalType === 'MOTOR'
+        ? 'proposal_MOTOR'
+        : `proposal_TRAVEL_${String(notifCtx.travelSubtype).toUpperCase()}`;
+
       // USER: Payment confirmed + pending review
       fireUser(E.PROPOSAL_PAYMENT_CONFIRMED_REVIEW_PENDING, {
         user_id: notifCtx.userId,
-        entity_type: 'proposal',
+        entity_type: entityType,
         entity_id: notifCtx.proposalId,
-        milestone: `payment_${id}`,
         data: {
           proposal_type: notifCtx.proposalType,
           travel_subtype: notifCtx.travelSubtype,
@@ -469,9 +472,8 @@ async function markPaymentSuccessDev({ paymentId }) {
         .filter(Boolean);
 
       fireAdmin(E.ADMIN_PROPOSAL_BECAME_PAID, {
-        entity_type: 'proposal',
+        entity_type: entityType,
         entity_id: notifCtx.proposalId,
-        milestone: `payment_${id}`,
         data: {
           proposal_type: notifCtx.proposalType,
           travel_subtype: notifCtx.travelSubtype,

@@ -714,7 +714,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         .filter(Boolean);
 
       fireAdmin(E.ADMIN_PROPOSAL_SUBMITTED_UNPAID, {
-        entity_type: 'proposal',
+        entity_type: 'proposal_MOTOR',
         entity_id: proposalId,
         data: { proposal_type: 'MOTOR', proposal_id: proposalId, user_id: userId },
         // admin email is optional; spec says admin unpaid submit is notif only
@@ -1239,7 +1239,7 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
         .filter(Boolean);
 
       fireAdmin(E.ADMIN_REUPLOAD_SUBMITTED, {
-        entity_type: 'proposal',
+        entity_type: 'proposal_MOTOR',
         entity_id: notifCtx.proposalId,
         data: {
           proposal_type: 'MOTOR',
@@ -1660,7 +1660,7 @@ async function updateMotorRegistrationNumberService({ userId, proposalId, regist
         .filter(Boolean);
 
       fireAdmin(E.ADMIN_MOTOR_REG_NO_UPLOADED, {
-        entity_type: 'policy',
+        entity_type: 'policy_MOTOR',
         entity_id: notifCtx.proposalId,
         data: {
           proposal_type: 'MOTOR',

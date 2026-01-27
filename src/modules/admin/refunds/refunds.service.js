@@ -341,7 +341,7 @@ async function updateMotorRefund(proposalId, adminId, payload, req) {
 
       fireUser(EVENTS.REFUND_STATUS_UPDATED, {
         user_id: p.user_id,
-        entity_type: 'PROPOSAL',
+        entity_type: 'refund_MOTOR',
         entity_id: p.id,
         milestone: String(payload.refund_status || '').toUpperCase() || null,
         data: {
@@ -471,7 +471,7 @@ async function updateTravelRefund(travelSubtype, proposalId, adminId, payload, r
 
         fireUser(EVENTS.REFUND_STATUS_UPDATED, {
           user_id: u.user_id,
-          entity_type: 'PROPOSAL',
+          entity_type: 'refund_TRAVEL',
           entity_id: u.id,
           milestone: String(refund_status || u.refund_status || '').toUpperCase() || null,
           data: {

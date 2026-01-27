@@ -612,7 +612,7 @@ async function reviewMotorProposal(
       if (notifCtx.action === 'reupload_required') {
         fireUser(E.PROPOSAL_REUPLOAD_REQUIRED, {
           user_id: notifCtx.userId,
-          entity_type: 'proposal',
+          entity_type: 'proposal_MOTOR',
           entity_id: notifCtx.proposalId,
           data: {
             proposal_type: 'MOTOR',
@@ -635,7 +635,7 @@ async function reviewMotorProposal(
       if (notifCtx.action === 'reject') {
         fireUser(E.PROPOSAL_REJECTED_REFUND_INITIATED, {
           user_id: notifCtx.userId,
-          entity_type: 'proposal',
+          entity_type: 'proposal_MOTOR',
           entity_id: notifCtx.proposalId,
           data: {
             proposal_type: 'MOTOR',
@@ -656,7 +656,7 @@ async function reviewMotorProposal(
         // 3) ADMIN reminder -> refund needs processing (notif + email)
         const adminEmails = getAdminEmails();
         fireAdmin(E.ADMIN_REFUND_ACTION_REQUIRED, {
-          entity_type: 'proposal',
+          entity_type: 'proposal_MOTOR',
           entity_id: notifCtx.proposalId,
           data: {
             proposal_type: 'MOTOR',
@@ -812,11 +812,13 @@ async function reviewTravelProposal(
 
     await conn.commit();
 
+    const entityType = `proposal_TRAVEL_${String(notifCtx.travelSubtype).toUpperCase()}`;
+
     try {
       if (notifCtx.action === 'reupload_required') {
         fireUser(E.PROPOSAL_REUPLOAD_REQUIRED, {
           user_id: notifCtx.userId,
-          entity_type: 'proposal',
+          entity_type: entityType,
           entity_id: notifCtx.proposalId,
           data: {
             proposal_type: 'TRAVEL',
@@ -839,7 +841,7 @@ async function reviewTravelProposal(
       if (notifCtx.action === 'reject') {
         fireUser(E.PROPOSAL_REJECTED_REFUND_INITIATED, {
           user_id: notifCtx.userId,
-          entity_type: 'proposal',
+          entity_type: entityType,
           entity_id: notifCtx.proposalId,
           data: {
             proposal_type: 'TRAVEL',
@@ -860,7 +862,7 @@ async function reviewTravelProposal(
 
         const adminEmails = getAdminEmails();
         fireAdmin(E.ADMIN_REFUND_ACTION_REQUIRED, {
-          entity_type: 'proposal',
+          entity_type: entityType,
           entity_id: notifCtx.proposalId,
           data: {
             proposal_type: 'TRAVEL',
