@@ -1,5 +1,8 @@
 const { query } = require('../../config/db');
 
+/**
+ * Create ticket record and generate custom ticket_no (SUP-YYYYMMDD-ID)
+ */
 exports.createTicket = async (userId, subject = 'other') => {
   const r = await query(
     'INSERT INTO support_tickets (user_id, subject) VALUES (?,?)',
@@ -19,6 +22,9 @@ exports.createTicket = async (userId, subject = 'other') => {
   return { id: r.insertId, ticket_no: ticketNo };
 };
 
+/**
+ * Insert a message into support_messages and update ticket timestamp
+ */
 exports.createMessage = async (
   ticketId,
   senderType,
@@ -41,6 +47,9 @@ exports.createMessage = async (
   return { id: r.insertId };
 };
 
+/**
+ * Save file metadata to support_attachments
+ */
 exports.saveAttachments = async (ticketId, messageId, files) => {
   for (const f of files) {
     await query(
@@ -78,6 +87,9 @@ exports.getMessages = (ticketId) =>
     [ticketId]
   );
 
+/**
+ * Update ticket status + timestamp
+ */
 exports.touchTicket = (id, status) =>
   query(
     'UPDATE support_tickets SET status=?, last_message_at=NOW() WHERE id=?',

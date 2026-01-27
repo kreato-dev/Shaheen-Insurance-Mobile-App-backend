@@ -392,6 +392,20 @@ function makeAdminSupportTicketCreatedEmail({ to, ticketId, userId, userEmail, t
   return { to, subject, text, html };
 }
 
+function makeAdminSupportTicketReplyEmail({ to, ticketId, userId, userEmail, messageSnippet }) {
+  const subject = `New Reply on Ticket #${ticketId}`;
+  const text = `User ${userEmail} (ID: ${userId}) replied to ticket #${ticketId}.\n"${messageSnippet}"`;
+  const html = wrapHtml(
+    'New Support Reply',
+    `<p><b>Ticket:</b> #${ticketId}</p>
+     <p><b>User:</b> ${userEmail} (ID: ${userId})</p>
+     <blockquote style="background:#f9f9f9; border-left:4px solid #ccc; margin:10px 0; padding:10px;">
+       ${messageSnippet}
+     </blockquote>`
+  );
+  return { to, subject, text, html };
+}
+
 module.exports = {
   makeWelcomeEmail,
   makeProposalPaymentReminderEmail,
@@ -417,4 +431,5 @@ module.exports = {
   makeSupportTicketCreatedEmail,
   makeSupportTicketReplyEmail,
   makeAdminSupportTicketCreatedEmail,
+  makeAdminSupportTicketReplyEmail,
 };

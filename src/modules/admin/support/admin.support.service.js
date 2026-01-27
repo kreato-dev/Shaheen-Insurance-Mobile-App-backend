@@ -9,6 +9,9 @@ function httpError(status, msg) {
   return e;
 }
 
+/**
+ * Get ticket details for Admin (no ownership check needed)
+ */
 exports.getTicketDetail = async (ticketId, user) => {
   const ticket = await repo.getTicket(ticketId);
   if (!ticket) throw httpError(404, 'Ticket not found');
@@ -29,8 +32,14 @@ exports.getTicketDetail = async (ticketId, user) => {
 };
 
 /* ADMIN */
+/**
+ * List all tickets for admin dashboard
+ */
 exports.getAllTickets = (q) => repo.getAllTickets(q);
 
+/**
+ * Admin replies to a ticket -> Notifies User
+ */
 exports.adminReply = async (ticketId, adminId, message, files) => {
   if (!message) throw httpError(400, 'Message required');
 
@@ -81,6 +90,9 @@ exports.adminReply = async (ticketId, adminId, message, files) => {
   return msg;
 };
 
+/**
+ * Update ticket status (e.g. close)
+ */
 exports.updateStatus = async (ticketId, status, adminId) => {
   await repo.updateStatus(ticketId, status, adminId);
 };

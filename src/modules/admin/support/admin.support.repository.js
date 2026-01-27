@@ -1,5 +1,8 @@
 const { query } = require('../../../config/db');
 
+/**
+ * Insert admin message
+ */
 exports.createMessage = async (
   ticketId,
   senderType,
@@ -56,6 +59,9 @@ exports.getMessages = (ticketId) =>
     [ticketId]
   );
 
+/**
+ * Update status (and closed_at if closing)
+ */
 exports.updateStatus = async (id, status, adminId) => {
   const closed =
     status === 'closed'
