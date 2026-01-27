@@ -448,6 +448,7 @@ async function markPaymentSuccessDev({ paymentId }) {
         user_id: notifCtx.userId,
         entity_type: 'proposal',
         entity_id: notifCtx.proposalId,
+        milestone: `payment_${id}`,
         data: {
           proposal_type: notifCtx.proposalType,
           travel_subtype: notifCtx.travelSubtype,
@@ -470,6 +471,7 @@ async function markPaymentSuccessDev({ paymentId }) {
       fireAdmin(E.ADMIN_PROPOSAL_BECAME_PAID, {
         entity_type: 'proposal',
         entity_id: notifCtx.proposalId,
+        milestone: `payment_${id}`,
         data: {
           proposal_type: notifCtx.proposalType,
           travel_subtype: notifCtx.travelSubtype,
