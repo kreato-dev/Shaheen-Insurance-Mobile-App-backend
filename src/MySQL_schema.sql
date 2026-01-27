@@ -963,20 +963,96 @@ CREATE TABLE faqs (
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-CREATE TABLE support_requests (
+CREATE TABLE support_tickets (
   id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NULL,
-  name VARCHAR(150) NOT NULL,
-  email VARCHAR(150) NOT NULL,
-  phone VARCHAR(30) NULL,
-  message TEXT NOT NULL,
-  status ENUM('open','in_progress','closed') DEFAULT 'open',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT fk_support_requests_user
+
+  ticket_no VARCHAR(30) NOT NULL UNIQUE,
+  user_id INT NOT NULL,
+
+  subject ENUM(
+    'proposals',
+    'policies',
+    'refunds',
+    'claims',
+    'payments',
+    'kyc',
+    'other'
+  ) NOT NULL DEFAULT 'other',
+
+  status ENUM(
+    'open',
+    'in_process',
+    'resolved',
+    'closed'
+  ) NOT NULL DEFAULT 'open',
+
+  priority ENUM('low','medium','high') NOT NULL DEFAULT 'medium',
+
+  last_message_at DATETIME NULL,
+
+  closed_at DATETIME NULL,
+  closed_by_admin_id INT NULL,
+
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ON UPDATE CURRENT_TIMESTAMP,
+
+  INDEX idx_support_user (user_id),
+  INDEX idx_support_status (status),
+  INDEX idx_support_subject (subject),
+  INDEX idx_support_last_message (last_message_at),
+
+  CONSTRAINT fk_support_ticket_user
     FOREIGN KEY (user_id) REFERENCES users(id)
-    ON DELETE SET NULL ON UPDATE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);
+
+CREATE TABLE support_messages (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  ticket_id INT NOT NULL,
+
+  sender_type ENUM('USER','ADMIN') NOT NULL,
+  sender_user_id INT NULL,
+  sender_admin_id INT NULL,
+
+  message TEXT NOT NULL,
+
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_support_msg_ticket (ticket_id),
+  INDEX idx_support_msg_created (created_at),
+
+  CONSTRAINT fk_support_message_ticket
+    FOREIGN KEY (ticket_id) REFERENCES support_tickets(id)
+    ON DELETE CASCADE
+);
+
+CREATE TABLE support_attachments (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+
+  ticket_id INT NOT NULL,
+  message_id INT NOT NULL,
+
+  file_name VARCHAR(255) NULL,
+  mime_type VARCHAR(100) NULL,
+  file_size INT NULL,
+
+  file_path VARCHAR(255) NOT NULL,
+  -- example: uploads/support/1706352000000.pdf
+
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_support_att_ticket (ticket_id),
+  INDEX idx_support_att_message (message_id),
+
+  CONSTRAINT fk_support_attachment_ticket
+    FOREIGN KEY (ticket_id) REFERENCES support_tickets(id)
+    ON DELETE CASCADE,
+
+  CONSTRAINT fk_support_attachment_message
+    FOREIGN KEY (message_id) REFERENCES support_messages(id)
+    ON DELETE CASCADE
+);
 
 
 -- 7) Motor Claims

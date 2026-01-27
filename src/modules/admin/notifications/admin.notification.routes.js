@@ -1,6 +1,6 @@
 // src/modules/admin/notifications/notification.routes.js
 const router = require('express').Router();
-const c = require('./notification.controller');
+const c = require('./admin.notification.controller');
 const requireAdmin = require('../../../middleware/requireAdmin.middleware');
 const adminSession = require('../../../middleware/adminSession.middleware');
 const requirePermission = require('../../../middleware/rbac.middleware');

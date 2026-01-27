@@ -1,5 +1,5 @@
 // src/modules/admin/notifications/notification.controller.js
-const repo = require('./notification.repository');
+const repo = require('./admin.notification.repository');
 
 async function listAdmin(req, res) {
   const unreadOnly = req.query.unreadOnly === 'true';

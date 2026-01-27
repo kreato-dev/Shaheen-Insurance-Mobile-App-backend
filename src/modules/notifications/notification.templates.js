@@ -352,6 +352,46 @@ function makeAdminReuploadSubmittedEmail({ to, proposalLabel, userName, userId, 
   return { to, subject, text, html };
 }
 
+function makeSupportTicketCreatedEmail({ to, fullName, ticketId, ticketSubject }) {
+  const subject = `Support Ticket Created: #${ticketId}`;
+  const text = `Hi ${fullName || ''}, your support ticket #${ticketId} has been created.\nSubject: ${ticketSubject}`;
+  const html = wrapHtml(
+    'Support Ticket Created',
+    `<p>Hi ${fullName || ''},</p>
+     <p>Your support ticket <b>#${ticketId}</b> has been created successfully.</p>
+     <p><b>Subject:</b> ${ticketSubject}</p>
+     <p>Our team will get back to you shortly.</p>`
+  );
+  return { to, subject, text, html };
+}
+
+function makeSupportTicketReplyEmail({ to, fullName, ticketId, message }) {
+  const subject = `New Reply on Ticket #${ticketId}`;
+  const text = `Hi ${fullName || ''}, you have a new reply on ticket #${ticketId}.\n\n"${message}"`;
+  const html = wrapHtml(
+    'New Reply Received',
+    `<p>Hi ${fullName || ''},</p>
+     <p>You have a new reply on ticket <b>#${ticketId}</b>.</p>
+     <blockquote style="background:#f9f9f9; border-left:4px solid #ccc; margin:10px 0; padding:10px;">
+       ${message}
+     </blockquote>
+     <p>Please open the app to view the full conversation.</p>`
+  );
+  return { to, subject, text, html };
+}
+
+function makeAdminSupportTicketCreatedEmail({ to, ticketId, userId, userEmail, ticketSubject }) {
+  const subject = `New Support Ticket #${ticketId}`;
+  const text = `User ${userEmail} (ID: ${userId}) created ticket #${ticketId}.\nSubject: ${ticketSubject}`;
+  const html = wrapHtml(
+    'New Support Ticket',
+    `<p><b>Ticket:</b> #${ticketId}</p>
+     <p><b>User:</b> ${userEmail} (ID: ${userId})</p>
+     <p><b>Subject:</b> ${ticketSubject}</p>`
+  );
+  return { to, subject, text, html };
+}
+
 module.exports = {
   makeWelcomeEmail,
   makeProposalPaymentReminderEmail,
@@ -374,4 +414,7 @@ module.exports = {
   makeAdminMotorRegNoUploadedEmail,
   makeAdminProposalPaidEmail,
   makeAdminReuploadSubmittedEmail,
+  makeSupportTicketCreatedEmail,
+  makeSupportTicketReplyEmail,
+  makeAdminSupportTicketCreatedEmail,
 };

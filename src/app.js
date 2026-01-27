@@ -16,6 +16,8 @@ const paymentRoutes = require('./modules/payment/payment.routes');
 const claimRoutes = require('./modules/claim/claim.motor.routes');
 const proposalsRoutes = require('./modules/proposals/proposals.routes');
 const notificationRoutes = require('./modules/notifications/notification.routes');
+const supportRoutes = require('./modules/support/support.routes');
+
 
 // Admin
 const adminRoutes = require('./modules/admin/admin.routes');
@@ -56,6 +58,7 @@ app.use('/api/travel', authMiddleware, travelRoutes);
 app.use('/api/claims', authMiddleware, claimRoutes);
 app.use('/api/proposals', authMiddleware, proposalsRoutes);
 app.use('/api/notifications', authMiddleware, notificationRoutes);
+app.use('/api/support', authMiddleware, supportRoutes);
 
 //payment.routes.js already does requireAuth on initiate and webhook is no-auth.
 app.use('/api/payment', authMiddleware, paymentRoutes);
