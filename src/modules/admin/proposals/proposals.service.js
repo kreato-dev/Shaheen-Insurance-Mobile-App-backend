@@ -93,13 +93,6 @@ function buildWhereAndParams(filters) {
   };
 }
 
-function parseAdminEmails() {
-  return (process.env.ADMIN_ALERT_EMAILS || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 
 async function getUnifiedProposals(qp) {
   // ✅ includeTotal must be computed BEFORE queries
@@ -256,6 +249,13 @@ function assertReviewAction(action) {
     throw err;
   }
   return a;
+}
+
+function getAdminEmails() {
+  return (process.env.ADMIN_ALERT_EMAILS || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 // ------------------------
@@ -599,7 +599,7 @@ async function reviewMotorProposal(
     try {
       // 1) REUPLOAD REQUIRED -> user notif + email
       if (notifCtx.action === 'reupload_required') {
-        await fireUser(E.PROPOSAL_REUPLOAD_REQUIRED, {
+        fireUser(E.PROPOSAL_REUPLOAD_REQUIRED, {
           user_id: notifCtx.userId,
           entity_type: 'proposal',
           entity_id: notifCtx.proposalId,
@@ -632,7 +632,7 @@ async function reviewMotorProposal(
 
       // 2) REJECTED -> user combined notif + email (rejection + refund initiated)
       if (notifCtx.action === 'reject') {
-        await fireUser(E.PROPOSAL_REJECTED_REFUND_INITIATED, {
+        fireUser(E.PROPOSAL_REJECTED_REFUND_INITIATED, {
           user_id: notifCtx.userId,
           entity_type: 'proposal',
           entity_id: notifCtx.proposalId,
@@ -666,8 +666,8 @@ async function reviewMotorProposal(
         });
 
         // 3) ADMIN reminder -> refund needs processing (notif + email)
-        const adminEmails = parseAdminEmails();
-        await fireAdmin(E.ADMIN_REFUND_ACTION_REQUIRED, {
+        const adminEmails = getAdminEmails();
+        fireAdmin(E.ADMIN_REFUND_ACTION_REQUIRED, {
           entity_type: 'proposal',
           entity_id: notifCtx.proposalId,
           data: {
@@ -836,7 +836,7 @@ async function reviewTravelProposal(
 
     try {
       if (notifCtx.action === 'reupload_required') {
-        await fireUser(E.PROPOSAL_REUPLOAD_REQUIRED, {
+        fireUser(E.PROPOSAL_REUPLOAD_REQUIRED, {
           user_id: notifCtx.userId,
           entity_type: 'proposal',
           entity_id: notifCtx.proposalId,
@@ -869,7 +869,7 @@ async function reviewTravelProposal(
       }
 
       if (notifCtx.action === 'reject') {
-        await fireUser(E.PROPOSAL_REJECTED_REFUND_INITIATED, {
+        fireUser(E.PROPOSAL_REJECTED_REFUND_INITIATED, {
           user_id: notifCtx.userId,
           entity_type: 'proposal',
           entity_id: notifCtx.proposalId,
@@ -903,8 +903,8 @@ async function reviewTravelProposal(
             : null,
         });
 
-        const adminEmails = parseAdminEmails();
-        await fireAdmin(E.ADMIN_REFUND_ACTION_REQUIRED, {
+        const adminEmails = getAdminEmails();
+        fireAdmin(E.ADMIN_REFUND_ACTION_REQUIRED, {
           entity_type: 'proposal',
           entity_id: notifCtx.proposalId,
           data: {

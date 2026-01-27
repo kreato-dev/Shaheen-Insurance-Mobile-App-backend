@@ -52,6 +52,7 @@ async function issuePolicyService({
     const type = normalizeProposalType(proposalType);
     const id = Number(proposalId);
     if (!id || Number.isNaN(id)) throw httpError(400, 'proposalId must be a valid number');
+    if (!adminId) throw httpError(401, 'Admin not found in request');
 
     const cleanPolicyNo = String(policyNo || '').trim();
     if (!cleanPolicyNo) throw httpError(400, 'policy_no is required');
@@ -150,10 +151,12 @@ async function issuePolicyService({
         policy_issued_at = NOW(),
         policy_expires_at = ?,
         policy_schedule_path = ?,
+        admin_last_action_by = ?,
+        admin_last_action_at = NOW(),
         updated_at = NOW()
       WHERE id = ?
       `,
-            [cleanPolicyNo, endDate, schedulePath, id]
+            [cleanPolicyNo, endDate, schedulePath,adminId, id]
         );
 
         await conn.commit();
@@ -164,7 +167,7 @@ async function issuePolicyService({
             const userEmail = proposal.user_email || null;
 
             // 1) USER: Policy Issued
-            await fireUser(E.POLICY_ISSUED, {
+            fireUser(E.POLICY_ISSUED, {
                 user_id: userId,
                 entity_type: 'policy',
                 entity_id: id,
@@ -201,7 +204,7 @@ async function issuePolicyService({
             // 2) MOTOR ONLY: if applied_for=1 -> immediate motor reg number reminder
             // (You also want reminders while submitted+paid not issued -> cron will handle that separately)
             if (type === 'MOTOR' && Number(proposal.applied_for) === 1) {
-                await fireUser(E.MOTOR_REG_NO_UPLOAD_REMINDER, {
+                fireUser(E.MOTOR_REG_NO_UPLOAD_REMINDER, {
                     user_id: userId,
                     entity_type: 'proposal',
                     entity_id: id,

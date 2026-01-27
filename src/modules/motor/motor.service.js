@@ -713,7 +713,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         .map((s) => s.trim())
         .filter(Boolean);
 
-      await fireAdmin(E.ADMIN_PROPOSAL_SUBMITTED_UNPAID, {
+      fireAdmin(E.ADMIN_PROPOSAL_SUBMITTED_UNPAID, {
         entity_type: 'proposal',
         entity_id: proposalId,
         data: { proposal_type: 'MOTOR', proposal_id: proposalId, user_id: userId },
@@ -725,7 +725,7 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
       // Your provided spec doesn't require email for submit+unpaid, only payment reminder T+3 + expiry.
       // If you want a basic in-app notif, uncomment:
       /*
-      await fireUser('PROPOSAL_SUBMITTED_UNPAID', {
+      fireUser('PROPOSAL_SUBMITTED_UNPAID', {
         user_id: userId,
         entity_type: 'proposal',
         entity_id: proposalId,
@@ -1238,7 +1238,7 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
         .map((s) => s.trim())
         .filter(Boolean);
 
-      await fireAdmin(E.ADMIN_REUPLOAD_SUBMITTED, {
+      fireAdmin(E.ADMIN_REUPLOAD_SUBMITTED, {
         entity_type: 'proposal',
         entity_id: notifCtx.proposalId,
         data: {
@@ -1659,7 +1659,7 @@ async function updateMotorRegistrationNumberService({ userId, proposalId, regist
         .map((s) => s.trim())
         .filter(Boolean);
 
-      await fireAdmin(E.ADMIN_MOTOR_REG_NO_UPLOADED, {
+      fireAdmin(E.ADMIN_MOTOR_REG_NO_UPLOADED, {
         entity_type: 'policy',
         entity_id: notifCtx.proposalId,
         data: {

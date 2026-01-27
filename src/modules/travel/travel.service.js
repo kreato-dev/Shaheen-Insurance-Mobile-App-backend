@@ -1026,7 +1026,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
 
     // ✅ AFTER COMMIT: ADMIN notify (submitted + unpaid)
     try {
-      await fireAdmin(E.ADMIN_PROPOSAL_SUBMITTED_UNPAID, {
+      fireAdmin(E.ADMIN_PROPOSAL_SUBMITTED_UNPAID, {
         entity_type: 'proposal',
         entity_id: proposalId,
         data: {
@@ -1396,7 +1396,7 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
         .map((s) => s.trim())
         .filter(Boolean);
 
-      await fireAdmin(E.ADMIN_REUPLOAD_SUBMITTED, {
+      fireAdmin(E.ADMIN_REUPLOAD_SUBMITTED, {
         entity_type: 'proposal',
         entity_id: notifCtx?.proposalId || Number(proposalId),
         data: {

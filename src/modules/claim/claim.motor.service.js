@@ -294,7 +294,7 @@ async function submitMotorClaimService({ userId, body, files }) {
       const adminTo = getAdminRecipients();
 
       // 1) USER: Claim submitted confirmation (notif + email)
-      await fireUser(E.CLAIM_SUBMITTED, {
+      fireUser(E.CLAIM_SUBMITTED, {
         user_id: Number(userId),
         entity_type: 'claim',
         entity_id: claimId,
@@ -318,7 +318,7 @@ async function submitMotorClaimService({ userId, body, files }) {
       });
 
       // 2) ADMIN: New claim alert (notif + email)
-      await fireAdmin(E.ADMIN_NEW_CLAIM, {
+      fireAdmin(E.ADMIN_NEW_CLAIM, {
         entity_type: 'claim',
         entity_id: claimId,
         data: {

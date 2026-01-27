@@ -178,7 +178,7 @@ async function verifyEmailOtpService({ email, otp }) {
         fullName: u.full_name,
       });
 
-      await fireUser(EVENTS.USER_WELCOME_EMAIL, {
+      fireUser(EVENTS.USER_WELCOME_EMAIL, {
         user_id: u.id,
         entity_type: 'USER',
         entity_id: u.id,

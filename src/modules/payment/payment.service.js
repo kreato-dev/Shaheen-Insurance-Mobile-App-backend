@@ -374,7 +374,6 @@ async function markPaymentSuccessDev({ paymentId }) {
          SET payment_status='paid',
              paid_at=NOW(),
              review_status='pending_review',
-             submitted_at = COALESCE(submitted_at, NOW()),
              updated_at=NOW()
          WHERE id=?`,
         [payment.application_id]
@@ -409,7 +408,6 @@ async function markPaymentSuccessDev({ paymentId }) {
          SET payment_status='paid',
              paid_at=NOW(),
              review_status='pending_review',
-             submitted_at = COALESCE(submitted_at, NOW()),
              updated_at=NOW()
          WHERE id=?`,
         [payment.application_id]
@@ -446,7 +444,7 @@ async function markPaymentSuccessDev({ paymentId }) {
           : `TRAVEL-${notifCtx.travelSubtype}-${notifCtx.proposalId}`;
 
       // USER: Payment confirmed + pending review
-      await fireUser(E.PROPOSAL_PAYMENT_CONFIRMED_REVIEW_PENDING, {
+      fireUser(E.PROPOSAL_PAYMENT_CONFIRMED_REVIEW_PENDING, {
         user_id: notifCtx.userId,
         entity_type: 'proposal',
         entity_id: notifCtx.proposalId,
@@ -469,7 +467,7 @@ async function markPaymentSuccessDev({ paymentId }) {
         .map((s) => s.trim())
         .filter(Boolean);
 
-      await fireAdmin(E.ADMIN_PROPOSAL_BECAME_PAID, {
+      fireAdmin(E.ADMIN_PROPOSAL_BECAME_PAID, {
         entity_type: 'proposal',
         entity_id: notifCtx.proposalId,
         data: {

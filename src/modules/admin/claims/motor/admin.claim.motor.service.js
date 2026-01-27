@@ -251,7 +251,7 @@ async function adminReviewMotorClaim({ adminId, claimId, body }) {
                 action === 'reject' ? E.CLAIM_REJECTED :
                     E.CLAIM_REUPLOAD_REQUIRED;
 
-        await fireUser(eventKey, {
+        fireUser(eventKey, {
             user_id: info.user_id,
             entity_type: 'claim',
             entity_id: id,

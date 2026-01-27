@@ -94,7 +94,7 @@ async function sendMotorRenewalDocService({ adminId, proposalId, renewalFile, re
     const user = uRows?.[0] || {};
     const renewalUrl = buildPublicFileUrl(renewalPath);
 
-    await fireUser(E.RENEWAL_DOCUMENT_SENT, {
+    fireUser(E.RENEWAL_DOCUMENT_SENT, {
       user_id: p.user_id,
       entity_type: 'policy',
       entity_id: id,

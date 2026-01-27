@@ -14,7 +14,6 @@ router.get(
     adminSession(),
     requirePermission('PROPOSALS:READ'),
     c.listAdmin
-    
 );
 
 router.patch(

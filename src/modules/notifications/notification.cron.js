@@ -18,7 +18,7 @@ async function runPaymentReminderTPlus3() {
   `);
 
   for (const r of motor) {
-    await fireUser(E.PROPOSAL_PAYMENT_REMINDER_TPLUS3, {
+    fireUser(E.PROPOSAL_PAYMENT_REMINDER_TPLUS3, {
       user_id: r.user_id,
       entity_type: 'proposal',
       entity_id: r.id,
@@ -49,7 +49,7 @@ async function runPaymentReminderTPlus3() {
     `);
 
     for (const r of rows) {
-      await fireUser(E.PROPOSAL_PAYMENT_REMINDER_TPLUS3, {
+      fireUser(E.PROPOSAL_PAYMENT_REMINDER_TPLUS3, {
         user_id: r.user_id,
         entity_type: 'proposal',
         entity_id: r.id,
@@ -73,7 +73,7 @@ async function runUnpaidExpiredTPlus7() {
   `);
 
   for (const r of motor) {
-    await fireUser(E.PROPOSAL_UNPAID_EXPIRED, {
+    fireUser(E.PROPOSAL_UNPAID_EXPIRED, {
       user_id: r.user_id,
       entity_type: 'proposal',
       entity_id: r.id,
@@ -102,7 +102,7 @@ async function runUnpaidExpiredTPlus7() {
     `);
 
     for (const r of rows) {
-      await fireUser(E.PROPOSAL_UNPAID_EXPIRED, {
+      fireUser(E.PROPOSAL_UNPAID_EXPIRED, {
         user_id: r.user_id,
         entity_type: 'proposal',
         entity_id: r.id,
@@ -128,7 +128,7 @@ async function runPolicyExpiringMilestones(days, userEventKey, adminEventKey) {
   );
 
   for (const r of motor) {
-    await fireUser(userEventKey, {
+    fireUser(userEventKey, {
       user_id: r.user_id,
       entity_type: 'policy',
       entity_id: r.id,
@@ -137,7 +137,7 @@ async function runPolicyExpiringMilestones(days, userEventKey, adminEventKey) {
       email: null,
     });
 
-    await fireAdmin(adminEventKey, {
+    fireAdmin(adminEventKey, {
       entity_type: 'policy',
       entity_id: r.id,
       milestone: `D${days}`,
@@ -168,7 +168,7 @@ async function runPolicyExpiringMilestones(days, userEventKey, adminEventKey) {
     );
 
     for (const r of rows) {
-      await fireUser(userEventKey, {
+      fireUser(userEventKey, {
         user_id: r.user_id,
         entity_type: 'policy',
         entity_id: r.id,
@@ -177,7 +177,7 @@ async function runPolicyExpiringMilestones(days, userEventKey, adminEventKey) {
         email: null,
       });
 
-      await fireAdmin(adminEventKey, {
+      fireAdmin(adminEventKey, {
         entity_type: 'policy',
         entity_id: r.id,
         milestone: `D${days}`,
@@ -203,7 +203,7 @@ async function runPolicyExpired() {
     // Optionally flip to expired here:
     await query(`UPDATE motor_proposals SET policy_status='expired' WHERE id=? AND policy_status='active'`, [r.id]);
 
-    await fireUser(E.POLICY_EXPIRED, {
+    fireUser(E.POLICY_EXPIRED, {
       user_id: r.user_id,
       entity_type: 'policy',
       entity_id: r.id,
@@ -211,7 +211,7 @@ async function runPolicyExpired() {
       email: null,
     });
 
-    await fireAdmin(E.ADMIN_POLICY_EXPIRED, {
+    fireAdmin(E.ADMIN_POLICY_EXPIRED, {
       entity_type: 'policy',
       entity_id: r.id,
       data: { proposal_type: 'MOTOR', proposal_id: r.id, policy_no: r.policy_no },
@@ -240,7 +240,7 @@ async function runPolicyExpired() {
     for (const r of rows) {
       await query(`UPDATE ${t.table} SET policy_status='expired' WHERE id=? AND policy_status='active'`, [r.id]);
 
-      await fireUser(E.POLICY_EXPIRED, {
+      fireUser(E.POLICY_EXPIRED, {
         user_id: r.user_id,
         entity_type: 'policy',
         entity_id: r.id,
@@ -248,7 +248,7 @@ async function runPolicyExpired() {
         email: null,
       });
 
-      await fireAdmin(E.ADMIN_POLICY_EXPIRED, {
+      fireAdmin(E.ADMIN_POLICY_EXPIRED, {
         entity_type: 'policy',
         entity_id: r.id,
         data: { proposal_type: 'TRAVEL', travel_subtype: t.subtype, proposal_id: r.id, policy_no: r.policy_no },
@@ -277,7 +277,7 @@ async function runMotorRegNoReminderWeekly() {
   `);
 
   for (const r of rows) {
-    await fireUser(E.MOTOR_REG_NO_UPLOAD_REMINDER, {
+    fireUser(E.MOTOR_REG_NO_UPLOAD_REMINDER, {
       user_id: r.user_id,
       entity_type: 'proposal',
       entity_id: r.id,

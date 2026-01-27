@@ -339,7 +339,7 @@ async function updateMotorRefund(proposalId, adminId, payload, req) {
         })
         : null;
 
-      await fireUser(EVENTS.REFUND_STATUS_UPDATED, {
+      fireUser(EVENTS.REFUND_STATUS_UPDATED, {
         user_id: p.user_id,
         entity_type: 'PROPOSAL',
         entity_id: p.id,
@@ -469,7 +469,7 @@ async function updateTravelRefund(travelSubtype, proposalId, adminId, payload, r
             })
             : null;
 
-        await fireUser(EVENTS.REFUND_STATUS_UPDATED, {
+        fireUser(EVENTS.REFUND_STATUS_UPDATED, {
           user_id: u.user_id,
           entity_type: 'PROPOSAL',
           entity_id: u.id,
