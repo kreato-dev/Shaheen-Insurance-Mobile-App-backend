@@ -352,7 +352,7 @@ async function updateMotorRefund(proposalId, adminId, payload, req) {
           refund_remarks: payload.refund_remarks ?? p.refund_remarks,
           refund_evidence_url: p.refund_evidence_url,
         },
-        email: p?.email ? { to: p.email, ...email } : null, // only if you have email on proposal/user
+        email: (p?.email && email) ? { to: p.email, ...email } : null, // only if you have email on proposal/user
       });
     } catch (e) {
       console.log('[NOTIF] REFUND_STATUS_UPDATED motor failed:', e?.message || e);
@@ -456,7 +456,7 @@ async function updateTravelRefund(travelSubtype, proposalId, adminId, payload, r
       const u = updated?.proposal; // your getTravelRefundDetail returns { proposalType, travelSubtype, proposal }
       if (u?.user_id) {
         const email =
-          u.email
+          (u.email && payload?.refund_status)
             ? templates.makeUserRefundStatusUpdatedEmail({
               proposalType: 'TRAVEL',
               travelSubtype,

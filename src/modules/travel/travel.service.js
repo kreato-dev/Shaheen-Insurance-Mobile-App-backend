@@ -1697,6 +1697,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
       refundReference: p.refund_reference,
       refundRemarks: p.refund_remarks,
       refundEvidencePath: p.refund_evidence_path,
+      refundEvidenceUrl: buildUrl(p.refund_evidence_path),
       refundInitiatedAt: p.refund_initiated_at,
       refundProcessedAt: p.refund_processed_at,
       closedAt: p.closed_at,
