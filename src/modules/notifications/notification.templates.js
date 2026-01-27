@@ -69,14 +69,16 @@ function makeProposalRejectedRefundInitiatedEmail({ to, fullName, proposalLabel,
   return { to, subject, text, html };
 }
 
-function makePolicyIssuedEmail({ to, fullName, policyNo, policyExpiresAt }) {
-  const subject = 'Policy Issued';
-  const text = `Hi ${fullName || ''}, your policy ${policyNo} has been issued.`;
+function makePolicyIssuedEmail({ to, fullName, policyNo, policyExpiresAt, proposalLabel }) {
+  const subject = `Policy Issued: ${policyNo}`;
+  const text = `Hi ${fullName || ''}, your policy ${policyNo} has been issued.\nProposal: ${proposalLabel || ''}\nExpires: ${policyExpiresAt || ''}`;
   const html = wrapHtml(
     'Policy Issued ✅',
     `<p>Hi ${fullName || ''},</p>
      <p>Your policy <b>${policyNo}</b> has been issued.</p>
-     ${policyExpiresAt ? `<p><b>Expires:</b> ${policyExpiresAt}</p>` : ''}`
+     ${proposalLabel ? `<p><b>Proposal:</b> ${proposalLabel}</p>` : ''}
+     ${policyExpiresAt ? `<p><b>Expires:</b> ${policyExpiresAt}</p>` : ''}
+     <p>Your policy schedule document is available in the app.</p>`
   );
   return { to, subject, text, html };
 }
@@ -104,13 +106,16 @@ function makePolicyExpiredEmail({ to, fullName, policyNo }) {
   return { to, subject, text, html };
 }
 
-function makeMotorRegNoReminderEmail({ to, fullName, proposalLabel }) {
-  const subject = 'Reminder — Upload Registration Number';
-  const text = `Hi ${fullName || ''}, please upload your vehicle registration number for ${proposalLabel}.`;
+function makeMotorRegNoReminderEmail({ to, fullName, proposalLabel, policyNo }) {
+  const subject = `Reminder: Upload Vehicle Registration Number (${proposalLabel})`;
+  const text = `Hi ${fullName || ''}, your policy is issued but your vehicle registration number is still pending.\nProposal: ${proposalLabel}\nPolicy No: ${policyNo || 'N/A'}\nPlease upload the registration number from the app.`;
   const html = wrapHtml(
     'Upload Registration Number',
     `<p>Hi ${fullName || ''},</p>
-     <p>Please upload your vehicle registration number for <b>${proposalLabel}</b>.</p>`
+     <p>Your policy is issued, but your registration number is still pending.</p>
+     <p><b>Proposal:</b> ${proposalLabel}</p>
+     ${policyNo ? `<p><b>Policy No:</b> ${policyNo}</p>` : ''}
+     <p>Please open the app and upload the registration number.</p>`
   );
   return { to, subject, text, html };
 }
@@ -286,6 +291,67 @@ function makeClaimDecisionEmail({
   return { to, subject, text, html };
 }
 
+function makeProposalReuploadRequiredEmail({ to, fullName, proposalLabel, reuploadNotes }) {
+  const subject = `Action Required: Re-upload Documents (${proposalLabel})`;
+  const text = `Admin requested document re-upload for your proposal.\nProposal: ${proposalLabel}\nNotes: ${reuploadNotes || 'N/A'}\n`;
+  const html = wrapHtml(
+    'Action Required: Re-upload Documents',
+    `<p>Hi ${fullName || ''},</p>
+     <p>Admin requested document re-upload for your proposal.</p>
+     <p><b>Proposal:</b> ${proposalLabel}</p>
+     <p><b>Notes:</b> ${reuploadNotes || 'N/A'}</p>
+     <p>Please open the app and re-upload the requested documents.</p>`
+  );
+  return { to, subject, text, html };
+}
+
+function makeAdminRefundActionRequiredEmail({ to, proposalLabel, userName, userId }) {
+  const subject = `Refund Needs Processing (${proposalLabel})`;
+  const text = `Refund initiated due to proposal rejection.\nProposal: ${proposalLabel}\nUser: ${userName || userId}\n`;
+  const html = wrapHtml(
+    'Refund Needs Processing',
+    `<p><b>Proposal:</b> ${proposalLabel}</p>
+     <p><b>User:</b> ${userName || userId}</p>
+     <p>Refund status is now <b>refund_initiated</b>. Please process and upload evidence.</p>`
+  );
+  return { to, subject, text, html };
+}
+
+function makeAdminMotorRegNoUploadedEmail({ to, proposalLabel, registrationNumber, userName, userId }) {
+  const subject = `Motor Registration Number Uploaded (${proposalLabel})`;
+  const text = `User uploaded motor registration number.\nProposal: ${proposalLabel}\nReg No: ${registrationNumber}\nUser: ${userName || userId}\n`;
+  const html = wrapHtml(
+    'Motor Registration Number Uploaded',
+    `<p><b>Proposal:</b> ${proposalLabel}</p>
+     <p><b>Registration No:</b> ${registrationNumber}</p>
+     <p><b>User:</b> ${userName || userId}</p>`
+  );
+  return { to, subject, text, html };
+}
+
+function makeAdminProposalPaidEmail({ to, proposalLabel }) {
+  const subject = `Paid Proposal Ready for Review (${proposalLabel})`;
+  const text = `A paid proposal is ready for review: ${proposalLabel}`;
+  const html = wrapHtml(
+    'Paid Proposal Ready for Review',
+    `<p><b>${proposalLabel}</b> is now paid and pending review.</p>`
+  );
+  return { to, subject, text, html };
+}
+
+function makeAdminReuploadSubmittedEmail({ to, proposalLabel, userName, userId, saved }) {
+  const subject = `Reupload Submitted (${proposalLabel})`;
+  const text = `User submitted requested reupload.\nProposal: ${proposalLabel}\nUser: ${userName || userId}\nSaved: ${JSON.stringify(saved)}`;
+  const html = wrapHtml(
+    'Reupload Submitted',
+    `<p><b>Proposal:</b> ${proposalLabel}</p>
+     <p><b>User:</b> ${userName || userId}</p>
+     <p><b>Uploaded:</b></p>
+     <pre style="background:#f6f6f6;padding:10px;border-radius:8px;">${JSON.stringify(saved, null, 2)}</pre>`
+  );
+  return { to, subject, text, html };
+}
+
 module.exports = {
   makeWelcomeEmail,
   makeProposalPaymentReminderEmail,
@@ -303,4 +369,9 @@ module.exports = {
   makeClaimSubmittedEmail,
   makeAdminNewMotorClaimEmail,
   makeClaimDecisionEmail,
+  makeProposalReuploadRequiredEmail,
+  makeAdminRefundActionRequiredEmail,
+  makeAdminMotorRegNoUploadedEmail,
+  makeAdminProposalPaidEmail,
+  makeAdminReuploadSubmittedEmail,
 };

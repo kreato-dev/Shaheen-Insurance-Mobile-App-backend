@@ -3,6 +3,7 @@ const { buildMotorSelect } = require('./motorQueries');
 const { buildTravelSelect } = require('./travelQueries');
 const { fireUser, fireAdmin } = require('../../notifications/notification.service');
 const E = require('../../notifications/notification.events');
+const templates = require('../../notifications/notification.templates');
 
 
 //Phase 1
@@ -10,6 +11,7 @@ const ALLOWED_TYPES = new Set(['MOTOR', 'TRAVEL']);
 const ALLOWED_REVIEW = new Set(['not_applicable', 'pending_review', 'reupload_required', 'approved', 'rejected']);
 const ALLOWED_PAYMENT = new Set(['unpaid', 'paid']);
 const ALLOWED_SUBMISSION = new Set(['draft', 'submitted']);
+const ALLOWED_POLICY = new Set(['not_issued', 'active', 'expired']);
 
 function toInt(v, fallback) {
   const n = Number(v);
@@ -50,6 +52,11 @@ function buildWhereAndParams(filters) {
   if (filters.payment_status) {
     where.push('t.payment_status = ?');
     params.push(filters.payment_status);
+  }
+
+  if (filters.policy_status) {
+    where.push('t.policy_status = ?');
+    params.push(filters.policy_status);
   }
 
   if (filters.submission_status) {
@@ -111,6 +118,9 @@ async function getUnifiedProposals(qp) {
   const payment_status =
     qp.payment_status && ALLOWED_PAYMENT.has(String(qp.payment_status)) ? String(qp.payment_status) : null;
 
+  const policy_status =
+    qp.policy_status && ALLOWED_POLICY.has(String(qp.policy_status)) ? String(qp.policy_status) : null;
+
   const submission_status =
     qp.submission_status && ALLOWED_SUBMISSION.has(String(qp.submission_status))
       ? String(qp.submission_status)
@@ -142,6 +152,7 @@ async function getUnifiedProposals(qp) {
     travel_subtype: effectiveTravelSubtype,
     review_status,
     payment_status,
+    policy_status,
     submission_status,
     from,
     to,
@@ -610,22 +621,12 @@ async function reviewMotorProposal(
             required_docs: notifCtx.requiredDocs,
           },
           email: notifCtx.userEmail
-            ? {
-              to: notifCtx.userEmail,
-              subject: `Action Required: Re-upload Documents (MOTOR-${notifCtx.proposalId})`,
-              text:
-                `Admin requested document re-upload for your proposal.\n` +
-                `Proposal: MOTOR-${notifCtx.proposalId}\n` +
-                `Notes: ${notifCtx.reuploadNotes || 'N/A'}\n`,
-              html: `
-              <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                <h2>Action Required: Re-upload Documents</h2>
-                <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
-                <p><b>Notes:</b> ${notifCtx.reuploadNotes || 'N/A'}</p>
-                <p>Please open the app and re-upload the requested documents.</p>
-              </div>
-            `,
-            }
+            ? templates.makeProposalReuploadRequiredEmail({
+                to: notifCtx.userEmail,
+                fullName: notifCtx.userName,
+                proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+                reuploadNotes: notifCtx.reuploadNotes,
+              })
             : null,
         });
       }
@@ -643,25 +644,12 @@ async function reviewMotorProposal(
             refund_status: 'refund_initiated',
           },
           email: notifCtx.userEmail
-            ? {
-              to: notifCtx.userEmail,
-              subject: `Proposal Rejected + Refund Initiated (MOTOR-${notifCtx.proposalId})`,
-              text:
-                `Your proposal was rejected.\n` +
-                `Proposal: MOTOR-${notifCtx.proposalId}\n` +
-                `Reason: ${notifCtx.rejectionReason || 'N/A'}\n` +
-                `Refund: Initiated\n`,
-              html: `
-              <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                <h2>Proposal Rejected</h2>
-                <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
-                <p><b>Reason:</b> ${notifCtx.rejectionReason || 'N/A'}</p>
-                <hr/>
-                <h3>Refund Initiated</h3>
-                <p>Your refund process has been initiated. You will be notified once processed.</p>
-              </div>
-            `,
-            }
+            ? templates.makeProposalRejectedRefundInitiatedEmail({
+                to: notifCtx.userEmail,
+                fullName: notifCtx.userName,
+                proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+                rejectionReason: notifCtx.rejectionReason,
+              })
             : null,
         });
 
@@ -679,22 +667,12 @@ async function reviewMotorProposal(
           },
           email:
             adminEmails.length > 0
-              ? {
-                to: adminEmails.join(','),
-                subject: `Refund Needs Processing (MOTOR-${notifCtx.proposalId})`,
-                text:
-                  `Refund initiated due to proposal rejection.\n` +
-                  `Proposal: MOTOR-${notifCtx.proposalId}\n` +
-                  `User: ${notifCtx.userName || notifCtx.userId}\n`,
-                html: `
-                <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                  <h2>Refund Needs Processing</h2>
-                  <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
-                  <p><b>User:</b> ${notifCtx.userName || notifCtx.userId}</p>
-                  <p>Refund status is now <b>refund_initiated</b>. Please process and upload evidence.</p>
-                </div>
-              `,
-              }
+              ? templates.makeAdminRefundActionRequiredEmail({
+                  to: adminEmails.join(','),
+                  proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+                  userName: notifCtx.userName,
+                  userId: notifCtx.userId,
+                })
               : null,
         });
       }
@@ -848,22 +826,12 @@ async function reviewTravelProposal(
             required_docs: notifCtx.requiredDocs,
           },
           email: notifCtx.userEmail
-            ? {
-              to: notifCtx.userEmail,
-              subject: `Action Required: Re-upload Documents (TRAVEL-${notifCtx.proposalId})`,
-              text:
-                `Admin requested document re-upload for your travel proposal.\n` +
-                `Proposal: TRAVEL-${notifCtx.proposalId}\n` +
-                `Notes: ${notifCtx.reuploadNotes || 'N/A'}\n`,
-              html: `
-              <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                <h2>Action Required: Re-upload Documents</h2>
-                <p><b>Proposal:</b> TRAVEL-${notifCtx.proposalId}</p>
-                <p><b>Notes:</b> ${notifCtx.reuploadNotes || 'N/A'}</p>
-                <p>Please open the app and re-upload the requested documents.</p>
-              </div>
-            `,
-            }
+            ? templates.makeProposalReuploadRequiredEmail({
+                to: notifCtx.userEmail,
+                fullName: notifCtx.userName,
+                proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
+                reuploadNotes: notifCtx.reuploadNotes,
+              })
             : null,
         });
       }
@@ -881,25 +849,12 @@ async function reviewTravelProposal(
             refund_status: 'refund_initiated',
           },
           email: notifCtx.userEmail
-            ? {
-              to: notifCtx.userEmail,
-              subject: `Proposal Rejected + Refund Initiated (TRAVEL-${notifCtx.proposalId})`,
-              text:
-                `Your travel proposal was rejected.\n` +
-                `Proposal: TRAVEL-${notifCtx.proposalId}\n` +
-                `Reason: ${notifCtx.rejectionReason || 'N/A'}\n` +
-                `Refund: Initiated\n`,
-              html: `
-              <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                <h2>Proposal Rejected</h2>
-                <p><b>Proposal:</b> TRAVEL-${notifCtx.proposalId}</p>
-                <p><b>Reason:</b> ${notifCtx.rejectionReason || 'N/A'}</p>
-                <hr/>
-                <h3>Refund Initiated</h3>
-                <p>Your refund process has been initiated. You will be notified once processed.</p>
-              </div>
-            `,
-            }
+            ? templates.makeProposalRejectedRefundInitiatedEmail({
+                to: notifCtx.userEmail,
+                fullName: notifCtx.userName,
+                proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
+                rejectionReason: notifCtx.rejectionReason,
+              })
             : null,
         });
 
@@ -917,22 +872,12 @@ async function reviewTravelProposal(
           },
           email:
             adminEmails.length > 0
-              ? {
-                to: adminEmails.join(','),
-                subject: `Refund Needs Processing (TRAVEL-${notifCtx.proposalId})`,
-                text:
-                  `Refund initiated due to proposal rejection.\n` +
-                  `Proposal: TRAVEL-${notifCtx.proposalId}\n` +
-                  `User: ${notifCtx.userName || notifCtx.userId}\n`,
-                html: `
-                <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                  <h2>Refund Needs Processing</h2>
-                  <p><b>Proposal:</b> TRAVEL-${notifCtx.proposalId}</p>
-                  <p><b>User:</b> ${notifCtx.userName || notifCtx.userId}</p>
-                  <p>Refund status is now <b>refund_initiated</b>. Please process and upload evidence.</p>
-                </div>
-              `,
-              }
+              ? templates.makeAdminRefundActionRequiredEmail({
+                  to: adminEmails.join(','),
+                  proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
+                  userName: notifCtx.userName,
+                  userId: notifCtx.userId,
+                })
               : null,
         });
       }

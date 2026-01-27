@@ -3,6 +3,7 @@ const { query, getConnection } = require('../../config/db');
 const { deleteFileIfExists } = require('../../utils/fileCleanup');
 const { fireAdmin } = require('../notifications/notification.service');
 const E = require('../notifications/notification.events');
+const templates = require('../notifications/notification.templates');
 
 
 /**
@@ -1409,28 +1410,13 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
         },
         email:
           adminEmails.length > 0
-            ? {
-              to: adminEmails.join(','),
-              subject: `Travel Reupload Submitted (${packageCode}-${proposalId})`,
-              text:
-                `User submitted requested reupload.\n` +
-                `Proposal: ${packageCode}-${proposalId}\n` +
-                `User: ${notifCtx?.userName || userId}\n` +
-                `Saved: ${JSON.stringify(notifCtx?.saved || saved)}`,
-              html: `
-              <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                <h2>Travel Reupload Submitted</h2>
-                <p><b>Proposal:</b> ${packageCode}-${proposalId}</p>
-                <p><b>User:</b> ${notifCtx?.userName || userId}</p>
-                <p><b>Uploaded:</b></p>
-                <pre style="background:#f6f6f6;padding:10px;border-radius:8px;">${JSON.stringify(
-                notifCtx?.saved || saved,
-                null,
-                2
-              )}</pre>
-              </div>
-            `,
-            }
+            ? templates.makeAdminReuploadSubmittedEmail({
+                to: adminEmails.join(','),
+                proposalLabel: `${packageCode}-${proposalId}`,
+                userName: notifCtx?.userName,
+                userId: notifCtx?.userId || userId,
+                saved: notifCtx?.saved || saved,
+              })
             : null,
       });
     } catch (_) {

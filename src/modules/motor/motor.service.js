@@ -1671,19 +1671,13 @@ async function updateMotorRegistrationNumberService({ userId, proposalId, regist
         },
         email:
           adminEmails.length > 0
-            ? {
-              to: adminEmails.join(','),
-              subject: `Motor Registration Number Uploaded (MOTOR-${notifCtx.proposalId})`,
-              text: `User uploaded motor registration number.\nProposal: MOTOR-${notifCtx.proposalId}\nReg No: ${notifCtx.regNo}\nUser: ${notifCtx.userName || notifCtx.userId}`,
-              html: `
-                  <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                    <h2>Motor Registration Number Uploaded</h2>
-                    <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
-                    <p><b>Registration No:</b> ${notifCtx.regNo}</p>
-                    <p><b>User:</b> ${notifCtx.userName || notifCtx.userId}</p>
-                  </div>
-                `,
-            }
+            ? templates.makeAdminMotorRegNoUploadedEmail({
+                to: adminEmails.join(','),
+                proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+                registrationNumber: notifCtx.regNo,
+                userName: notifCtx.userName,
+                userId: notifCtx.userId,
+              })
             : null,
       });
     }

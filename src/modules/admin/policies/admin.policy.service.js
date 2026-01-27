@@ -1,6 +1,7 @@
 const { getConnection } = require('../../../config/db');
 const { fireUser, fireAdmin } = require('../../notifications/notification.service');
 const E = require('../../notifications/notification.events');
+const templates = require('../../notifications/notification.templates');
 
 function httpError(status, message) {
     const err = new Error(message);
@@ -180,24 +181,13 @@ async function issuePolicyService({
                     travel_package_code: type === 'TRAVEL' ? pkgCode : null,
                 },
                 email: userEmail
-                    ? {
+                    ? templates.makePolicyIssuedEmail({
                         to: userEmail,
-                        subject: `Policy Issued: ${cleanPolicyNo}`,
-                        text:
-                            `Your policy has been issued.\n` +
-                            `Policy No: ${cleanPolicyNo}\n` +
-                            `Proposal: ${type}-${id}\n` +
-                            `Expires At: ${endDate}\n`,
-                        html: `
-            <div style="font-family: Arial, sans-serif; line-height:1.6;">
-              <h2>Policy Issued</h2>
-              <p><b>Policy No:</b> ${cleanPolicyNo}</p>
-              <p><b>Proposal:</b> ${type}-${id}</p>
-              <p><b>Expires At:</b> ${endDate}</p>
-              <p>Your policy schedule document is available in the app.</p>
-            </div>
-          `,
-                    }
+                        fullName: proposal.user_name,
+                        policyNo: cleanPolicyNo,
+                        policyExpiresAt: endDate,
+                        proposalLabel: `${type}-${id}`,
+                    })
                     : null,
             });
 
@@ -216,24 +206,12 @@ async function issuePolicyService({
                         policy_issued: true,
                     },
                     email: userEmail
-                        ? {
+                        ? templates.makeMotorRegNoReminderEmail({
                             to: userEmail,
-                            subject: `Reminder: Upload Vehicle Registration Number (MOTOR-${id})`,
-                            text:
-                                `Your policy is issued but your vehicle registration number is still pending.\n` +
-                                `Proposal: MOTOR-${id}\n` +
-                                `Policy No: ${cleanPolicyNo}\n` +
-                                `Please upload the registration number from the app.\n`,
-                            html: `
-              <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                <h2>Upload Registration Number</h2>
-                <p>Your policy is issued, but your registration number is still pending.</p>
-                <p><b>Proposal:</b> MOTOR-${id}</p>
-                <p><b>Policy No:</b> ${cleanPolicyNo}</p>
-                <p>Please open the app and upload the registration number.</p>
-              </div>
-            `,
-                        }
+                            fullName: proposal.user_name,
+                            proposalLabel: `MOTOR-${id}`,
+                            policyNo: cleanPolicyNo,
+                        })
                         : null,
                 });
             }

@@ -477,15 +477,10 @@ async function markPaymentSuccessDev({ paymentId }) {
         },
         email:
           adminEmails.length > 0
-            ? {
-              to: adminEmails.join(','),
-              subject: `Paid Proposal Ready for Review (${proposalLabel})`,
-              text: `A paid proposal is ready for review: ${proposalLabel}`,
-              html: `<div style="font-family:Arial;line-height:1.6;">
-                        <h2>Paid Proposal Ready for Review</h2>
-                        <p><b>${proposalLabel}</b> is now paid and pending review.</p>
-                      </div>`,
-            }
+            ? templates.makeAdminProposalPaidEmail({
+                to: adminEmails.join(','),
+                proposalLabel,
+              })
             : null,
       });
     }
