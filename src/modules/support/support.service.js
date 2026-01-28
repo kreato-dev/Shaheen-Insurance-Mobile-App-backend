@@ -116,6 +116,11 @@ exports.replyTicket = async (userId, ticketId, body, files) => {
   if (ticket.user_id !== userId) throw httpError(403, 'Forbidden');
   if (ticket.status === 'closed') throw httpError(400, 'Cannot reply to a closed ticket');
 
+  const lastMsg = await repo.getLastMessage(ticketId);
+  if (lastMsg && lastMsg.sender_type === 'USER') {
+    throw httpError(400, 'Please wait for a response from support before sending another message.');
+  }
+
   const msg = await repo.createMessage(ticketId, 'USER', userId, null, message);
 
   if (files?.length) {

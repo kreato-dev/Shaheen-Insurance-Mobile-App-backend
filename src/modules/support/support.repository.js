@@ -87,6 +87,14 @@ exports.getMessages = (ticketId) =>
     [ticketId]
   );
 
+exports.getLastMessage = async (ticketId) => {
+  const rows = await query(
+    'SELECT * FROM support_messages WHERE ticket_id=? ORDER BY id DESC LIMIT 1',
+    [ticketId]
+  );
+  return rows[0];
+};
+
 /**
  * Update ticket status + timestamp
  */

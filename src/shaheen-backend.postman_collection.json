@@ -409,11 +409,6 @@
                   "key": "attachments",
                   "type": "file",
                   "src": ""
-                },
-                {
-                  "key": "attachments",
-                  "type": "file",
-                  "src": ""
                 }
               ]
             },

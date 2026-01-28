@@ -46,8 +46,17 @@ exports.saveAttachments = async (ticketId, messageId, files) => {
 exports.getAllTickets = () =>
   query('SELECT * FROM support_tickets ORDER BY last_message_at DESC');
 
-exports.getTicket = async (id) =>
-  (await query('SELECT * FROM support_tickets WHERE id=?', [id]))[0];
+exports.getTicket = async (id) => {
+  const rows = await query(
+    `SELECT t.*, u.full_name AS user_name, u.email AS user_email, mobile AS user_mobile, address AS user_address, city_id AS user_city_id, c.name AS user_city_name
+     FROM support_tickets t
+     LEFT JOIN users u ON u.id = t.user_id
+     LEFT JOIN cities c ON c.id = u.city_id
+     WHERE t.id=?`,
+    [id]
+  );
+  return rows[0];
+};
 
 exports.getMessages = (ticketId) =>
   query(
