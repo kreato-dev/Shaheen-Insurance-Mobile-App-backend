@@ -11,6 +11,8 @@ const ROLE_PERMS = {
     'CONFIG:MANAGE',
     'REPORTS:EXPORT',
     'AUDIT:READ',
+    'SUPPORT:READ',
+    'SUPPORT:UPDATE',
   ],
   FINANCE_ADMIN: [
     'PROPOSALS:READ',
@@ -24,6 +26,8 @@ const ROLE_PERMS = {
     'USERS:READ',
     'USERS:RESET',
     'NOTIFICATIONS:SEND_LIMITED',
+    'SUPPORT:READ',
+    'SUPPORT:UPDATE',
   ],
 };
 
