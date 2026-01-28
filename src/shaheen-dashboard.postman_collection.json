@@ -145,9 +145,8 @@
               ],
               "path": [
                 "api",
-                "support",
                 "admin",
-                "all"
+                "support"
               ]
             }
           }
@@ -170,6 +169,7 @@
               ],
               "path": [
                 "api",
+                "admin",
                 "support",
                 "{{ticketId}}"
               ]
@@ -209,8 +209,8 @@
               ],
               "path": [
                 "api",
-                "support",
                 "admin",
+                "support",
                 "{{ticketId}}",
                 "reply"
               ]
@@ -244,8 +244,8 @@
               ],
               "path": [
                 "api",
-                "support",
                 "admin",
+                "support",
                 "{{ticketId}}",
                 "status"
               ]
@@ -279,8 +279,8 @@
               ],
               "path": [
                 "api",
-                "support",
                 "admin",
+                "support",
                 "{{ticketId}}",
                 "status"
               ]
