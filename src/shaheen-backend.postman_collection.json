@@ -608,6 +608,24 @@
           }
         },
         {
+          "name": "Get Vehicle Body Types",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/data/vehicle-body-types",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "data",
+                "vehicle-body-types"
+              ]
+            }
+          }
+        },
+        {
           "name": "Get Tracker Companies",
           "request": {
             "method": "GET",

@@ -9,7 +9,6 @@ const morgan = require('morgan');
 
 const authRoutes = require('./modules/auth/auth.routes');
 const userRoutes = require('./modules/user/user.routes');
-const dataRoutes = require('./modules/data/data.routes');
 const motorRoutes = require('./modules/motor/motor.routes');
 const travelRoutes = require('./modules/travel/travel.routes');
 const paymentRoutes = require('./modules/payment/payment.routes');
@@ -18,6 +17,8 @@ const proposalsRoutes = require('./modules/proposals/proposals.routes');
 const notificationRoutes = require('./modules/notifications/notification.routes');
 const supportRoutes = require('./modules/support/support.routes');
 
+// api: get(public) post,put,delete(admin)
+const dataRoutes = require('./modules/admin/data/admin.data.routes');
 
 // Admin
 const adminRoutes = require('./modules/admin/admin.routes');

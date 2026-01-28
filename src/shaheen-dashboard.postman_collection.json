@@ -41,6 +41,30 @@
     {
       "key": "ticketId",
       "value": ""
+    },
+    {
+      "key": "cityId",
+      "value": "1"
+    },
+    {
+      "key": "makeId",
+      "value": "1"
+    },
+    {
+      "key": "submakeId",
+      "value": "1"
+    },
+    {
+      "key": "variantId",
+      "value": "1"
+    },
+    {
+      "key": "trackerId",
+      "value": "1"
+    },
+    {
+      "key": "bodyTypeId",
+      "value": "1"
     }
   ],
   "item": [
@@ -1196,6 +1220,593 @@
             }
           },
           "description": "Triggers OTP email using existing otp.service.js + mailer.js"
+        }
+      ]
+    },
+    {
+      "name": "Admin - Data Management",
+      "item": [
+        {
+          "name": "Cities",
+          "item": [
+            {
+              "name": "Create City",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"New City\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/cities",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "cities"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update City",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated City Name\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/cities/{{cityId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "cities",
+                    "{{cityId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete City",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/cities/{{cityId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "cities",
+                    "{{cityId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehicle Makes",
+          "item": [
+            {
+              "name": "Create Make",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"New Make\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-makes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-makes"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Make",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Make\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-makes/{{makeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-makes",
+                    "{{makeId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Make",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-makes/{{makeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-makes",
+                    "{{makeId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehicle Submakes",
+          "item": [
+            {
+              "name": "Create Submake",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"New Submake\",\n  \"make_id\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-submakes",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-submakes"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Submake",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Submake\",\n  \"make_id\": 1\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-submakes/{{submakeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-submakes",
+                    "{{submakeId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Submake",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-submakes/{{submakeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-submakes",
+                    "{{submakeId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehicle Variants",
+          "item": [
+            {
+              "name": "Create Variant",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"New Variant\",\n  \"make_id\": 1,\n  \"submake_id\": 1,\n  \"model_year\": 2025,\n  \"body_type_id\": 1,\n  \"engine_cc\": 1300,\n  \"seating_capacity\": 5\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-variants",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-variants"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Variant",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Variant\",\n  \"make_id\": 1,\n  \"submake_id\": 1,\n  \"model_year\": 2025,\n  \"body_type_id\": 1,\n  \"engine_cc\": 1300,\n  \"seating_capacity\": 5\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-variants/{{variantId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-variants",
+                    "{{variantId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Variant",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-variants/{{variantId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-variants",
+                    "{{variantId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Vehicle Body Types",
+          "item": [
+            {
+              "name": "Create Body Type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Sedan\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-body-types",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-body-types"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Body Type",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Sedan Updated\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-body-types/{{bodyTypeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-body-types",
+                    "{{bodyTypeId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Body Type",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/vehicle-body-types/{{bodyTypeId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "vehicle-body-types",
+                    "{{bodyTypeId}}"
+                  ]
+                }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Tracker Companies",
+          "item": [
+            {
+              "name": "Create Tracker Company",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"New Tracker Co\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/tracker-companies",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "tracker-companies"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Update Tracker Company",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json",
+                    "type": "text"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Tracker Co\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/tracker-companies/{{trackerId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "tracker-companies",
+                    "{{trackerId}}"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Delete Tracker Company",
+              "request": {
+                "method": "DELETE",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{adminToken}}",
+                    "type": "text"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/tracker-companies/{{trackerId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "tracker-companies",
+                    "{{trackerId}}"
+                  ]
+                }
+              }
+            }
+          ]
         }
       ]
     }

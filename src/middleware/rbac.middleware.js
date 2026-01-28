@@ -13,6 +13,7 @@ const ROLE_PERMS = {
     'AUDIT:READ',
     'SUPPORT:READ',
     'SUPPORT:UPDATE',
+    'DATA:MANAGE',
   ],
   FINANCE_ADMIN: [
     'PROPOSALS:READ',
