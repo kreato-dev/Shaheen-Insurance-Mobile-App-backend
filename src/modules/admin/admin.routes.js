@@ -1,8 +1,9 @@
 // src/modules/admin/admin.routes.js
 const express = require('express');
 const router = express.Router();
-const proposalsRoutes = require('./proposals/proposals.routes');
+const adminOverviewRoutes = require('./overview/admin.overview.routes');
 const adminAuthRoutes = require('./auth/adminAuth.routes');
+const proposalsRoutes = require('./proposals/proposals.routes');
 const refundsRoutes = require('./refunds/refunds.routes');
 const usersRoutes = require('./users/users.routes')
 const policiesRoutes = require('./policies/admin.policy.routes')
@@ -14,6 +15,8 @@ const adminContentRoutes = require('./content/admin.content.routes');
 
 
 router.use('/auth', adminAuthRoutes );
+
+router.use('/overview', adminOverviewRoutes);
 
 router.use('/proposals', proposalsRoutes );
 
