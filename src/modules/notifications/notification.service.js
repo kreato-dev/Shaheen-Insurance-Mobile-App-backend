@@ -2,6 +2,8 @@
 const repo = require('./notification.repository');
 const templates = require('./notification.templates');
 const { sendEmail } = require('../../utils/mailer'); // ✅ your mailer
+const { sendPushToUser, sendPushToAdmins } = require('./fcm.service');
+
 
 function buildTitleMessage(event_key, payload) {
   switch (event_key) {
@@ -92,6 +94,7 @@ async function fireUser(event_key, { user_id, entity_type, entity_id, milestone 
       });
     }
   }
+  await sendPushToUser(user_id, title, message, data);
 
   return notifId;
 }
@@ -129,6 +132,7 @@ async function fireAdmin(event_key, { admin_id = null, entity_type, entity_id, m
     }
   }
 
+  await sendPushToAdmins(admin_id, title, message, data);
   return notifId;
 }
 

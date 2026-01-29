@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('./auth.controller');
+const { authMiddleware } = require('./../../middleware/auth');
 
 // POST /api/auth/register
 router.post('/register', authController.register);
@@ -21,5 +22,11 @@ router.post('/resend-email-otp', authController.resendEmailOtp);
 
 // POST /api/auth/forgot-password/verify
 router.post('/forgot-password/verify', authController.verifyForgotPasswordOtp);
+
+// POST /api/auth/fcm-token (Protected: Auth middleware required since router is public)
+router.post('/fcm-token', authMiddleware, authController.saveFcmToken);
+
+// DELETE /api/auth/fcm-token (Protected: Auth middleware required since router is public)
+router.delete('/fcm-token', authMiddleware, authController.removeFcmToken);
 
 module.exports = router;

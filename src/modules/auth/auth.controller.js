@@ -98,6 +98,48 @@ async function verifyForgotPasswordOtp(req, res, next) {
   }
 }
 
+// Save FCM Token (Protected)
+async function saveFcmToken(req, res, next) {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const { token, deviceId, platform } = req.body;
+
+    const result = await authService.saveFcmToken({
+      userId: req.user.id,
+      token,
+      deviceId,
+      platform,
+    });
+
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Remove FCM Token (Protected)
+async function removeFcmToken(req, res, next) {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const { token } = req.body;
+
+    const result = await authService.removeFcmToken({
+      userId: req.user.id,
+      token,
+    });
+
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   register,
   verifyEmailOtp,
@@ -105,4 +147,6 @@ module.exports = {
   login,
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,
+  saveFcmToken,
+  removeFcmToken,
 };

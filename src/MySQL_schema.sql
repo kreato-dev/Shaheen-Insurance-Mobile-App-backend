@@ -177,6 +177,30 @@ CREATE TABLE admin_sessions (
     ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 2.3) store FCM tokens for users
+CREATE TABLE user_fcm_tokens (
+  user_id INT NOT NULL,
+  token VARCHAR(512) NOT NULL,
+  device_id VARCHAR(255),
+  platform VARCHAR(50), -- 'android', 'ios', 'web'
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (user_id, token),
+  CONSTRAINT fk_fcm_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- 2.4) store FCM tokens for admins
+CREATE TABLE admin_fcm_tokens (
+  admin_id INT NOT NULL,
+  token VARCHAR(512) NOT NULL,
+  device_id VARCHAR(255),
+  platform VARCHAR(50), -- 'android', 'ios', 'web'
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (admin_id, token),
+  CONSTRAINT fk_fcm_admin FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE CASCADE
+);
+
 -- 3) Motor Insurance Proposals (Updated lifecycle fields)
 CREATE TABLE motor_proposals (
   id INT AUTO_INCREMENT PRIMARY KEY,

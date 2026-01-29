@@ -1,9 +1,38 @@
 const svc = require('./adminAuth.service');
+const fcmSvc = require('../admin.auth.service');
 
 exports.login = async (req, res, next) => {
   try {
     const out = await svc.login(req.body, req);
     res.json(out);
+  } catch (e) {
+    next(e);
+  }
+};
+
+exports.saveFcmToken = async (req, res, next) => {
+  try {
+    const { token, deviceId, platform } = req.body;
+    const result = await fcmSvc.saveAdminFcmToken({
+      adminId: req.admin.id,
+      token,
+      deviceId,
+      platform,
+    });
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+exports.removeFcmToken = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    const result = await fcmSvc.removeAdminFcmToken({
+      adminId: req.admin.id,
+      token,
+    });
+    res.json(result);
   } catch (e) {
     next(e);
   }

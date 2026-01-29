@@ -410,6 +410,34 @@ async function updateUserProfile(userId, data) {
   return getUserProfile(userId);
 }
 
+/**
+ * Save FCM Token for Push Notifications
+ */
+async function saveFcmToken({ userId, token, deviceId, platform }) {
+  if (!userId || !token) {
+    throw httpError(400, 'userId and token are required');
+  }
+
+  await query(
+    `INSERT INTO user_fcm_tokens (user_id, token, device_id, platform, created_at, updated_at)
+     VALUES (?, ?, ?, ?, NOW(), NOW())
+     ON DUPLICATE KEY UPDATE
+       token = VALUES(token),
+       device_id = VALUES(device_id),
+       platform = VALUES(platform),
+       updated_at = NOW()`,
+    [userId, token, deviceId || null, platform || null]
+  );
+
+  return { message: 'FCM token saved successfully' };
+}
+
+async function removeFcmToken({ userId, token }) {
+  if (!userId || !token) throw httpError(400, 'userId and token are required');
+  await query('DELETE FROM user_fcm_tokens WHERE user_id = ? AND token = ?', [userId, token]);
+  return { message: 'FCM token removed successfully' };
+}
+
 module.exports = {
   registerUser,
   verifyEmailOtpService,
@@ -419,4 +447,6 @@ module.exports = {
   verifyForgotPasswordOtp,
   getUserProfile,
   updateUserProfile,
+  saveFcmToken,
+  removeFcmToken,
 };

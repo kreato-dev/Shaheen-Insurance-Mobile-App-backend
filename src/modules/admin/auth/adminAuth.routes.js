@@ -8,4 +8,7 @@ router.post('/logout', requireAdmin, adminSession(), ctrl.logout);
 router.get('/me', requireAdmin, adminSession(), ctrl.me);
 router.post('/change-password', requireAdmin, adminSession(), ctrl.changePassword);
 
+router.post('/fcm-token', requireAdmin, adminSession(), ctrl.saveFcmToken);
+router.delete('/fcm-token', requireAdmin, adminSession(), ctrl.removeFcmToken);
+
 module.exports = router;
