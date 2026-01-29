@@ -64,6 +64,9 @@ async function sendMulticast(tokens, title, body, data, type) {
     notification: { title, body },
     data: stringData,
     tokens: tokens,
+    fcmOptions: {
+      analyticsLabel: type === 'ADMIN' ? 'admin_notif' : 'user_notif',
+    },
   };
 
   const response = await admin.messaging().sendEachForMulticast(message);
