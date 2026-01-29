@@ -10,6 +10,7 @@ const policyRenewralRoutes = require('./policies/admin.policy.renewal.routes')
 const adminMotorClaimsRoutes = require('./claims/motor/admin.claim.motor.routes');
 const notificationsRoutes = require('./notifications/admin.notification.routes');
 const adminSupportRoutes = require('./support/admin.support.routes');
+const adminContentRoutes = require('./content/admin.content.routes');
 
 
 router.use('/auth', adminAuthRoutes );
@@ -27,4 +28,6 @@ router.use('/claims/motor', adminMotorClaimsRoutes);
 router.use('/notifications', notificationsRoutes);
 
 router.use('/support', adminSupportRoutes);
+
+router.use('/content', adminContentRoutes);
 module.exports = router;

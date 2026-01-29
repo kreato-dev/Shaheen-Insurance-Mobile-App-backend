@@ -2234,6 +2234,36 @@
           }
         }
       ]
+    },
+    {
+      "name": "Content",
+      "item": [
+        {
+          "name": "Get Active Banners",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/content/banners?type=BANNER",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "content",
+                "banners"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "BANNER",
+                  "description": "BANNER or PROMO (optional)"
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [

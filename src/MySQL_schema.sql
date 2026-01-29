@@ -1226,6 +1226,23 @@ CREATE TABLE notification_send_logs (
     ON DELETE SET NULL ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 11) Content  Table(BANNER + PROMO)
+CREATE TABLE content_banners (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  title VARCHAR(150) NULL,
+  description TEXT NULL,
+  image_path VARCHAR(255) NOT NULL,
+  type ENUM('BANNER', 'PROMO') NOT NULL DEFAULT 'BANNER',
+  status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  sort_order INT DEFAULT 0,
+  created_by_admin_id INT NULL,
+  updated_by_admin_id INT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_content_created_by FOREIGN KEY (created_by_admin_id) REFERENCES admins(id) ON DELETE SET NULL,
+  CONSTRAINT fk_content_updated_by FOREIGN KEY (updated_by_admin_id) REFERENCES admins(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ADMIN DASHBOARD
 -- 1) Travel Admin View for Unified Proposals Inbox
 CREATE OR REPLACE VIEW vw_travel_proposals_admin AS

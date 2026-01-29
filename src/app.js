@@ -16,6 +16,7 @@ const claimRoutes = require('./modules/claim/claim.motor.routes');
 const proposalsRoutes = require('./modules/proposals/proposals.routes');
 const notificationRoutes = require('./modules/notifications/notification.routes');
 const supportRoutes = require('./modules/support/support.routes');
+const contentRoutes = require('./modules/content/content.routes');
 
 // api: get(public) post,put,delete(admin)
 const dataRoutes = require('./modules/admin/data/admin.data.routes');
@@ -51,6 +52,7 @@ console.log('Static uploads dir for pictures:', projectRoot);
 // Public routes
 app.use('/api/auth', authRoutes);
 app.use('/api/data', dataRoutes);
+app.use('/api/content', contentRoutes); // Public content (banners)
 
 // Protected customer routes (example, you can apply per-route instead)
 app.use('/api/user', authMiddleware, userRoutes);

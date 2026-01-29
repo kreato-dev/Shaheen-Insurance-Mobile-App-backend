@@ -63,6 +63,10 @@
       "value": "1"
     },
     {
+      "key": "bannerId",
+      "value": "1"
+    },
+    {
       "key": "bodyTypeId",
       "value": "1"
     }
@@ -1849,6 +1853,112 @@
               }
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Admin - Content Management",
+      "item": [
+        {
+          "name": "List Banners",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/content?type=BANNER&status=active&page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "content"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "BANNER",
+                  "description": "BANNER or PROMO"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "active or inactive"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Banner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "New Promo", "type": "text" },
+                { "key": "description", "value": "Get 50% off", "type": "text" },
+                { "key": "type", "value": "PROMO", "type": "text" },
+                { "key": "status", "value": "active", "type": "text" },
+                { "key": "sort_order", "value": "1", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/admin/content"
+          }
+        },
+        {
+          "name": "Update Banner",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "title", "value": "Updated Promo", "type": "text" },
+                { "key": "status", "value": "inactive", "type": "text" },
+                { "key": "image", "type": "file", "src": "" }
+              ]
+            },
+            "url": "{{baseUrl}}/api/admin/content/{{bannerId}}"
+          }
+        },
+        {
+          "name": "Delete Banner",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/content/{{bannerId}}"
+          }
         }
       ]
     }
