@@ -291,6 +291,7 @@ CREATE TABLE motor_proposals (
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
   policy_schedule_path VARCHAR(255) NULL,
+  cover_note_path VARCHAR(255) NULL,
 
   -- policy renewal module
   renewal_document_path VARCHAR(255) NULL,
@@ -527,6 +528,7 @@ CREATE TABLE travel_domestic_proposals (
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
   policy_schedule_path VARCHAR(255) NULL,
+  cover_note_path VARCHAR(255) NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -649,6 +651,7 @@ CREATE TABLE travel_huj_proposals (
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
   policy_schedule_path VARCHAR(255) NULL,
+  cover_note_path VARCHAR(255) NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -775,6 +778,7 @@ CREATE TABLE travel_international_proposals (
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
   policy_schedule_path VARCHAR(255) NULL,
+  cover_note_path VARCHAR(255) NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -905,6 +909,7 @@ CREATE TABLE travel_student_proposals (
   policy_issued_at DATETIME NULL,
   policy_expires_at DATETIME NULL,
   policy_schedule_path VARCHAR(255) NULL,
+  cover_note_path VARCHAR(255) NULL,
 
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -1288,6 +1293,7 @@ SELECT
   p.policy_no,
   p.policy_issued_at,
   p.policy_expires_at,
+  p.cover_note_path,
 
   p.created_at,
   p.updated_at
@@ -1306,6 +1312,7 @@ SELECT
   p.reupload_notes, p.reupload_required_docs,
   p.refund_status, p.refund_amount, p.refund_reference, p.refund_initiated_at, p.refund_processed_at, p.closed_at,
   p.policy_status, p.policy_no, p.policy_issued_at, p.policy_expires_at,
+  p.cover_note_path,
   p.created_at, p.updated_at
 FROM travel_huj_proposals p
 
@@ -1322,6 +1329,7 @@ SELECT
   p.reupload_notes, p.reupload_required_docs,
   p.refund_status, p.refund_amount, p.refund_reference, p.refund_initiated_at, p.refund_processed_at, p.closed_at,
   p.policy_status, p.policy_no, p.policy_issued_at, p.policy_expires_at,
+  p.cover_note_path,
   p.created_at, p.updated_at
 FROM travel_international_proposals p
 
@@ -1338,5 +1346,6 @@ SELECT
   p.reupload_notes, p.reupload_required_docs,
   p.refund_status, p.refund_amount, p.refund_reference, p.refund_initiated_at, p.refund_processed_at, p.closed_at,
   p.policy_status, p.policy_no, p.policy_issued_at, p.policy_expires_at,
+  p.cover_note_path,
   p.created_at, p.updated_at
 FROM travel_student_proposals p;

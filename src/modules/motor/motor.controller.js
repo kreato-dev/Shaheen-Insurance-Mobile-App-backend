@@ -11,13 +11,14 @@ const {
 
 async function calculatePremium(req, res, next) {
   try {
-    const { vehicleValue, year, tracker, accessoriesValue } = req.body;
+    const { vehicleValue, year, tracker, accessoriesValue, registrationProvince } = req.body;
 
     const result = await calculatePremiumService({
       vehicleValue,
       year,
       tracker,
-      accessoriesValue
+      accessoriesValue,
+      registrationProvince
     });
 
     return res.json(result);

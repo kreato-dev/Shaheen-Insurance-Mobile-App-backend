@@ -752,7 +752,8 @@
                 "api",
                 "admin",
                 "policies",
-                "issue"
+                "issue",
+                "motor"
               ]
             }
           },
@@ -808,7 +809,8 @@
                 "api",
                 "admin",
                 "policies",
-                "issue"
+                "issue",
+                "travel"
               ]
             }
           },

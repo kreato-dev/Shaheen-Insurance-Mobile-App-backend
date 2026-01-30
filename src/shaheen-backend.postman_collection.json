@@ -745,7 +745,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"vehicleValue\": 2500000,\n  \"accessoriesValue\": 0,\n  \"year\": 2020,\n  \"tracker\": true\n}"
+              "raw": "{\n  \"vehicleValue\": 2500000,\n  \"year\": 2020,\n  \"tracker\": true,\n  \"accessoriesValue\": 0,\n    \"registrationProvince\": \"SINDH\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/motor/calculate-premium",

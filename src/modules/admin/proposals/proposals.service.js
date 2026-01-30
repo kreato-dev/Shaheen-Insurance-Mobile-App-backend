@@ -365,6 +365,13 @@ async function getMotorProposalDetail(proposalId) {
     image_url: `${APP_BASE_URL}/${img.file_path}`,
   }));
 
+  const PolicyCoverNotes = (rows && rows.length > 0)
+    ? rows
+      .filter(doc => doc.cover_note_path) // Only keep rows with a value
+      .map(doc => ({
+        cover_note_path: `${APP_BASE_URL}/${doc.cover_note_path}`,
+      })) : [];
+
   const policyDocuments = (rows && rows.length > 0)
     ? rows
       .filter(doc => doc.policy_schedule_path) // Only keep rows with a value
@@ -384,6 +391,7 @@ async function getMotorProposalDetail(proposalId) {
     documents,
     KYCdocuments,
     vehicleImages,
+    PolicyCoverNotes,
     policyDocuments,
     renewalDocuments,
   };
@@ -462,6 +470,13 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     file_url: `${APP_BASE_URL}/${doc.file_path}`,
   }));
 
+  const PolicyCoverNotes = (proposalRows && proposalRows.length > 0)
+    ? proposalRows
+      .filter(doc => doc.cover_note_path) // Only keep rows with a value
+      .map(doc => ({
+        cover_note_path: `${APP_BASE_URL}/${doc.cover_note_path}`,
+      })) : [];
+
   //policy schedule path from motor_proposal
   const policyDocuments = (proposalRows && proposalRows.length > 0)
     ? proposalRows
@@ -478,6 +493,7 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
     familyMembers,
     documents,
     KYCdocuments,
+    PolicyCoverNotes,
     policyDocuments,
   };
 }
@@ -622,11 +638,11 @@ async function reviewMotorProposal(
           },
           email: notifCtx.userEmail
             ? templates.makeProposalReuploadRequiredEmail({
-                to: notifCtx.userEmail,
-                fullName: notifCtx.userName,
-                proposalLabel: `MOTOR-${notifCtx.proposalId}`,
-                reuploadNotes: notifCtx.reuploadNotes,
-              })
+              to: notifCtx.userEmail,
+              fullName: notifCtx.userName,
+              proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+              reuploadNotes: notifCtx.reuploadNotes,
+            })
             : null,
         });
       }
@@ -645,11 +661,11 @@ async function reviewMotorProposal(
           },
           email: notifCtx.userEmail
             ? templates.makeProposalRejectedRefundInitiatedEmail({
-                to: notifCtx.userEmail,
-                fullName: notifCtx.userName,
-                proposalLabel: `MOTOR-${notifCtx.proposalId}`,
-                rejectionReason: notifCtx.rejectionReason,
-              })
+              to: notifCtx.userEmail,
+              fullName: notifCtx.userName,
+              proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+              rejectionReason: notifCtx.rejectionReason,
+            })
             : null,
         });
 
@@ -668,11 +684,11 @@ async function reviewMotorProposal(
           email:
             adminEmails.length > 0
               ? templates.makeAdminRefundActionRequiredEmail({
-                  to: adminEmails.join(','),
-                  proposalLabel: `MOTOR-${notifCtx.proposalId}`,
-                  userName: notifCtx.userName,
-                  userId: notifCtx.userId,
-                })
+                to: adminEmails.join(','),
+                proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+                userName: notifCtx.userName,
+                userId: notifCtx.userId,
+              })
               : null,
         });
       }
@@ -829,11 +845,11 @@ async function reviewTravelProposal(
           },
           email: notifCtx.userEmail
             ? templates.makeProposalReuploadRequiredEmail({
-                to: notifCtx.userEmail,
-                fullName: notifCtx.userName,
-                proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
-                reuploadNotes: notifCtx.reuploadNotes,
-              })
+              to: notifCtx.userEmail,
+              fullName: notifCtx.userName,
+              proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
+              reuploadNotes: notifCtx.reuploadNotes,
+            })
             : null,
         });
       }
@@ -852,11 +868,11 @@ async function reviewTravelProposal(
           },
           email: notifCtx.userEmail
             ? templates.makeProposalRejectedRefundInitiatedEmail({
-                to: notifCtx.userEmail,
-                fullName: notifCtx.userName,
-                proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
-                rejectionReason: notifCtx.rejectionReason,
-              })
+              to: notifCtx.userEmail,
+              fullName: notifCtx.userName,
+              proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
+              rejectionReason: notifCtx.rejectionReason,
+            })
             : null,
         });
 
@@ -875,11 +891,11 @@ async function reviewTravelProposal(
           email:
             adminEmails.length > 0
               ? templates.makeAdminRefundActionRequiredEmail({
-                  to: adminEmails.join(','),
-                  proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
-                  userName: notifCtx.userName,
-                  userId: notifCtx.userId,
-                })
+                to: adminEmails.join(','),
+                proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
+                userName: notifCtx.userName,
+                userId: notifCtx.userId,
+              })
               : null,
         });
       }

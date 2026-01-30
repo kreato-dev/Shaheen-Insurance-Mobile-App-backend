@@ -1,9 +1,14 @@
 // src/modules/payment/payment.service.js
 const crypto = require('crypto');
+const path = require('path');
 const { query, getConnection } = require('../../config/db');
 const { fireUser, fireAdmin } = require('../notifications/notification.service');
 const E = require('../notifications/notification.events');
 const templates = require('../notifications/notification.templates');
+const { generatePdfFromHtml } = require('../../utils/pdfGenerator');
+const { createMotorCoverNoteHtml, createTravelCoverNoteHtml } = require('../../utils/policy.templates');
+const { getMotorProposalByIdForUser } = require('../motor/motor.service');
+const { getTravelProposalByIdForUser } = require('../travel/travel.service');
 
 
 const PAYFAST_MERCHANT_ID = process.env.PAYFAST_MERCHANT_ID;
@@ -83,6 +88,40 @@ function getTravelProposalTableBySubtype(subtypeEnum) {
       return 'travel_student_proposals';
     default:
       return null;
+  }
+}
+
+/**
+ * Helper: Generate Cover Note PDF and return relative path
+ */
+async function generateAndSaveCoverNote(proposalType, proposalId, userId, travelSubtype = null) {
+  try {
+    let htmlContent = '';
+    let fileName = '';
+
+    if (proposalType === 'MOTOR') {
+      const fullData = await getMotorProposalByIdForUser(userId, proposalId);
+      htmlContent = createMotorCoverNoteHtml({ proposalId, ...fullData });
+      fileName = `Motor_CoverNote_${proposalId}_${Date.now()}.pdf`;
+    } else if (proposalType === 'TRAVEL') {
+      const fullData = await getTravelProposalByIdForUser(userId, travelSubtype, proposalId);
+      htmlContent = createTravelCoverNoteHtml({ proposalId, ...fullData });
+      fileName = `Travel_CoverNote_${proposalId}_${Date.now()}.pdf`;
+    }
+
+    if (!htmlContent) return null;
+
+    // Save to uploads/policies
+    const relativePath = `uploads/policies/${fileName}`;
+    // Go up 3 levels from src/modules/payment to root, then into uploads/policies
+    const absolutePath = path.join(__dirname, '../../../uploads/policies', fileName);
+
+    await generatePdfFromHtml(htmlContent, absolutePath);
+
+    return relativePath;
+  } catch (err) {
+    console.error('Error generating cover note:', err);
+    return null; // Don't fail the payment if PDF fails
   }
 }
 
@@ -290,41 +329,49 @@ async function handleWebhookService(payload) {
     );
 
     // On success, mark proposal as paid and move to pending_review
+    let coverNotePath = null;
     if (newStatus === 'SUCCESS') {
       if (payment.application_type === 'MOTOR') {
+        coverNotePath = await generateAndSaveCoverNote('MOTOR', payment.application_id, payment.user_id);
         await conn.execute(
           `UPDATE motor_proposals
               SET payment_status = 'paid',
                   paid_at = NOW(),
                   review_status = 'pending_review',
+                  cover_note_path = ?,
                   submitted_at = COALESCE(submitted_at, NOW()),
                   updated_at = NOW()
             WHERE id = ?`,
-          [payment.application_id]
+          [coverNotePath, payment.application_id]
         );
       } else if (payment.application_type === 'TRAVEL') {
         const subtypeEnum = payment.application_subtype;
         const table = getTravelProposalTableBySubtype(subtypeEnum);
         if (!table) throw httpError(400, 'Invalid travel subtype on payment record');
 
+        coverNotePath = await generateAndSaveCoverNote('TRAVEL', payment.application_id, payment.user_id, subtypeEnum);
         await conn.execute(
           `UPDATE ${table}
               SET payment_status = 'paid',
                   paid_at = NOW(),
                   review_status = 'pending_review',
+                  cover_note_path = ?,
                   submitted_at = COALESCE(submitted_at, NOW()),
                   updated_at = NOW()
             WHERE id = ?`,
-          [payment.application_id]
+          [coverNotePath, payment.application_id]
         );
       }
     }
 
     await conn.commit();
 
+    const coverNoteUrl = coverNotePath ? `${APP_BASE_URL}/${coverNotePath}` : null;
+
     return {
       paymentId,
       status: newStatus,
+      coverNoteUrl,
     };
   } catch (err) {
     await conn.rollback();
@@ -342,6 +389,7 @@ async function markPaymentSuccessDev({ paymentId }) {
 
   // ✅ we'll collect needed info during the transaction
   let notifCtx = null;
+  let coverNotePath = null;
 
   try {
     await conn.beginTransaction();
@@ -369,14 +417,17 @@ async function markPaymentSuccessDev({ paymentId }) {
 
     // ✅ Update proposal + build notif context (user details for email)
     if (payment.application_type === 'MOTOR') {
+      coverNotePath = await generateAndSaveCoverNote('MOTOR', payment.application_id, payment.user_id);
+
       await conn.execute(
         `UPDATE motor_proposals
          SET payment_status='paid',
              paid_at=NOW(),
              review_status='pending_review',
+             cover_note_path=?,
              updated_at=NOW()
          WHERE id=?`,
-        [payment.application_id]
+        [coverNotePath, payment.application_id]
       );
 
       const [urows] = await conn.execute(
@@ -403,14 +454,17 @@ async function markPaymentSuccessDev({ paymentId }) {
       const table = getTravelProposalTableBySubtype(subtype);
       if (!table) throw httpError(400, 'Invalid travel subtype on payment record');
 
+      coverNotePath = await generateAndSaveCoverNote('TRAVEL', payment.application_id, payment.user_id, subtype);
+
       await conn.execute(
         `UPDATE ${table}
          SET payment_status='paid',
              paid_at=NOW(),
              review_status='pending_review',
+             cover_note_path=?,
              updated_at=NOW()
          WHERE id=?`,
-        [payment.application_id]
+        [coverNotePath, payment.application_id]
       );
 
       const [urows] = await conn.execute(
@@ -489,7 +543,9 @@ async function markPaymentSuccessDev({ paymentId }) {
       });
     }
 
-    return { ok: true, paymentId: id, status: 'SUCCESS' };
+    const coverNoteUrl = coverNotePath ? `${APP_BASE_URL}/${coverNotePath}` : null;
+
+    return { ok: true, paymentId: id, status: 'SUCCESS', coverNoteUrl };
   } catch (err) {
     await conn.rollback();
     throw err;

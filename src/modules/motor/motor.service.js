@@ -121,19 +121,14 @@ function validateKycDetails(kyc) {
 
 /**
  * Calculate motor premium and sum insured
- * Very simple sample logic:
- *  - sumInsured = vehicleValue + accessoriesValue (default = 0 from frontend)
- *  - baseRate = 1.4% of sumInsured
- *  - if tracker: 10% discount <- not included rightnow
- *  - if vehicle age > 5 years: +15% loading <- not included rightnow
+ * Detailed breakdown: GP, AS, ST, STS, FIF, SD
  */
-async function calculatePremiumService({ vehicleValue, year, tracker, accessoriesValue }) {
+async function calculatePremiumService({ vehicleValue, year, tracker, accessoriesValue, registrationProvince }) {
   if (!vehicleValue || !year) {
     throw httpError(400, 'vehicleValue and year are required');
   }
-
   const numericValue = Number(vehicleValue);
-  const numericaccessoriesValue = Number(accessoriesValue);
+  const numericaccessoriesValue = Number(accessoriesValue || 0);
   const numericYear = Number(year);
   if (Number.isNaN(numericValue) || numericValue <= 0) {
     throw httpError(400, 'vehicleValue must be a positive number');
@@ -148,26 +143,55 @@ async function calculatePremiumService({ vehicleValue, year, tracker, accessorie
   const nowYear = new Date().getFullYear();
   const vehicleAge = nowYear - numericYear;
 
-  let sumInsured = numericValue + numericaccessoriesValue;
-  let premium = sumInsured * 0.014; // 1.4%
+  const sumInsured = numericValue + numericaccessoriesValue;
+
+  // 1. Gross Premium (GP)
+  // SINDH: 1.12890%, Others: 1.11925% (punjab, kpk etc )
+  const prov = String(registrationProvince || '').toUpperCase();
+  let gpRate = 0.0111925; //1.11925%
+  if (prov === 'SINDH') {
+    gpRate = 0.0112890; //1.12890%
+  }
+
+  const gp = sumInsured * gpRate;
+
+  // 2. Admin Surcharge (AS) = 5% of GP
+  const as = 0.05 * gp;
+
+  // 3. Sub-Total (ST) = GP + AS
+  const st = gp + as;
+
+  // 4. Sales Tax on Services (STS)
+  // Sindh: 15%, Others: 16%
+  let taxRate = 0.16;
+  if (prov === 'SINDH') {
+    taxRate = 0.15;
+  }
+  const sts = taxRate * st;
+
+  // 5. Federal Insurance Fee (FIF) = 1% of ST
+  const fif = 0.01 * st;
+
+  // 6. Stamp Duty (SD) = 500
+  const sd = 500;
+
+  // 7. Net Premium (NP)
+  const np = gp + as + sts + fif + sd;
 
   const hasTracker = tracker === true || tracker === 'true' || tracker === 1 || tracker === '1';
 
-  // Tracker discount 10%
-  // if (hasTracker) {
-  //   premium = premium * 0.9;
-  // }
-
-  // Older than 5 years → +15% loading
-  // if (vehicleAge > 5) {
-  //   premium = premium * 1.15;
-  // }
-
   return {
     sumInsured: Number(sumInsured.toFixed(2)),
-    premium: Number(premium.toFixed(2)),
+    grossPremium: Number(gp.toFixed(2)),
+    adminSurcharge: Number(as.toFixed(2)),
+    subTotal: Number(st.toFixed(2)),
+    salesTax: Number(sts.toFixed(2)),
+    federalInsuranceFee: Number(fif.toFixed(2)),
+    stampDuty: Number(sd.toFixed(2)),
+    netPremium: Number(np.toFixed(2)),
     vehicleAge,
     trackerApplied: hasTracker,
+    grossPremiumFactor: gpRate,
   };
 }
 
@@ -595,9 +619,10 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
       accessoriesValue,
       year: modelYear,
       tracker: !!trackerCompanyId,
+      registrationProvince,
     });
     sumInsured = prem.sumInsured;
-    premium = prem.premium;
+    premium = prem.netPremium;
   }
 
   const conn = await getConnection();
@@ -1402,12 +1427,6 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
     [id]
   );
 
-  const policyDocuments = rows.length
-    ? {
-      docType: "Policy Schedule Document",
-      url: buildUrl(rows[0].policy_schedule_path),
-    }
-    : null;
 
   const renewalDocuments = rows.length
     ? {
@@ -1429,6 +1448,21 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
   let requiredDocs = p.reupload_required_docs ?? null;
   if (typeof requiredDocs === 'string') {
     try { requiredDocs = JSON.parse(requiredDocs); } catch (_) { }
+  }
+
+  // Recalculate premium breakdown for display/PDF (since we only store total in DB)
+  let breakdown = {};
+  try {
+    const vehicleVal = Number(p.sum_insured) - Number(p.accessories_value || 0);
+    breakdown = await calculatePremiumService({
+      vehicleValue: vehicleVal,
+      year: p.model_year,
+      tracker: !!p.tracker_company_id,
+      accessoriesValue: p.accessories_value,
+      registrationProvince: p.registration_province,
+    });
+  } catch (e) {
+    // If calculation fails (e.g. bad data), we just won't have the breakdown
   }
 
   return {
@@ -1481,7 +1515,8 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
       policyNo: p.policy_no,
       policyIssuedAt: p.policy_issued_at,
       policyExpiresAt: p.policy_expires_at,
-      policyDocuments,
+      coverNoteUrl: buildUrl(p.cover_note_path),
+      policyScheduleUrl: buildUrl(p.policy_schedule_path),
     },
 
     renewal: {
@@ -1547,6 +1582,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
     pricing: {
       sumInsured: p.sum_insured,
       premium: p.premium,
+      breakdown, // { grossPremium, adminSurcharge, subTotal, salesTax, federalInsuranceFee, stampDuty }
     },
 
     documents: documents.map((d) => ({

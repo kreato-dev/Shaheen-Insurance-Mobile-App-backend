@@ -357,10 +357,4 @@ function registerNotificationCrons() {
 
 module.exports = {
   registerNotificationCrons,
-  // export for testCrons.js
-  runPaymentReminderTPlus3,
-  runUnpaidExpiredTPlus7,
-  runPolicyExpiringMilestones,
-  runPolicyExpired,
-  runMotorRegNoReminderWeekly,
 };
