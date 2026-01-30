@@ -5,23 +5,23 @@ const adminSession = require('../../../middleware/adminSession.middleware');
 const requirePermission = require('../../../middleware/rbac.middleware');
 
 // GET /api/admin/overview/motor-stats
-// Requires PROPOSALS:READ permission (available to all admins)
-router.get('/motor-stats', requireAdmin, adminSession(), requirePermission('PROPOSALS:READ'), ctrl.getMotorStats);
+// Requires OVERVIEW:READ permission
+router.get('/motor-stats', requireAdmin, adminSession(), requirePermission('OVERVIEW:READ_MOTOR'), ctrl.getMotorStats);
 
 // GET /api/admin/overview/travel-stats
-// Requires PROPOSALS:READ permission
-router.get('/travel-stats', requireAdmin, adminSession(), requirePermission('PROPOSALS:READ'), ctrl.getTravelStats);
+// Requires OVERVIEW:READ permission
+router.get('/travel-stats', requireAdmin, adminSession(), requirePermission('OVERVIEW:READ_TRAVEL'), ctrl.getTravelStats);
 
 // GET /api/admin/overview/revenue
-// Requires PROPOSALS:READ permission
-router.get('/revenue', requireAdmin, adminSession(), requirePermission('PROPOSALS:READ'), ctrl.getTotalRevenue);
+// Requires OVERVIEW:READ permission
+router.get('/revenue', requireAdmin, adminSession(), requirePermission('OVERVIEW:READ_MOTOR', 'OVERVIEW:READ_TRAVEL'), ctrl.getTotalRevenue);
 
 // GET /api/admin/overview/revenue-chart
-// Requires PROPOSALS:READ permission
-router.get('/revenue-chart', requireAdmin, adminSession(), requirePermission('PROPOSALS:READ'), ctrl.getRevenueChartData);
+// Requires OVERVIEW:READ permission
+router.get('/revenue-chart', requireAdmin, adminSession(), requirePermission('OVERVIEW:READ_MOTOR', 'OVERVIEW:READ_TRAVEL'), ctrl.getRevenueChartData);
 
 // GET /api/admin/overview/user-stats
-// Requires USERS:READ permission
-router.get('/user-stats', requireAdmin, adminSession(), requirePermission('USERS:READ'), ctrl.getUserStats);
+// Requires OVERVIEW:READ permission
+router.get('/user-stats', requireAdmin, adminSession(), requirePermission('OVERVIEW:READ_MOTOR', 'OVERVIEW:READ_TRAVEL'), ctrl.getUserStats);
 
 module.exports = router;

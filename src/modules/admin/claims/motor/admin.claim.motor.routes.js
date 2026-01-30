@@ -3,14 +3,12 @@ const router = express.Router();
 
 const controller = require('./admin.claim.motor.controller');
 
-// Plug your admin auth + RBAC here:
-// router.use(requireAdminAuth);
-// router.get('/', requirePermission('CLAIMS:READ'), controller.listClaims);
-// router.get('/:claimId', requirePermission('CLAIMS:READ'), controller.claimDetail);
-// router.patch('/:claimId/review', requirePermission('CLAIMS:REVIEW'), controller.reviewClaim);
+const requireAdmin = require('../../../../middleware/requireAdmin.middleware');
+const adminSession = require('../../../../middleware/adminSession.middleware');
+const requirePermission = require('../../../../middleware/rbac.middleware');
 
-router.get('/', controller.listClaims);
-router.get('/:claimId', controller.claimDetail);
-router.patch('/:claimId/review', controller.reviewClaim);
+router.get('/', requireAdmin, adminSession(), requirePermission('CLAIMS:READ_MOTOR'), controller.listClaims);
+router.get('/:claimId', requireAdmin, adminSession(), requirePermission('CLAIMS:READ_MOTOR'), controller.claimDetail);
+router.patch('/:claimId/review', requireAdmin, adminSession(), requirePermission('CLAIMS:REVIEW_MOTOR'), controller.reviewClaim);
 
 module.exports = router;

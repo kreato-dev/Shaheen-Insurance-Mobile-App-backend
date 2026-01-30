@@ -36,46 +36,47 @@ router.get('/travel-destinations', dataController.getTravelDestinations);
  * ADMIN C-U-D Routes
  */
 
-const adminAuth = [requireAdmin, adminSession(), requirePermission('DATA:MANAGE')];
+const authCommon = [requireAdmin, adminSession(), requirePermission('DATA:MANAGE_COMMON')];
+const authMotor = [requireAdmin, adminSession(), requirePermission('DATA:MANAGE_MOTOR')];
 
 // --- Cities ---
-router.post('/cities', adminAuth, dataController.createCity);
-router.put('/cities/:id', adminAuth, dataController.updateCity);
-router.delete('/cities/:id', adminAuth, dataController.deleteCity);
+router.post('/cities', authCommon, dataController.createCity);
+router.put('/cities/:id', authCommon, dataController.updateCity);
+router.delete('/cities/:id', authCommon, dataController.deleteCity);
 
 // --- Countries ---
-// router.post('/countries', adminAuth, dataController.createCountry);
-// router.put('/countries/:id', adminAuth, dataController.updateCountry);
-// router.delete('/countries/:id', adminAuth, dataController.deleteCountry);
+// router.post('/countries', authCommon, dataController.createCountry);
+// router.put('/countries/:id', authCommon, dataController.updateCountry);
+// router.delete('/countries/:id', authCommon, dataController.deleteCountry);
 
 // --- Vehicle Makes ---
-router.post('/vehicle-makes', adminAuth, dataController.createVehicleMake);
-router.put('/vehicle-makes/:id', adminAuth, dataController.updateVehicleMake);
-router.delete('/vehicle-makes/:id', adminAuth, dataController.deleteVehicleMake);
+router.post('/vehicle-makes', authMotor, dataController.createVehicleMake);
+router.put('/vehicle-makes/:id', authMotor, dataController.updateVehicleMake);
+router.delete('/vehicle-makes/:id', authMotor, dataController.deleteVehicleMake);
 
 // --- Vehicle Submakes ---
-router.post('/vehicle-submakes', adminAuth, dataController.createVehicleSubmake);
-router.put('/vehicle-submakes/:id', adminAuth, dataController.updateVehicleSubmake);
-router.delete('/vehicle-submakes/:id', adminAuth, dataController.deleteVehicleSubmake);
+router.post('/vehicle-submakes', authMotor, dataController.createVehicleSubmake);
+router.put('/vehicle-submakes/:id', authMotor, dataController.updateVehicleSubmake);
+router.delete('/vehicle-submakes/:id', authMotor, dataController.deleteVehicleSubmake);
 
 // --- Vehicle Variants ---
-router.post('/vehicle-variants', adminAuth, dataController.createVehicleVariant);
-router.put('/vehicle-variants/:id', adminAuth, dataController.updateVehicleVariant);
-router.delete('/vehicle-variants/:id', adminAuth, dataController.deleteVehicleVariant);
+router.post('/vehicle-variants', authMotor, dataController.createVehicleVariant);
+router.put('/vehicle-variants/:id', authMotor, dataController.updateVehicleVariant);
+router.delete('/vehicle-variants/:id', authMotor, dataController.deleteVehicleVariant);
 
 // --- Vehicle Body Types ---
-router.post('/vehicle-body-types', adminAuth, dataController.createVehicleBodyType);
-router.put('/vehicle-body-types/:id', adminAuth, dataController.updateVehicleBodyType);
-router.delete('/vehicle-body-types/:id', adminAuth, dataController.deleteVehicleBodyType);
+router.post('/vehicle-body-types', authMotor, dataController.createVehicleBodyType);
+router.put('/vehicle-body-types/:id', authMotor, dataController.updateVehicleBodyType);
+router.delete('/vehicle-body-types/:id', authMotor, dataController.deleteVehicleBodyType);
 
 // --- Tracker Companies ---
-router.post('/tracker-companies', adminAuth, dataController.createTrackerCompany);
-router.put('/tracker-companies/:id', adminAuth, dataController.updateTrackerCompany);
-router.delete('/tracker-companies/:id', adminAuth, dataController.deleteTrackerCompany);
+router.post('/tracker-companies', authMotor, dataController.createTrackerCompany);
+router.put('/tracker-companies/:id', authMotor, dataController.updateTrackerCompany);
+router.delete('/tracker-companies/:id', authMotor, dataController.deleteTrackerCompany);
 
 // --- Travel Destinations ---
-// router.post('/travel-destinations', adminAuth, dataController.createTravelDestination);
-// router.put('/travel-destinations/:id', adminAuth, dataController.updateTravelDestination);
-// router.delete('/travel-destinations/:id', adminAuth, dataController.deleteTravelDestination);
+// router.post('/travel-destinations', authTravel, dataController.createTravelDestination);
+// router.put('/travel-destinations/:id', authTravel, dataController.updateTravelDestination);
+// router.delete('/travel-destinations/:id', authTravel, dataController.deleteTravelDestination);
 
 module.exports = router;

@@ -7,15 +7,22 @@ const requirePermission = require('../../../middleware/rbac.middleware');
 const adminPolicyController = require('./admin.policy.controller');
 const { uploadPolicySchedule } = require('./admin.policy.upload');
 
-// NOTE: add requireAdminAuth + RBAC here
 router.post(
-    '/issue',
+    '/issue/motor',
     requireAdmin,
     adminSession(),
-    // Assuming 'POLICIES:ISSUE' is the correct permission. Adjust if needed.
-    requirePermission('POLICIES:ISSUE'),
+    requirePermission('POLICIES:ISSUE_MOTOR'),
     uploadPolicySchedule,
-    adminPolicyController.issuePolicy
+    adminPolicyController.issuePolicyMotor
+);
+
+router.post(
+    '/issue/travel',
+    requireAdmin,
+    adminSession(),
+    requirePermission('POLICIES:ISSUE_TRAVEL'),
+    uploadPolicySchedule,
+    adminPolicyController.issuePolicyTravel
 );
 
 module.exports = router;

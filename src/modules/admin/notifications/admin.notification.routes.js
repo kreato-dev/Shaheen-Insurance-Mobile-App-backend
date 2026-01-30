@@ -12,7 +12,7 @@ router.get(
     '/',
     requireAdmin,
     adminSession(),
-    requirePermission('PROPOSALS:READ'),
+    requirePermission('NOTIFICATIONS:READ'),
     c.listAdmin
 );
 
@@ -20,7 +20,7 @@ router.patch(
     '/:id/read',
     requireAdmin,
     adminSession(),
-    requirePermission('PROPOSALS:REVIEW'),
+    requirePermission('NOTIFICATIONS:READ'),
     c.readOneAdmin
 );
 
@@ -28,7 +28,7 @@ router.patch(
     '/read-all',
     requireAdmin,
     adminSession(),
-    requirePermission('PROPOSALS:REVIEW'),
+    requirePermission('NOTIFICATIONS:READ'),
     c.readAllAdmin
 );
 

@@ -10,7 +10,7 @@ router.get(
   '/',
   requireAdmin,
   adminSession(),
-  requirePermission('PROPOSALS:READ'),
+  requirePermission(['PROPOSALS:READ_MOTOR', 'PROPOSALS:READ_TRAVEL']),
   controller.listUnifiedProposals
 );
 
@@ -19,7 +19,7 @@ router.get(
   '/motor/:proposalId',
   requireAdmin,
   adminSession(),
-  requirePermission('PROPOSALS:READ'),
+  requirePermission('PROPOSALS:READ_MOTOR'),
   controller.getMotorProposalDetail
 );
 
@@ -28,7 +28,7 @@ router.get(
   '/travel/:travelSubtype/:proposalId',
   requireAdmin,
   adminSession(),
-  requirePermission('PROPOSALS:READ'),
+  requirePermission('PROPOSALS:READ_TRAVEL'),
   controller.getTravelProposalDetail
 );
 
@@ -37,7 +37,7 @@ router.patch(
   '/motor/:proposalId/review',
   requireAdmin,
   adminSession(),
-  requirePermission('PROPOSALS:REVIEW'),
+  requirePermission('PROPOSALS:REVIEW_MOTOR'),
   controller.reviewMotorProposal
 );
 
@@ -46,7 +46,7 @@ router.patch(
   '/travel/:travelSubtype/:proposalId/review',
   requireAdmin,
   adminSession(),
-  requirePermission('PROPOSALS:REVIEW'),
+  requirePermission('PROPOSALS:REVIEW_TRAVEL'),
   controller.reviewTravelProposal
 );
 

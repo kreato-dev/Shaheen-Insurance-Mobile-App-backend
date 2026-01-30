@@ -4,6 +4,13 @@ const { validateReviewActionBody } = require('./proposals.validators');
 // phase 1
 async function listUnifiedProposals(req, res, next) {
   try {
+    // RBAC: Enforce type filter for domain-specific admins
+    if (req.admin?.role === 'MOTOR_ADMIN') {
+      req.query.type = 'MOTOR';
+    } else if (req.admin?.role === 'TRAVEL_ADMIN') {
+      req.query.type = 'TRAVEL';
+    }
+
     const result = await service.getUnifiedProposals(req.query);
     return res.json(result);
   } catch (err) {

@@ -13,7 +13,7 @@ router.post(
   '/motor/:proposalId/renewal',
   requireAdmin,
   adminSession(),
-  requirePermission('POLICIES:RENEWAL_SEND'),
+  requirePermission('POLICIES:RENEWAL_SEND_MOTOR'),
   uploadRenewalDoc,
   sendMotorRenewal
 );

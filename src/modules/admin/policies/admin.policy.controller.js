@@ -29,4 +29,14 @@ async function issuePolicy(req, res, next) {
   }
 }
 
-module.exports = { issuePolicy };
+async function issuePolicyMotor(req, res, next) {
+  req.body.proposalType = 'MOTOR';
+  return issuePolicy(req, res, next);
+}
+
+async function issuePolicyTravel(req, res, next) {
+  req.body.proposalType = 'TRAVEL';
+  return issuePolicy(req, res, next);
+}
+
+module.exports = { issuePolicy, issuePolicyMotor, issuePolicyTravel };
