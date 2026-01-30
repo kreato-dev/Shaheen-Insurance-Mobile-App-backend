@@ -23,7 +23,7 @@ const dataRoutes = require('./modules/admin/data/admin.data.routes');
 
 // Admin
 const adminRoutes = require('./modules/admin/admin.routes');
-const adminAuthRoutes = require('./modules/admin/auth/adminAuth.routes');
+
 
 const { errorHandler } = require('./middleware/errorHandler');
 const { authMiddleware } = require('./middleware/auth');
@@ -67,7 +67,6 @@ app.use('/api/support', authMiddleware, supportRoutes);
 app.use('/api/payment', authMiddleware, paymentRoutes);
 
 // Admin routes (new)
-app.use('/api/admin/auth', adminAuthRoutes);
 app.use('/api/admin', adminRoutes);
 
 

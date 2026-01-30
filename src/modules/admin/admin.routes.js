@@ -12,6 +12,8 @@ const adminMotorClaimsRoutes = require('./claims/motor/admin.claim.motor.routes'
 const notificationsRoutes = require('./notifications/admin.notification.routes');
 const adminSupportRoutes = require('./support/admin.support.routes');
 const adminContentRoutes = require('./content/admin.content.routes');
+const manageAdminRoutes = require('./users/adminUsers.routes');
+
 
 
 router.use('/auth', adminAuthRoutes );
@@ -33,4 +35,7 @@ router.use('/notifications', notificationsRoutes);
 router.use('/support', adminSupportRoutes);
 
 router.use('/content', adminContentRoutes);
+
+router.use('/subAdmins', manageAdminRoutes);
+
 module.exports = router;
