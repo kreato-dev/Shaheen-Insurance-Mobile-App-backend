@@ -1,4 +1,5 @@
 const { query } = require('../../config/db');
+const { deleteFileIfExists } = require('../../utils/fileCleanup');
 
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
 
@@ -80,10 +81,18 @@ async function updateUserProfile(userId, data) {
  * Update profile picture path
  */
 async function updateProfilePicture(userId, filePath) {
+  // Get old profile picture
+  const rows = await query('SELECT profile_picture FROM users WHERE id = ?', [userId]);
+  const oldPath = rows[0]?.profile_picture;
+
   await query(
     `UPDATE users SET profile_picture = ?, updated_at = NOW() WHERE id = ?`,
     [filePath, userId]
   );
+
+  if (oldPath && oldPath !== filePath) {
+    await deleteFileIfExists(oldPath).catch(() => {});
+  }
 
   return getUserProfile(userId);
 }
