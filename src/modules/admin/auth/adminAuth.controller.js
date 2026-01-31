@@ -58,3 +58,21 @@ exports.changePassword = async (req, res, next) => {
     next(e);
   }
 };
+
+exports.sendForgotPasswordOtp = async (req, res, next) => {
+  try {
+    const result = await svc.sendForgotPasswordOtp(req.body);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};
+
+exports.resetPasswordWithOtp = async (req, res, next) => {
+  try {
+    const result = await svc.resetPasswordWithOtp(req.body);
+    res.json(result);
+  } catch (e) {
+    next(e);
+  }
+};

@@ -4,6 +4,8 @@ const jwt = require('jsonwebtoken');
 const { query } = require('../../../config/db');
 const { randomToken, sha256Hex } = require('../../../utils/crypto');
 const { logAdminAction } = require('../adminlogs/admin.logs.service');
+const { createEmailOtp, verifyEmailOtp } = require('../../auth/otp.service');
+const { sendOtpEmail } = require('../../../utils/mailer');
 
 const ADMIN_SESSION_DAYS = 7;
 
@@ -151,4 +153,66 @@ exports.removeAdminFcmToken = async ({ adminId, token }) => {
   if (!adminId || !token) throw httpError(400, 'adminId and token are required');
   await query('DELETE FROM admin_fcm_tokens WHERE admin_id = ? AND token = ?', [adminId, token]);
   return { message: 'Admin FCM token removed successfully' };
+};
+
+exports.sendForgotPasswordOtp = async ({ email }) => {
+  if (!email) throw httpError(400, 'Email is required');
+
+  const rows = await query(`SELECT id, full_name, email, status FROM admins WHERE email = ? LIMIT 1`, [email]);
+  if (!rows.length) throw httpError(404, 'Admin not found');
+  const admin = rows[0];
+
+  if (admin.status !== 'active') throw httpError(403, 'Admin account is inactive');
+
+  const expiresMinutes = 10;
+  const { otp, expiresAt } = await createEmailOtp({
+    mobile: null,
+    email: admin.email,
+    purpose: 'admin_forgot_password',
+    expiresMinutes,
+  });
+
+  await sendOtpEmail({
+    to: admin.email,
+    otp,
+    purpose: 'admin_forgot_password',
+    expiresMinutes,
+  });
+
+  await logAdminAction({
+    adminId: admin.id,
+    module: 'AUTH',
+    action: 'FORGOT_PASSWORD_INIT',
+    targetId: admin.id,
+    details: { email: admin.email },
+  });
+
+  return { message: 'OTP sent to email', expiresAt };
+};
+
+exports.resetPasswordWithOtp = async ({ email, otp, newPassword }) => {
+  if (!email || !otp || !newPassword) throw httpError(400, 'Email, OTP, and new password are required');
+  if (String(newPassword).length < 8) throw httpError(400, 'Password must be at least 8 characters');
+
+  await verifyEmailOtp({ email, otp, purpose: 'admin_forgot_password' });
+
+  const rows = await query(`SELECT id FROM admins WHERE email = ? LIMIT 1`, [email]);
+  if (!rows.length) throw httpError(404, 'Admin not found');
+  const admin = rows[0];
+
+  const hash = await bcrypt.hash(newPassword, 10);
+  await query(`UPDATE admins SET password_hash = ? WHERE id = ?`, [hash, admin.id]);
+  
+  // Revoke all sessions
+  await query(`UPDATE admin_sessions SET revoked_at = NOW() WHERE admin_id = ? AND revoked_at IS NULL`, [admin.id]);
+
+  await logAdminAction({
+    adminId: admin.id,
+    module: 'AUTH',
+    action: 'FORGOT_PASSWORD_RESET',
+    targetId: admin.id,
+    details: { success: true },
+  });
+
+  return { message: 'Password reset successfully' };
 };

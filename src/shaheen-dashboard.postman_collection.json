@@ -108,6 +108,40 @@
           ]
         },
         {
+          "name": "Forgot Password - Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/auth/forgot-password/otp",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@shaheen.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Forgot Password - Reset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/admin/auth/forgot-password/reset",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@shaheen.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewAdmin@123\"\n}"
+            }
+          }
+        },
+        {
           "name": "Me (Admin)",
           "request": {
             "method": "GET",
@@ -2302,6 +2336,58 @@
               }
             ],
             "url": "{{baseUrl}}/api/admin/subAdmins/{{subAdminId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin - Activity Logs",
+      "item": [
+        {
+          "name": "Get Admin Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/logs?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "logs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "module",
+                  "value": "",
+                  "description": "AUTH, MOTOR, TRAVEL, USERS, ADMINS, DATA, CONTENT, SUPPORT"
+                },
+                {
+                  "key": "action",
+                  "value": "",
+                  "description": "LOGIN, CREATE_ADMIN, etc."
+                },
+                {
+                  "key": "adminId",
+                  "value": ""
+                }
+              ]
+            }
           }
         }
       ]

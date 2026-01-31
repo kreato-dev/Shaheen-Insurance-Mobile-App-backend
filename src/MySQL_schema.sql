@@ -121,7 +121,7 @@ CREATE TABLE otp_codes (
   mobile VARCHAR(30) NOT NULL,
   email VARCHAR(150) NULL,
   otp VARCHAR(10) NOT NULL,
-  purpose ENUM('forgot_password','email_verify','login','other') DEFAULT 'forgot_password',
+  purpose ENUM('forgot_password','email_verify','login','admin_forgot_password','other') DEFAULT 'forgot_password',
   expires_at DATETIME NOT NULL,
   used_at DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
