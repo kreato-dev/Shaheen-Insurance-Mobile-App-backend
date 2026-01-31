@@ -102,6 +102,7 @@ CREATE TABLE users (
   dob DATE NULL,
   nationality INT NULL,
   gender ENUM('male','female','other') NULL,
+  profile_picture VARCHAR(255) NULL,
   status ENUM('active','inactive') DEFAULT 'active',
   role ENUM('customer') NOT NULL DEFAULT 'customer',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

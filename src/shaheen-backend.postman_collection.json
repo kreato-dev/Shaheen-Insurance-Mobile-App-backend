@@ -340,7 +340,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"fullName\": \"Test User Updated\",\n  \"email\": \"updated@example.com\",\n  \"address\": \"Gulshan-e-Iqbal Block 5\",\n  \"cityId\": 1,\n  \"cnic\": \"42101-1234567-1\",\n  \"cnicExpiry\": \"2030-12-31\",\n  \"dob\": \"1995-05-10\",\n  \"nationality\": \"Pakistani\",\n  \"gender\": \"male\"\n}"
+              "raw": "{\n  \"fullName\": \"Test User Updated\",\n  \"email\": \"updated@example.com\",\n  \"address\": \"Gulshan-e-Iqbal Block 5\",\n  \"cityId\": 1,\n  \"cnic\": \"42101-1234567-1\",\n  \"cnicExpiry\": \"2030-12-31\",\n  \"dob\": \"1995-05-10\",\n  \"nationality\": 131,\n  \"gender\": \"male\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/user/profile",
@@ -351,6 +351,40 @@
                 "api",
                 "user",
                 "profile"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Profile Picture",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "profilePicture",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/user/profile-picture",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "user",
+                "profile-picture"
               ]
             }
           }

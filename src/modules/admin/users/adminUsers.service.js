@@ -72,8 +72,15 @@ async function createAdmin(data) {
     throw httpError(400, 'Full name, email, password, and role are required');
   }
 
+  if (role === 'SUPER_ADMIN') {
+    throw httpError(403, 'Cannot create an admin with SUPER_ADMIN role');
+  }
+
   if (role === 'CEO') {
-    throw httpError(403, 'Cannot create an admin with CEO role');
+    const ceoExists = await query(`SELECT id FROM admins WHERE role = 'CEO' LIMIT 1`);
+    if (ceoExists.length > 0) {
+      throw httpError(403, 'A CEO account already exists. Only one CEO is allowed.');
+    }
   }
 
   // Check duplicates
@@ -112,6 +119,9 @@ async function updateAdmin(id, data) {
   // Prevent promoting to CEO
   if (role === 'CEO') {
     throw httpError(403, 'Cannot set role to CEO');
+  }
+  if (role === 'SUPER_ADMIN') {
+    throw httpError(403, 'Cannot set role to SUPER_ADMIN');
   }
 
   // 2. Check duplicates if email/mobile changed
@@ -157,9 +167,12 @@ async function deleteAdmin(id, currentAdminId) {
 
   const targetRows = await query(`SELECT role FROM admins WHERE id = ?`, [id]);
   if (!targetRows.length) throw httpError(404, 'Admin not found');
-  
+
   if (targetRows[0].role === 'CEO') {
     throw httpError(403, 'Cannot delete CEO account');
+  }
+  if (targetRows[0].role === 'SUPER_ADMIN') {
+    throw httpError(403, 'Cannot delete SUPER_ADMIN account');
   }
 
   await query(`DELETE FROM admins WHERE id = ?`, [id]);
