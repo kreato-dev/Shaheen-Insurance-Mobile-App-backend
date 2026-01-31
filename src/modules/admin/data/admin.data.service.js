@@ -1,4 +1,5 @@
 const { query } = require('../../../config/db');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 function httpError(status, message) {
     const err = new Error(message);
@@ -14,31 +15,34 @@ function handleDbError(e, entity) {
 }
 
 // --- Cities ---
-async function createCity({ name }) {
+async function createCity({ name }, adminId) {
     if (!name) throw httpError(400, 'City name is required');
     try {
         const result = await query('INSERT INTO cities (name) VALUES (?)', [name]);
+        await logAdminAction({ adminId, module: 'DATA', action: 'CREATE_CITY', targetId: result.insertId, details: { name } });
         return { id: result.insertId, name };
     } catch (e) {
         handleDbError(e, 'City');
     }
 }
 
-async function updateCity(id, { name }) {
+async function updateCity(id, { name }, adminId) {
     if (!name) throw httpError(400, 'City name is required');
     try {
         const result = await query('UPDATE cities SET name = ? WHERE id = ?', [name, id]);
         if (result.affectedRows === 0) throw httpError(404, 'City not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'UPDATE_CITY', targetId: id, details: { name } });
         return { id: Number(id), name };
     } catch (e) {
         handleDbError(e, 'City');
     }
 }
 
-async function deleteCity(id) {
+async function deleteCity(id, adminId) {
     try {
         const result = await query('DELETE FROM cities WHERE id = ?', [id]);
         if (result.affectedRows === 0) throw httpError(404, 'City not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'DELETE_CITY', targetId: id });
         return { success: true };
     } catch (e) {
         handleDbError(e, 'City');
@@ -46,31 +50,34 @@ async function deleteCity(id) {
 }
 
 // --- Vehicle Makes ---
-async function createVehicleMake({ name }) {
+async function createVehicleMake({ name }, adminId) {
     if (!name) throw httpError(400, 'Vehicle make name is required');
     try {
         const result = await query('INSERT INTO vehicle_makes (name) VALUES (?)', [name]);
+        await logAdminAction({ adminId, module: 'DATA', action: 'CREATE_MAKE', targetId: result.insertId, details: { name } });
         return { id: result.insertId, name };
     } catch (e) {
         handleDbError(e, 'Vehicle make');
     }
 }
 
-async function updateVehicleMake(id, { name }) {
+async function updateVehicleMake(id, { name }, adminId) {
     if (!name) throw httpError(400, 'Vehicle make name is required');
     try {
         const result = await query('UPDATE vehicle_makes SET name = ? WHERE id = ?', [name, id]);
         if (result.affectedRows === 0) throw httpError(404, 'Vehicle make not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'UPDATE_MAKE', targetId: id, details: { name } });
         return { id: Number(id), name };
     } catch (e) {
         handleDbError(e, 'Vehicle make');
     }
 }
 
-async function deleteVehicleMake(id) {
+async function deleteVehicleMake(id, adminId) {
     try {
         const result = await query('DELETE FROM vehicle_makes WHERE id = ?', [id]);
         if (result.affectedRows === 0) throw httpError(404, 'Vehicle make not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'DELETE_MAKE', targetId: id });
         return { success: true };
     } catch (e) {
         handleDbError(e, 'Vehicle make');
@@ -78,31 +85,34 @@ async function deleteVehicleMake(id) {
 }
 
 // --- Vehicle Submakes ---
-async function createVehicleSubmake({ name, make_id }) {
+async function createVehicleSubmake({ name, make_id }, adminId) {
     if (!name || !make_id) throw httpError(400, 'Name and make_id are required');
     try {
         const result = await query('INSERT INTO vehicle_submakes (name, make_id) VALUES (?, ?)', [name, make_id]);
+        await logAdminAction({ adminId, module: 'DATA', action: 'CREATE_SUBMAKE', targetId: result.insertId, details: { name, make_id } });
         return { id: result.insertId, name, make_id };
     } catch (e) {
         handleDbError(e, 'Vehicle submake');
     }
 }
 
-async function updateVehicleSubmake(id, { name, make_id }) {
+async function updateVehicleSubmake(id, { name, make_id }, adminId) {
     if (!name || !make_id) throw httpError(400, 'Name and make_id are required');
     try {
         const result = await query('UPDATE vehicle_submakes SET name = ?, make_id = ? WHERE id = ?', [name, make_id, id]);
         if (result.affectedRows === 0) throw httpError(404, 'Vehicle submake not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'UPDATE_SUBMAKE', targetId: id, details: { name, make_id } });
         return { id: Number(id), name, make_id };
     } catch (e) {
         handleDbError(e, 'Vehicle submake');
     }
 }
 
-async function deleteVehicleSubmake(id) {
+async function deleteVehicleSubmake(id, adminId) {
     try {
         const result = await query('DELETE FROM vehicle_submakes WHERE id = ?', [id]);
         if (result.affectedRows === 0) throw httpError(404, 'Vehicle submake not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'DELETE_SUBMAKE', targetId: id });
         return { success: true };
     } catch (e) {
         handleDbError(e, 'Vehicle submake');
@@ -110,7 +120,7 @@ async function deleteVehicleSubmake(id) {
 }
 
 // --- Vehicle Variants ---
-async function createVehicleVariant(data) {
+async function createVehicleVariant(data, adminId) {
     const { name, make_id, submake_id, model_year, body_type_id, engine_cc, seating_capacity } = data;
     if (!name || !make_id || !submake_id || !model_year) throw httpError(400, 'Name, make_id, submake_id, and model_year are required');
     try {
@@ -118,13 +128,14 @@ async function createVehicleVariant(data) {
             'INSERT INTO vehicle_variants (name, make_id, submake_id, model_year, body_type_id, engine_cc, seating_capacity) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [name, make_id, submake_id, model_year, body_type_id, engine_cc, seating_capacity]
         );
+        await logAdminAction({ adminId, module: 'DATA', action: 'CREATE_VARIANT', targetId: result.insertId, details: data });
         return { id: result.insertId, ...data };
     } catch (e) {
         handleDbError(e, 'Vehicle variant');
     }
 }
 
-async function updateVehicleVariant(id, data) {
+async function updateVehicleVariant(id, data, adminId) {
     const { name, make_id, submake_id, model_year, body_type_id, engine_cc, seating_capacity } = data;
     if (!name || !make_id || !submake_id || !model_year) throw httpError(400, 'Name, make_id, submake_id, and model_year are required');
     try {
@@ -133,16 +144,18 @@ async function updateVehicleVariant(id, data) {
             [name, make_id, submake_id, model_year, body_type_id, engine_cc, seating_capacity, id]
         );
         if (result.affectedRows === 0) throw httpError(404, 'Vehicle variant not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'UPDATE_VARIANT', targetId: id, details: data });
         return { id: Number(id), ...data };
     } catch (e) {
         handleDbError(e, 'Vehicle variant');
     }
 }
 
-async function deleteVehicleVariant(id) {
+async function deleteVehicleVariant(id, adminId) {
     try {
         const result = await query('DELETE FROM vehicle_variants WHERE id = ?', [id]);
         if (result.affectedRows === 0) throw httpError(404, 'Vehicle variant not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'DELETE_VARIANT', targetId: id });
         return { success: true };
     } catch (e) {
         handleDbError(e, 'Vehicle variant');
@@ -150,31 +163,34 @@ async function deleteVehicleVariant(id) {
 }
 
 // --- Tracker Companies ---
-async function createTrackerCompany({ name }) {
+async function createTrackerCompany({ name }, adminId) {
     if (!name) throw httpError(400, 'Tracker company name is required');
     try {
         const result = await query('INSERT INTO tracker_companies (name) VALUES (?)', [name]);
+        await logAdminAction({ adminId, module: 'DATA', action: 'CREATE_TRACKER', targetId: result.insertId, details: { name } });
         return { id: result.insertId, name };
     } catch (e) {
         handleDbError(e, 'Tracker company');
     }
 }
 
-async function updateTrackerCompany(id, { name }) {
+async function updateTrackerCompany(id, { name }, adminId) {
     if (!name) throw httpError(400, 'Tracker company name is required');
     try {
         const result = await query('UPDATE tracker_companies SET name = ? WHERE id = ?', [name, id]);
         if (result.affectedRows === 0) throw httpError(404, 'Tracker company not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'UPDATE_TRACKER', targetId: id, details: { name } });
         return { id: Number(id), name };
     } catch (e) {
         handleDbError(e, 'Tracker company');
     }
 }
 
-async function deleteTrackerCompany(id) {
+async function deleteTrackerCompany(id, adminId) {
     try {
         const result = await query('DELETE FROM tracker_companies WHERE id = ?', [id]);
         if (result.affectedRows === 0) throw httpError(404, 'Tracker company not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'DELETE_TRACKER', targetId: id });
         return { success: true };
     } catch (e) {
         handleDbError(e, 'Tracker company');
@@ -182,31 +198,34 @@ async function deleteTrackerCompany(id) {
 }
 
 // --- Vehicle Body Types ---
-async function createVehicleBodyType({ name }) {
+async function createVehicleBodyType({ name }, adminId) {
     if (!name) throw httpError(400, 'Body type name is required');
     try {
         const result = await query('INSERT INTO vehicle_body_types (name) VALUES (?)', [name]);
+        await logAdminAction({ adminId, module: 'DATA', action: 'CREATE_BODY_TYPE', targetId: result.insertId, details: { name } });
         return { id: result.insertId, name };
     } catch (e) {
         handleDbError(e, 'Body type');
     }
 }
 
-async function updateVehicleBodyType(id, { name }) {
+async function updateVehicleBodyType(id, { name }, adminId) {
     if (!name) throw httpError(400, 'Body type name is required');
     try {
         const result = await query('UPDATE vehicle_body_types SET name = ? WHERE id = ?', [name, id]);
         if (result.affectedRows === 0) throw httpError(404, 'Body type not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'UPDATE_BODY_TYPE', targetId: id, details: { name } });
         return { id: Number(id), name };
     } catch (e) {
         handleDbError(e, 'Body type');
     }
 }
 
-async function deleteVehicleBodyType(id) {
+async function deleteVehicleBodyType(id, adminId) {
     try {
         const result = await query('DELETE FROM vehicle_body_types WHERE id = ?', [id]);
         if (result.affectedRows === 0) throw httpError(404, 'Body type not found');
+        await logAdminAction({ adminId, module: 'DATA', action: 'DELETE_BODY_TYPE', targetId: id });
         return { success: true };
     } catch (e) {
         handleDbError(e, 'Body type');

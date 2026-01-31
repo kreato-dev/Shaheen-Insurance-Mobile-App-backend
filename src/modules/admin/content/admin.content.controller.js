@@ -29,7 +29,7 @@ exports.update = async (req, res, next) => {
 
 exports.delete = async (req, res, next) => {
   try {
-    const result = await service.deleteBanner(req.params.id);
+    const result = await service.deleteBanner(req.params.id, req.admin.id);
     res.json(result);
   } catch (e) {
     next(e);

@@ -239,7 +239,7 @@ async function getTravelDestinations(req, res, next) {
 // --- Cities ---
 async function createCity(req, res, next) {
   try {
-    const city = await service.createCity(req.body);
+    const city = await service.createCity(req.body, req.admin.id);
     res.status(201).json(city);
   } catch (err) {
     next(err);
@@ -248,7 +248,7 @@ async function createCity(req, res, next) {
 
 async function updateCity(req, res, next) {
   try {
-    const city = await service.updateCity(req.params.id, req.body);
+    const city = await service.updateCity(req.params.id, req.body, req.admin.id);
     res.json(city);
   } catch (err) {
     next(err);
@@ -257,7 +257,7 @@ async function updateCity(req, res, next) {
 
 async function deleteCity(req, res, next) {
   try {
-    await service.deleteCity(req.params.id);
+    await service.deleteCity(req.params.id, req.admin.id);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -267,7 +267,7 @@ async function deleteCity(req, res, next) {
 // --- Vehicle Makes ---
 async function createVehicleMake(req, res, next) {
   try {
-    const make = await service.createVehicleMake(req.body);
+    const make = await service.createVehicleMake(req.body, req.admin.id);
     res.status(201).json(make);
   } catch (err) {
     next(err);
@@ -276,7 +276,7 @@ async function createVehicleMake(req, res, next) {
 
 async function updateVehicleMake(req, res, next) {
   try {
-    const make = await service.updateVehicleMake(req.params.id, req.body);
+    const make = await service.updateVehicleMake(req.params.id, req.body, req.admin.id);
     res.json(make);
   } catch (err) {
     next(err);
@@ -285,7 +285,7 @@ async function updateVehicleMake(req, res, next) {
 
 async function deleteVehicleMake(req, res, next) {
   try {
-    await service.deleteVehicleMake(req.params.id);
+    await service.deleteVehicleMake(req.params.id, req.admin.id);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -295,7 +295,7 @@ async function deleteVehicleMake(req, res, next) {
 // --- Vehicle Submakes ---
 async function createVehicleSubmake(req, res, next) {
   try {
-    const submake = await service.createVehicleSubmake(req.body);
+    const submake = await service.createVehicleSubmake(req.body, req.admin.id);
     res.status(201).json(submake);
   } catch (err) {
     next(err);
@@ -304,7 +304,7 @@ async function createVehicleSubmake(req, res, next) {
 
 async function updateVehicleSubmake(req, res, next) {
   try {
-    const submake = await service.updateVehicleSubmake(req.params.id, req.body);
+    const submake = await service.updateVehicleSubmake(req.params.id, req.body, req.admin.id);
     res.json(submake);
   } catch (err) {
     next(err);
@@ -313,7 +313,7 @@ async function updateVehicleSubmake(req, res, next) {
 
 async function deleteVehicleSubmake(req, res, next) {
   try {
-    await service.deleteVehicleSubmake(req.params.id);
+    await service.deleteVehicleSubmake(req.params.id, req.admin.id);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -323,7 +323,7 @@ async function deleteVehicleSubmake(req, res, next) {
 // --- Vehicle Variants ---
 async function createVehicleVariant(req, res, next) {
   try {
-    const variant = await service.createVehicleVariant(req.body);
+    const variant = await service.createVehicleVariant(req.body, req.admin.id);
     res.status(201).json(variant);
   } catch (err) {
     next(err);
@@ -332,7 +332,7 @@ async function createVehicleVariant(req, res, next) {
 
 async function updateVehicleVariant(req, res, next) {
   try {
-    const variant = await service.updateVehicleVariant(req.params.id, req.body);
+    const variant = await service.updateVehicleVariant(req.params.id, req.body, req.admin.id);
     res.json(variant);
   } catch (err) {
     next(err);
@@ -341,7 +341,7 @@ async function updateVehicleVariant(req, res, next) {
 
 async function deleteVehicleVariant(req, res, next) {
   try {
-    await service.deleteVehicleVariant(req.params.id);
+    await service.deleteVehicleVariant(req.params.id, req.admin.id);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -351,7 +351,7 @@ async function deleteVehicleVariant(req, res, next) {
 // --- Vehicle Body Types ---
 async function createVehicleBodyType(req, res, next) {
   try {
-    const bodyType = await service.createVehicleBodyType(req.body);
+    const bodyType = await service.createVehicleBodyType(req.body, req.admin.id);
     res.status(201).json(bodyType);
   } catch (err) {
     next(err);
@@ -360,7 +360,7 @@ async function createVehicleBodyType(req, res, next) {
 
 async function updateVehicleBodyType(req, res, next) {
   try {
-    const bodyType = await service.updateVehicleBodyType(req.params.id, req.body);
+    const bodyType = await service.updateVehicleBodyType(req.params.id, req.body, req.admin.id);
     res.json(bodyType);
   } catch (err) {
     next(err);
@@ -369,7 +369,7 @@ async function updateVehicleBodyType(req, res, next) {
 
 async function deleteVehicleBodyType(req, res, next) {
   try {
-    await service.deleteVehicleBodyType(req.params.id);
+    await service.deleteVehicleBodyType(req.params.id, req.admin.id);
     res.status(204).send();
   } catch (err) {
     next(err);
@@ -379,7 +379,7 @@ async function deleteVehicleBodyType(req, res, next) {
 // --- Tracker Companies ---
 async function createTrackerCompany(req, res, next) {
   try {
-    const company = await service.createTrackerCompany(req.body);
+    const company = await service.createTrackerCompany(req.body, req.admin.id);
     res.status(201).json(company);
   } catch (err) {
     next(err);
@@ -388,7 +388,7 @@ async function createTrackerCompany(req, res, next) {
 
 async function updateTrackerCompany(req, res, next) {
   try {
-    const company = await service.updateTrackerCompany(req.params.id, req.body);
+    const company = await service.updateTrackerCompany(req.params.id, req.body, req.admin.id);
     res.json(company);
   } catch (err) {
     next(err);
@@ -397,7 +397,7 @@ async function updateTrackerCompany(req, res, next) {
 
 async function deleteTrackerCompany(req, res, next) {
   try {
-    await service.deleteTrackerCompany(req.params.id);
+    await service.deleteTrackerCompany(req.params.id, req.admin.id);
     res.status(204).send();
   } catch (err) {
     next(err);

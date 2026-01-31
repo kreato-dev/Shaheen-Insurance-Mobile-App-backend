@@ -1,5 +1,6 @@
 const bcrypt = require('bcryptjs');
 const { query } = require('../../../config/db');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -65,7 +66,7 @@ async function getAdminById(id) {
   return rows[0];
 }
 
-async function createAdmin(data) {
+async function createAdmin(data, adminId) {
   const { fullName, email, mobile, password, role } = data;
 
   if (!fullName || !email || !password || !role) {
@@ -94,16 +95,24 @@ async function createAdmin(data) {
 
   const hash = await bcrypt.hash(password, 10);
 
-  await query(
+  const result = await query(
     `INSERT INTO admins (full_name, email, mobile, password_hash, role, status, created_at, updated_at)
      VALUES (?, ?, ?, ?, ?, 'active', NOW(), NOW())`,
     [fullName, email, mobile || null, hash, role]
   );
 
+  await logAdminAction({
+    adminId,
+    module: 'ADMINS',
+    action: 'CREATE_ADMIN',
+    targetId: result.insertId,
+    details: { fullName, email, role },
+  });
+
   return { message: 'Admin created successfully' };
 }
 
-async function updateAdmin(id, data) {
+async function updateAdmin(id, data, adminId) {
   const { fullName, email, mobile, password, role, status } = data;
 
   // 1. Check target admin
@@ -157,6 +166,17 @@ async function updateAdmin(id, data) {
   params.push(id);
   await query(`UPDATE admins SET ${fields.join(', ')}, updated_at = NOW() WHERE id = ?`, params);
 
+  const logDetails = { ...data };
+  delete logDetails.password; // Don't log the raw password
+
+  await logAdminAction({
+    adminId,
+    module: 'ADMINS',
+    action: 'UPDATE_ADMIN',
+    targetId: id,
+    details: logDetails,
+  });
+
   return { message: 'Admin updated successfully' };
 }
 
@@ -176,6 +196,14 @@ async function deleteAdmin(id, currentAdminId) {
   }
 
   await query(`DELETE FROM admins WHERE id = ?`, [id]);
+
+  await logAdminAction({
+    adminId: currentAdminId,
+    module: 'ADMINS',
+    action: 'DELETE_ADMIN',
+    targetId: id,
+  });
+
   return { message: 'Admin deleted successfully' };
 }
 

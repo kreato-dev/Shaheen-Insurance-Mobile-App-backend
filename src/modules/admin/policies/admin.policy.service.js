@@ -2,6 +2,7 @@ const { getConnection } = require('../../../config/db');
 const { fireUser, fireAdmin } = require('../../notifications/notification.service');
 const E = require('../../notifications/notification.events');
 const templates = require('../../notifications/notification.templates');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 function httpError(status, message) {
     const err = new Error(message);
@@ -161,6 +162,15 @@ async function issuePolicyService({
         );
 
         await conn.commit();
+
+        // ✅ LOG ACTIVITY
+        await logAdminAction({
+            adminId,
+            module: type, // 'MOTOR' or 'TRAVEL'
+            action: 'ISSUE_POLICY',
+            targetId: id,
+            details: { policyNo: cleanPolicyNo, package: pkgCode }
+        });
 
         // ✅ AFTER COMMIT: notifications + email (never block issuance)
         try {

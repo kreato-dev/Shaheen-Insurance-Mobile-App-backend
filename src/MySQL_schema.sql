@@ -1249,6 +1249,20 @@ CREATE TABLE content_banners (
   CONSTRAINT fk_content_updated_by FOREIGN KEY (updated_by_admin_id) REFERENCES admins(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- 12) Admin Activity Logs (Audit Trail)
+CREATE TABLE admin_activity_logs (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_id INT NOT NULL,
+  module VARCHAR(50) NOT NULL, -- 'AUTH', 'MOTOR', 'TRAVEL', 'USERS', 'FINANCE', 'SUPPORT'
+  action VARCHAR(100) NOT NULL, -- 'LOGIN', 'UPDATE_STATUS', 'ISSUE_POLICY', 'CREATE_ADMIN'
+  target_id INT NULL, -- Proposal ID, User ID, Ticket ID etc.
+  details JSON NULL, -- Snapshot of changes or description
+  ip_address VARCHAR(45) NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_admin_logs_filter (admin_id, module, created_at),
+  CONSTRAINT fk_admin_logs_admin FOREIGN KEY (admin_id) REFERENCES admins(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ADMIN DASHBOARD
 -- 1) Travel Admin View for Unified Proposals Inbox
 CREATE OR REPLACE VIEW vw_travel_proposals_admin AS

@@ -1,6 +1,7 @@
 const { query } = require('../../../config/db');
 const { createEmailOtp } = require('../../auth/otp.service');
 const { sendOtpEmail } = require('../../../utils/mailer');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 function httpError(status, message) {
   const e = new Error(message);
@@ -123,7 +124,14 @@ async function updateUserStatus(userId, status, adminId) {
     [s, id]
   );
 
-  // Optional: audit log later (Phase 4/5)
+  await logAdminAction({
+    adminId,
+    module: 'USERS',
+    action: 'UPDATE_STATUS',
+    targetId: id,
+    details: { status: s },
+  });
+
   return { ok: true, userId: id, status: s, updatedBy: adminId };
 }
 
@@ -156,6 +164,14 @@ async function initiateUserPasswordReset(userId, adminId) {
     otp,
     purpose: 'forgot_password',
     expiresMinutes,
+  });
+
+  await logAdminAction({
+    adminId,
+    module: 'USERS',
+    action: 'INITIATE_RESET',
+    targetId: user.id,
+    details: { email: user.email },
   });
 
   return {
@@ -221,11 +237,11 @@ async function getProposalsFeedService(userId, opts = {}) {
   // --------------------------
   // TRAVEL (4 tables)
   // --------------------------
-for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
-  let where = `WHERE tp.user_id = ? AND tp.submission_status = 'submitted'`;
-  params.push(id);
+  for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
+    let where = `WHERE tp.user_id = ? AND tp.submission_status = 'submitted'`;
+    params.push(id);
 
-  unions.push(`
+    unions.push(`
     SELECT
       'TRAVEL' AS type,
       '${pkgCode}' AS packageCode,
@@ -248,7 +264,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
     INNER JOIN travel_plans pl ON pl.id = tp.plan_id
     ${where}
   `);
-}
+  }
 
 
   const unionSql = unions.join(' UNION ALL ');
@@ -281,7 +297,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
       review_status: r.review_status,
       payment_status: r.payment_status,
       paid_at: r.paid_at,
-      
+
       title: r.title,
       subtitle: r.subtitle,
       premium: r.premium,

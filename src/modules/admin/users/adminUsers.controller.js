@@ -20,7 +20,7 @@ exports.get = async (req, res, next) => {
 
 exports.create = async (req, res, next) => {
   try {
-    const result = await service.createAdmin(req.body);
+    const result = await service.createAdmin(req.body, req.admin.id);
     res.status(201).json(result);
   } catch (e) {
     next(e);
@@ -29,7 +29,7 @@ exports.create = async (req, res, next) => {
 
 exports.update = async (req, res, next) => {
   try {
-    const result = await service.updateAdmin(req.params.id, req.body);
+    const result = await service.updateAdmin(req.params.id, req.body, req.admin.id);
     res.json(result);
   } catch (e) {
     next(e);

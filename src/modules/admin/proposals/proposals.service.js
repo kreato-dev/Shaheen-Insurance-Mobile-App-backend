@@ -4,6 +4,7 @@ const { buildTravelSelect } = require('./travelQueries');
 const { fireUser, fireAdmin } = require('../../notifications/notification.service');
 const E = require('../../notifications/notification.events');
 const templates = require('../../notifications/notification.templates');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 
 //Phase 1
@@ -622,6 +623,19 @@ async function reviewMotorProposal(
 
     await conn.commit();
 
+    await logAdminAction({
+      adminId,
+      module: 'MOTOR',
+      action: `REVIEW_${normalizedAction.toUpperCase()}`,
+      targetId: proposalId,
+      details: {
+        action: normalizedAction,
+        newStatus: newReviewStatus,
+        rejectionReason: notifCtx.rejectionReason,
+        reuploadNotes: notifCtx.reuploadNotes
+      }
+    });
+
     // ✅ AFTER COMMIT: notifications + emails (NO policy issued here)
     try {
       // 1) REUPLOAD REQUIRED -> user notif + email
@@ -827,6 +841,20 @@ async function reviewTravelProposal(
     };
 
     await conn.commit();
+
+    await logAdminAction({
+      adminId,
+      module: 'TRAVEL',
+      action: `REVIEW_${normalizedAction.toUpperCase()}`,
+      targetId: proposalId,
+      details: {
+        subtype: travelSubtype,
+        action: normalizedAction,
+        newStatus: newReviewStatus,
+        rejectionReason: notifCtx.rejectionReason,
+        reuploadNotes: notifCtx.reuploadNotes
+      }
+    });
 
     const entityType = `proposal_TRAVEL_${String(notifCtx.travelSubtype).toUpperCase()}`;
 

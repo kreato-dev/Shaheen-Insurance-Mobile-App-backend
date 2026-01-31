@@ -2,6 +2,7 @@ const { query } = require('../../../config/db');
 const repo = require('./admin.support.repository');
 const { fireUser } = require('../../notifications/notification.service');
 const templates = require('../../notifications/notification.templates');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 function httpError(status, msg) {
   const e = new Error(msg);
@@ -87,6 +88,15 @@ exports.adminReply = async (ticketId, adminId, message, files) => {
   } catch (e) { console.error('Admin support reply notification error:', e); }
 
   await repo.touchTicket(ticketId, 'in_process');
+
+  await logAdminAction({
+    adminId,
+    module: 'SUPPORT',
+    action: 'REPLY_TICKET',
+    targetId: ticketId,
+    details: { messageId: msg.id, messageSnippet: message.substring(0, 50) },
+  });
+
   return msg;
 };
 
@@ -95,4 +105,12 @@ exports.adminReply = async (ticketId, adminId, message, files) => {
  */
 exports.updateStatus = async (ticketId, status, adminId) => {
   await repo.updateStatus(ticketId, status, adminId);
+
+  await logAdminAction({
+    adminId,
+    module: 'SUPPORT',
+    action: 'UPDATE_STATUS',
+    targetId: ticketId,
+    details: { status },
+  });
 };

@@ -1,5 +1,6 @@
 const { query } = require('../../../config/db');
 const { deleteFileIfExists } = require('../../../utils/fileCleanup');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -48,11 +49,19 @@ async function createBanner(data, file, adminId) {
   const imagePath = `uploads/content/${file.filename}`;
   const { title, description, type, status, sort_order } = data;
 
-  await query(
+  const result = await query(
     `INSERT INTO content_banners (title, description, image_path, type, status, sort_order, created_by_admin_id, created_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
     [title, description, imagePath, type || 'BANNER', status || 'active', sort_order || 0, adminId]
   );
+
+  await logAdminAction({
+    adminId,
+    module: 'CONTENT',
+    action: 'CREATE_BANNER',
+    targetId: result.insertId,
+    details: { title, type: type || 'BANNER' },
+  });
 
   return { message: 'Banner created successfully' };
 }
@@ -94,16 +103,33 @@ async function updateBanner(id, data, file, adminId) {
     [updatedData.title, updatedData.description, updatedData.type, updatedData.status, updatedData.sort_order, adminId, id]
   );
 
+  await logAdminAction({
+    adminId,
+    module: 'CONTENT',
+    action: 'UPDATE_BANNER',
+    targetId: id,
+    details: { title: updatedData.title, status: updatedData.status },
+  });
+
   return { message: 'Banner updated successfully' };
 }
 
-async function deleteBanner(id) {
+async function deleteBanner(id, adminId) {
   const [existingBanner] = await query('SELECT image_path FROM content_banners WHERE id = ?', [id]);
   if (existingBanner && existingBanner.image_path) {
     await deleteFileIfExists(existingBanner.image_path);
   }
 
   await query('DELETE FROM content_banners WHERE id = ?', [id]);
+
+  if (adminId) {
+    await logAdminAction({
+      adminId,
+      module: 'CONTENT',
+      action: 'DELETE_BANNER',
+      targetId: id,
+    });
+  }
   return { message: 'Banner deleted successfully' };
 }
 

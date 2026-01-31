@@ -3,6 +3,7 @@ const { query, getConnection } = require('../../../config/db');
 const { fireUser } = require('../../notifications/notification.service');
 const EVENTS = require('../../notifications/notification.events');
 const templates = require('../../notifications/notification.templates');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 
 function httpError(status, message) {
@@ -321,6 +322,20 @@ async function updateMotorRefund(proposalId, adminId, payload, req) {
 
     await conn.commit();
 
+    await logAdminAction({
+      adminId,
+      module: 'MOTOR',
+      action: 'UPDATE_REFUND',
+      targetId: id,
+      details: {
+        refund_status,
+        refund_amount,
+        refund_reference,
+        refund_remarks,
+        evidence_path,
+      },
+    });
+
     const updated = await getMotorRefundDetail(id, req);
     // ✅ notify user on refund update
     try {
@@ -448,6 +463,21 @@ async function updateTravelRefund(travelSubtype, proposalId, adminId, payload, r
     );
 
     await conn.commit();
+
+    await logAdminAction({
+      adminId,
+      module: 'TRAVEL',
+      action: 'UPDATE_REFUND',
+      targetId: id,
+      details: {
+        subtype: travelSubtype,
+        refund_status,
+        refund_amount,
+        refund_reference,
+        refund_remarks,
+        evidence_path,
+      },
+    });
 
     const updated = await getTravelRefundDetail(travelSubtype, id, req);
 

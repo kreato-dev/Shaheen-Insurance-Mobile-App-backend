@@ -2,6 +2,7 @@ const { getConnection } = require('../../../../config/db');
 const { fireUser } = require('../../../notifications/notification.service');
 const E = require('../../../notifications/notification.events');
 const templates = require('../../../notifications/notification.templates');
+const { logAdminAction } = require('../../adminlogs/admin.logs.service');
 
 function httpError(status, message) {
     const err = new Error(message);
@@ -237,6 +238,19 @@ async function adminReviewMotorClaim({ adminId, claimId, body }) {
         const info = infoRows?.[0] || {};
 
         await conn.commit();
+
+        await logAdminAction({
+            adminId,
+            module: 'MOTOR',
+            action: `CLAIM_${action.toUpperCase()}`,
+            targetId: id,
+            details: {
+                fnol: info.fnol_no,
+                action,
+                rejectionReason: body.rejection_reason,
+                reuploadNotes: body.reupload_notes
+            }
+        });
 
         // Parse required_docs if string
         let requiredDocsParsed = null;

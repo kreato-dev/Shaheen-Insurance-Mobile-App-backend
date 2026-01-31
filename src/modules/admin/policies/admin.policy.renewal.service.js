@@ -9,6 +9,7 @@ const E = require('../../notifications/notification.events');
 const {
   makeRenewalDocumentSentEmail,
 } = require('../../notifications/notification.templates');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -78,6 +79,14 @@ async function sendMotorRenewalDocService({ adminId, proposalId, renewalFile, re
     );
 
     await conn.commit();
+
+    await logAdminAction({
+      adminId,
+      module: 'MOTOR',
+      action: 'SEND_RENEWAL',
+      targetId: id,
+      details: { renewalPath, notes },
+    });
 
     // --------------------
     // Notify user + email

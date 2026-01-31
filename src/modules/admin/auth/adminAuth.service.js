@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { query } = require('../../../config/db');
 const { randomToken, sha256Hex } = require('../../../utils/crypto');
+const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 const ADMIN_SESSION_DAYS = 7;
 
@@ -50,6 +51,15 @@ exports.login = async ({ email, password }, req) => {
 
   await query(`UPDATE admins SET last_login_at = NOW() WHERE id = ?`, [admin.id]);
 
+  await logAdminAction({
+    adminId: admin.id,
+    module: 'AUTH',
+    action: 'LOGIN',
+    targetId: admin.id,
+    details: { email: admin.email, role: admin.role },
+    ip,
+  });
+
   const accessToken = jwt.sign(
     { adminId: admin.id, sessionId: insert.insertId, st: sessionToken },
     process.env.ADMIN_JWT_SECRET,
@@ -68,12 +78,24 @@ exports.login = async ({ email, password }, req) => {
 };
 
 exports.logout = async (sessionId) => {
+  const rows = await query(`SELECT admin_id FROM admin_sessions WHERE id = ?`, [sessionId]);
+
   await query(
     `UPDATE admin_sessions
      SET revoked_at = NOW()
      WHERE id = ? AND revoked_at IS NULL`,
     [sessionId]
   );
+
+  if (rows.length > 0) {
+    await logAdminAction({
+      adminId: rows[0].admin_id,
+      module: 'AUTH',
+      action: 'LOGOUT',
+      targetId: rows[0].admin_id,
+      details: { sessionId },
+    });
+  }
 };
 
 exports.changePassword = async (adminId, { oldPassword, newPassword }) => {
@@ -96,4 +118,37 @@ exports.changePassword = async (adminId, { oldPassword, newPassword }) => {
      WHERE admin_id = ? AND revoked_at IS NULL`,
     [adminId]
   );
+
+  await logAdminAction({
+    adminId,
+    module: 'AUTH',
+    action: 'CHANGE_PASSWORD',
+    targetId: adminId,
+    details: { success: true },
+  });
+};
+
+exports.saveAdminFcmToken = async ({ adminId, token, deviceId, platform }) => {
+  if (!adminId || !token) {
+    throw httpError(400, 'adminId and token are required');
+  }
+
+  await query(
+    `INSERT INTO admin_fcm_tokens (admin_id, token, device_id, platform, created_at, updated_at)
+     VALUES (?, ?, ?, ?, NOW(), NOW())
+     ON DUPLICATE KEY UPDATE
+       token = VALUES(token),
+       device_id = VALUES(device_id),
+       platform = VALUES(platform),
+       updated_at = NOW()`,
+    [adminId, token, deviceId || null, platform || null]
+  );
+
+  return { message: 'Admin FCM token saved successfully' };
+};
+
+exports.removeAdminFcmToken = async ({ adminId, token }) => {
+  if (!adminId || !token) throw httpError(400, 'adminId and token are required');
+  await query('DELETE FROM admin_fcm_tokens WHERE admin_id = ? AND token = ?', [adminId, token]);
+  return { message: 'Admin FCM token removed successfully' };
 };
