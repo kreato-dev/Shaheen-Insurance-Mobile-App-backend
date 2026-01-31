@@ -205,6 +205,7 @@ function calculateAge(dobStr) {
 /**
  * Calculates tenure days from startDate & endDate.
  * We treat endDate as after startDate. (endDate must be > startDate)
+ * Logic: Difference in milliseconds divided by (1000 * 60 * 60 * 24), rounded up.
  */
 function calculateTenureDays(startDateStr, endDateStr) {
   const start = new Date(startDateStr);
@@ -308,6 +309,7 @@ async function validateDestinations(destinationIds) {
  * 2) Get coverage_id for that package
  * 3) Get plan_id for (package, coverage, planCode)
  * 4) Get pricing slab where tenureDays is inside min_days/max_days and matches is_multi_trip
+ * This ensures we find the exact price row from the brochure logic stored in DB.
  */
 async function getPlanAndSlab({ packageCode, coverageCode, planCode, tenureDays, isMultiTrip }) {
   const pkg = await query(`SELECT id FROM travel_packages WHERE code = ? LIMIT 1`, [packageCode]);
@@ -351,6 +353,7 @@ async function getPlanAndSlab({ packageCode, coverageCode, planCode, tenureDays,
  * - max age limits (Domestic 60, HUJ 69, International 80, Student 65)
  * - International loadings (66-70 => +100%, 71-75 => +150%, 76-80 => +200%)
  * - International multi-trip restriction: max 90 days per trip in those age bands
+ * Returns loadingPercent (e.g. 50 for 50% increase) and maxTripDaysApplied.
  */
 async function applyRulesAndLoading({ packageId, packageCode, age, isMultiTrip }) {
   const ruleRows = await query(
@@ -416,6 +419,7 @@ async function quoteTravelPremiumService(data) {
 
   let tenureDays = tenureDaysInput;
 
+  // 1. If tenureDays not provided, we calculate it from dates
   // If tenureDays not provided, we calculate it
   if (!tenureDays) {
     if (!startDate || !endDate) {
@@ -432,6 +436,7 @@ async function quoteTravelPremiumService(data) {
   const coverageCode = normalizeCoverageCode(packageCode, coverageType);
   const planCode = normalizePlanCode(productPlan);
 
+  // 2. Fetch the correct pricing slab from DB based on duration
   const { packageId, planId, slab } = await getPlanAndSlab({
     packageCode,
     coverageCode,
@@ -440,6 +445,7 @@ async function quoteTravelPremiumService(data) {
     isMultiTrip: !!isMultiTrip,
   });
 
+  // 3. Check age limits and calculate extra loading % (e.g. for seniors)
   const { loadingPercent, maxTripDaysApplied } = await applyRulesAndLoading({
     packageId,
     packageCode,
@@ -447,10 +453,10 @@ async function quoteTravelPremiumService(data) {
     isMultiTrip: !!isMultiTrip,
   });
 
-  // Base premium comes from slab
+  // 4. Base premium comes directly from the slab row
   const basePremium = Number(slab.premium);
 
-  // Final premium includes possible age loading for international
+  // 5. Final premium = Base + (Base * Loading%)
   const finalPremium = Number((basePremium * (1 + loadingPercent / 100)).toFixed(2));
 
   return {
@@ -588,6 +594,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
 
   validateFamilyMembersIfNeeded(coverageCode, familyMembers);
 
+  // 1. Destination Logic: Domestic is fixed to "Anywhere in Pakistan", others require selection
   // ✅ Destination rules:
   // - DOMESTIC: auto-set "Anywhere in Pakistan (Except Home City)" , no destinationIds required
   // - Other packages: destinationIds required + validated
@@ -608,6 +615,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
 
   const tenureDays = calculateTenureDays(startDate, endDate);
 
+  // 2. Re-Quote: We calculate premium again here to prevent frontend tampering
   // Quote from DB (this ensures submit always uses DB pricing)
   const quote = await quoteTravelPremiumService({
     packageType,
@@ -620,6 +628,14 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
     isMultiTrip,
   });
 
+  // 3. Override End Date: The policy duration is strictly determined by the purchased slab's max days.
+  // Override endDate and tenureDays based on slab max days
+  const finalTenureDays = quote.slab.maxDays;
+  const sDateObj = new Date(startDate);
+  sDateObj.setDate(sDateObj.getDate() + finalTenureDays);
+  const finalEndDate = sDateObj.toISOString().split('T')[0];
+
+  // 4. Dynamic Table Resolution: Decide which tables to insert into based on package type
   const proposalTable = resolveProposalTable(packageCode);
   const destTable = resolveDestTable(packageCode);
   const familyTable = resolveFamilyTable(packageCode);
@@ -632,6 +648,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
     let insertSql;
     let insertParams;
 
+    // 5. Build Insert Query based on Package (Columns vary slightly)
     // International has extra fields for age loading + multi-trip
     if (packageCode === 'INTERNATIONAL') {
       insertSql = `
@@ -687,8 +704,8 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         purposeOfVisit,
         accommodation,
         startDate,
-        endDate,
-        tenureDays,
+        finalEndDate,
+        finalTenureDays,
         quote.slab.isMultiTrip ? 1 : 0,
         quote.maxTripDaysApplied,
         quote.loadingPercent,
@@ -777,8 +794,8 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         insuranceType,
         accommodation,
         startDate,
-        endDate,
-        tenureDays,
+        finalEndDate,
+        finalTenureDays,
 
         universityName || applicantInfo.universityName || null,
 
@@ -873,8 +890,8 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         insuranceType,
         accommodation,
         startDate,
-        endDate,
-        tenureDays,
+        finalEndDate,
+        finalTenureDays,
 
         applicantInfo.firstName,
         applicantInfo.lastName,
@@ -957,8 +974,8 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
         accommodation,
         travelMode || null,
         startDate,
-        endDate,
-        tenureDays,
+        finalEndDate,
+        finalTenureDays,
 
         applicantInfo.firstName,
         applicantInfo.lastName,
@@ -987,10 +1004,12 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
     }
 
     // Insert proposal row
+    // 6. Execute Insert Proposal
     const [result] = await conn.execute(insertSql, insertParams);
     const proposalId = result.insertId;
 
     // Insert destinations (same logic for all packages)
+    // 7. Insert Destinations (Many-to-Many)
     for (const destId of effectiveDestinationIds) {
       await conn.execute(
         `INSERT INTO ${destTable} (proposal_id, destination_id, created_at)
@@ -999,6 +1018,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       );
     }
 
+    // 8. Insert Family Members (if applicable)
     // Insert family members ONLY if:
     // - coverage is FAMILY
     // - package supports family member table (Student doesn't)
@@ -1025,6 +1045,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
 
     await conn.commit();
 
+    // 9. Notify Admin
     // ✅ AFTER COMMIT: ADMIN notify (submitted + unpaid)
     try {
       fireAdmin(E.ADMIN_PROPOSAL_SUBMITTED_UNPAID, {
@@ -1048,7 +1069,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
       packageCode,
       coverageCode,
       planCode: quote.planCode,
-      tenureDays,
+      tenureDays: finalTenureDays,
       basePremium: quote.basePremium,
       loadingPercent: quote.loadingPercent,
       finalPremium: quote.finalPremium,
@@ -1092,6 +1113,7 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
 
     const oldPathsToDelete = [];
 
+    // --- STEP 1: IDENTITY (CNIC or Passport) ---
     // Step: identity (CNIC 2 pics OR Passport 1 pic)
     if (stepLower === 'identity') {
       const hasCnicFront = !!(files.cnic_front && files.cnic_front[0]);
@@ -1160,6 +1182,7 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
       };
     }
 
+    // --- STEP 2: TICKET (Optional) ---
     // Step: ticket (optional)
     if (stepLower === 'ticket') {
       const hasTicket = !!(files.ticket_image && files.ticket_image[0]);
@@ -1190,6 +1213,7 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
       };
     }
 
+    // --- STEP 3: KYC (Employment Proof) ---
     // Step: kyc (optional) -> employment proof / visiting card (single)
     // Save KYC docs in kyc_documents (not travel_documents)
     // Rule: optional for everyone, admin can ask later if needed
@@ -1297,6 +1321,7 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
       throw httpError(500, 'Invalid stored reupload_required_docs JSON');
     }
 
+    // Build a set of allowed documents based on what admin requested
     // allow list: "CNIC:front"
     const allowDocs = new Set();
     for (const item of required) {
@@ -1307,6 +1332,7 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
       }
     }
 
+    // Check if user is uploading something that wasn't requested
     // validate uploaded fields are expected + requested
     for (const field of uploadedFields) {
       const map = TRAVEL_FIELD_MAP[field];
@@ -1318,6 +1344,7 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
       }
     }
 
+    // Process valid uploads
     // replace in travel_documents OR kyc_documents and collect old paths to delete after commit
     const oldPathsToDelete = [];
     const saved = [];
@@ -1545,6 +1572,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
   const id = Number(proposalId);
   if (!id || Number.isNaN(id)) throw httpError(400, 'Invalid proposalId');
 
+  // 1. Fetch Proposal + Joins (City, Plan, Coverage, Package)
   // ✅ Proposal row (join plan meta so UI can show plan/package/coverage properly)
   const rows = await query(
     `
@@ -1570,6 +1598,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
 
   const p = rows[0];
 
+  // 2. Fetch Related Data (Destinations, Family, Docs)
   // Destinations
   const destinations = await query(
     `SELECT
@@ -1622,6 +1651,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
   const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
   const buildUrl = (filePath) => (filePath ? `${baseUrl}/${String(filePath).replace(/^\//, '')}` : null);
 
+  // 3. Fetch KYC Docs (Employment Proof)
   /* =========================
    KYC (Travel)
    - occupation is stored in travel_*_proposals
@@ -1663,6 +1693,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     try { requiredDocs = JSON.parse(requiredDocs); } catch (_) { }
   }
 
+  // 4. Assemble Final Response Object
   return {
     id: p.id,
     insuranceType: p.insurance_type,

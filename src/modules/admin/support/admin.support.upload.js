@@ -2,7 +2,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const projectRoot = path.join(__dirname, '..', '..', '..');
+const projectRoot = path.join(__dirname, '..', '..', '..', '..');
 const uploadDir = path.join(projectRoot, 'uploads', 'support');
 fs.mkdirSync(uploadDir, { recursive: true });
 
