@@ -298,7 +298,7 @@ CREATE TABLE motor_proposals (
   renewal_document_path VARCHAR(255) NULL,
   renewal_sent_at DATETIME NULL,
   renewal_sent_by_admin_id INT NULL,
-  renewal_notes TEXT NULL;
+  renewal_notes TEXT NULL,
 
   -- registration number issue module if vehicle is applied
   registration_updated_at DATETIME NULL,
