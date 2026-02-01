@@ -1,7 +1,7 @@
 const { getConnection } = require('../../config/db');
-const { fireUser, fireAdmin } = require('../../modules/notifications/notification.service');
-const E = require('../../modules/notifications/notification.events');
-const templates = require('../../modules/notifications/notification.templates');
+const { fireUser, fireAdmin } = require('../notifications/notification.service');
+const E = require('../notifications/notification.events');
+const templates = require('../notifications/notification.templates');
 
 function getAdminRecipients() {
   const raw =
@@ -143,6 +143,10 @@ async function submitMotorClaimService({ userId, body, files }) {
   if (!incidentDate) throw httpError(400, 'incident_date is required');
 
   const incidentTime = body.incident_time ? String(body.incident_time).trim() : null;
+  // Validate time format HH:MM to prevent DB errors
+  if (incidentTime && !/^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/.test(incidentTime)) {
+    throw httpError(400, 'incident_time must be in HH:MM format');
+  }
 
   const cityId = body.city_id ? Number(body.city_id) : null;
   const locationText = body.location_text ? String(body.location_text).trim() : null;
@@ -186,6 +190,19 @@ async function submitMotorClaimService({ userId, body, files }) {
     const p = pRows[0];
     if (Number(p.user_id) !== Number(userId)) throw httpError(403, 'Forbidden');
 
+    // Check if a pending claim already exists for this proposal
+    // We allow new claims if previous ones are closed/rejected/approved
+    const [existingClaims] = await conn.execute(
+      `SELECT id FROM motor_claims 
+       WHERE motor_proposal_id = ? 
+       AND claim_status IN ('submitted', 'pending_review', 'reupload_required')
+       LIMIT 1`,
+      [motorProposalId]
+    );
+    if (existingClaims.length > 0) {
+      throw httpError(400, 'A claim is already in progress for this proposal');
+    }
+
     if (!p.policy_no || String(p.policy_status || 'not_issued') === 'not_issued') {
       throw httpError(400, 'Policy is not issued for this proposal');
     }
@@ -203,6 +220,7 @@ async function submitMotorClaimService({ userId, body, files }) {
 
     // Snapshot minimal proposal info (keeps claim stable even if proposal changes later)
     const snapshot = {
+      insuranceType: p.insurance_type,
       policy_no: p.policy_no,
       insured_name: p.name ?? null,
       mobile: p.mobile ?? null,
