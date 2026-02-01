@@ -205,10 +205,17 @@ async function resendEmailOtpService({ email, purpose }) {
   const p = (purpose || 'email_verify').toLowerCase();
   if (!allowed.has(p)) throw httpError(400, 'purpose must be email_verify or forgot_password');
 
+  // Check if user exists
+  const u = await query('SELECT email_verified FROM users WHERE email = ? LIMIT 1', [email]);
+  if (!u.length) {
+    // For forgot_password, if user isn't exists it returns a success message immediately 
+    // (security best practice to prevent email enumeration) and does not send an OTP.
+    if (p === 'forgot_password') return { message: 'OTP resent successfully' };
+    throw httpError(404, 'User not found');
+  }
+
   // Optional rule: if purpose=email_verify and user already verified, block resend
   if (p === 'email_verify') {
-    const u = await query('SELECT email_verified FROM users WHERE email = ? LIMIT 1', [email]);
-    if (!u.length) throw httpError(404, 'User not found');
     if (u[0].email_verified === 1) {
       return { message: 'Email is already verified.' };
     }

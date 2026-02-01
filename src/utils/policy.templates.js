@@ -1,3 +1,14 @@
+const formatDate = (date) => {
+  if (!date) return '-';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '-';
+  const day = String(d.getDate()).padStart(2, '0');
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[d.getMonth()];
+  const year = d.getFullYear();
+  return `${day}/${month}/${year}`;
+};
+
 const createMotorCoverNoteHtml = (data) => {
   const {
     proposalId,
@@ -7,14 +18,14 @@ const createMotorCoverNoteHtml = (data) => {
     lifecycle = {}
   } = data;
 
-  const issueDate = new Date().toLocaleDateString();
+  const issueDate = formatDate(new Date());
   // Default validity 1 year from start date, or today if not set
   const startDate = lifecycle.insuranceStartDate ? new Date(lifecycle.insuranceStartDate) : new Date();
-  const validFrom = startDate.toLocaleDateString();
+  const validFrom = formatDate(startDate);
   
   const endDate = new Date(startDate);
   endDate.setFullYear(endDate.getFullYear() + 1);
-  const validTo = endDate.toLocaleDateString();
+  const validTo = formatDate(endDate);
 
   const insuredName = personalDetails.name || '-';
   const insuredAddress = personalDetails.address || '-';
@@ -193,7 +204,7 @@ const createTravelCoverNoteHtml = (data) => {
       <tr>
         <td>${m.firstName} ${m.lastName}</td>
         <td>${m.relation}</td>
-        <td>${m.dob ? new Date(m.dob).toLocaleDateString() : '-'}</td>
+        <td>${formatDate(m.dob)}</td>
         <td>${m.passportNumber || m.cnic || '-'}</td>
       </tr>
     `).join('');
