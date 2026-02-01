@@ -68,6 +68,15 @@ async function login(req, res, next) {
   }
 }
 
+// Logout user
+async function logout(req, res, next) {
+  try {
+    return res.json({ message: 'Logged out successfully' });
+  } catch (err) {
+    next(err);
+  }
+}
+
 // Send OTP for forgot password (EMAIL ONLY)
 async function sendForgotPasswordOtp(req, res, next) {
   try {
@@ -81,12 +90,28 @@ async function sendForgotPasswordOtp(req, res, next) {
   }
 }
 
-// Verify OTP & reset password (EMAIL ONLY)
+// Step 1: Verify OTP
 async function verifyForgotPasswordOtp(req, res, next) {
+  try {
+    const { email, otp } = req.body;
+
+    const result = await authService.verifyForgotPasswordOtp({
+      email,
+      otp,
+    });
+
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+// Step 2: Reset Password
+async function resetPasswordWithOtp(req, res, next) {
   try {
     const { email, otp, newPassword } = req.body;
 
-    const result = await authService.verifyForgotPasswordOtp({
+    const result = await authService.resetPasswordWithOtp({
       email,
       otp,
       newPassword,
@@ -145,8 +170,10 @@ module.exports = {
   verifyEmailOtp,
   resendEmailOtp,
   login,
+  logout,
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,
+  resetPasswordWithOtp,
   saveFcmToken,
   removeFcmToken,
 };

@@ -150,6 +150,37 @@
           }
         },
         {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcmToken\": \"OPTIONAL_FCM_TOKEN_TO_REMOVE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "logout"
+              ]
+            }
+          }
+        },
+        {
           "name": "Forgot Password - Send OTP (EMAIL ONLY)",
           "request": {
             "method": "POST",
@@ -178,7 +209,35 @@
           }
         },
         {
-          "name": "Forgot Password - Verify OTP (EMAIL ONLY)",
+          "name": "Forgot Password - Verify OTP (Step 1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password",
+                "verify"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password - Reset Password (Step 2)",
           "request": {
             "method": "POST",
             "header": [
@@ -192,7 +251,7 @@
               "raw": "{\n  \"email\": \"test@example.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewSecret123\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/forgot-password/verify",
+              "raw": "{{baseUrl}}/api/auth/forgot-password/reset",
               "host": [
                 "{{baseUrl}}"
               ],
@@ -200,7 +259,7 @@
                 "api",
                 "auth",
                 "forgot-password",
-                "verify"
+                "reset"
               ]
             }
           }

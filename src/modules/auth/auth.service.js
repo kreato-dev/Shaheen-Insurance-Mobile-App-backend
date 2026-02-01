@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { query } = require('../../config/db');
 const { sendOtpEmail } = require('../../utils/mailer');
-const { createEmailOtp, verifyEmailOtp } = require('./otp.service');
+const { createEmailOtp, verifyEmailOtp, validateEmailOtp } = require('./otp.service');
 
 const { fireUser } = require('../notifications/notification.service');
 const EVENTS = require('../notifications/notification.events');
@@ -312,9 +312,22 @@ async function sendForgotPasswordOtp({ email }) {
 }
 
 /**
- * Verify OTP and reset password (EMAIL ONLY)
+ * Step 1: Verify OTP only (does not consume it)
  */
-async function verifyForgotPasswordOtp({ email, otp, newPassword }) {
+async function verifyForgotPasswordOtp({ email, otp }) {
+  if (!email || !otp) {
+    throw httpError(400, 'email and otp are required');
+  }
+
+  await validateEmailOtp({ email, otp, purpose: 'forgot_password' });
+
+  return { message: 'OTP verified successfully' };
+}
+
+/**
+ * Step 2: Consume OTP and reset password
+ */
+async function resetPasswordWithOtp({ email, otp, newPassword }) {
   if (!email || !otp || !newPassword) {
     throw httpError(400, 'email, otp and New Password are required');
   }
@@ -382,6 +395,7 @@ module.exports = {
   loginUser,
   sendForgotPasswordOtp,
   verifyForgotPasswordOtp,
+  resetPasswordWithOtp,
   saveFcmToken,
   removeFcmToken,
 };

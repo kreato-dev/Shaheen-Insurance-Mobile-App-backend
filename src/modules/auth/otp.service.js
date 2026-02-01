@@ -91,7 +91,40 @@ async function verifyEmailOtp({ email, otp, purpose }) {
   return true;
 }
 
+/**
+ * Validate OTP without marking it used (for multi-step flows).
+ */
+async function validateEmailOtp({ email, otp, purpose }) {
+  if (!email) throw httpError(400, 'email is required');
+  if (!otp) throw httpError(400, 'otp is required');
+  if (!purpose) throw httpError(400, 'purpose is required');
+
+  const rows = await query(
+    `SELECT id, otp, expires_at, used_at
+       FROM otp_codes
+      WHERE email = ? AND purpose = ?
+      ORDER BY id DESC
+      LIMIT 1`,
+    [email, purpose]
+  );
+
+  if (rows.length === 0) throw httpError(400, 'OTP not found');
+
+  const record = rows[0];
+
+  if (record.used_at) throw httpError(400, 'OTP already used');
+
+  const now = new Date();
+  const expiresAt = new Date(record.expires_at);
+  if (expiresAt <= now) throw httpError(400, 'OTP expired');
+
+  if (String(record.otp) !== String(otp)) throw httpError(400, 'Invalid OTP');
+
+  return true;
+}
+
 module.exports = {
   createEmailOtp,
   verifyEmailOtp,
+  validateEmailOtp,
 };
