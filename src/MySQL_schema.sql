@@ -1267,6 +1267,7 @@ CREATE TABLE admin_activity_logs (
 -- 1) Travel Admin View for Unified Proposals Inbox
 CREATE OR REPLACE VIEW vw_travel_proposals_admin AS
 SELECT
+  p.insurance_type,
   'DOMESTIC' AS travel_type,
   p.id,
   p.user_id,
@@ -1316,6 +1317,7 @@ FROM travel_domestic_proposals p
 
 UNION ALL
 SELECT
+  p.insurance_type,
   'HAJJ_UMRAH_ZIARAT' AS travel_type,
   p.id, p.user_id, p.plan_id, p.start_date, p.end_date, p.tenure_days,
   p.first_name, p.last_name, p.mobile, p.email, p.cnic,
@@ -1333,6 +1335,7 @@ FROM travel_huj_proposals p
 
 UNION ALL
 SELECT
+  p.insurance_type,
   'INTERNATIONAL' AS travel_type,
   p.id, p.user_id, p.plan_id, p.start_date, p.end_date, p.tenure_days,
   p.first_name, p.last_name, p.mobile, p.email, p.cnic,
@@ -1350,6 +1353,7 @@ FROM travel_international_proposals p
 
 UNION ALL
 SELECT
+  p.insurance_type,
   'STUDENT_GUARD' AS travel_type,
   p.id, p.user_id, p.plan_id, p.start_date, p.end_date, p.tenure_days,
   p.first_name, p.last_name, p.mobile, p.email, p.cnic,

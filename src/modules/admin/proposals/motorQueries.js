@@ -1,6 +1,7 @@
 function buildMotorSelect() {
   return `
     SELECT
+      p.insurance_type,
       'MOTOR' AS proposal_type,
       NULL AS travel_subtype,
 

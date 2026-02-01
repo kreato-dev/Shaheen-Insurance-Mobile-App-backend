@@ -1,6 +1,7 @@
 function buildTravelSelect() {
   return `
     SELECT
+      v.insurance_type,
       'TRAVEL' AS proposal_type,
       v.travel_type AS travel_subtype,
 

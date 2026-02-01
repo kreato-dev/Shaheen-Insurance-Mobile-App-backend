@@ -42,6 +42,7 @@ async function getMyProposalsFeedService(userId, opts = {}) {
 
     unions.push(`
       SELECT
+        mp.insurance_type AS insuranceType,
         'MOTOR' AS type,
         NULL AS packageCode,
         mp.id AS proposalId,
@@ -76,6 +77,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
 
   unions.push(`
     SELECT
+      tp.insurance_type AS insuranceType,
       'TRAVEL' AS type,
       '${pkgCode}' AS packageCode,
       tp.id AS proposalId,
@@ -122,6 +124,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
     limit,
     total,
     items: rows.map((r) => ({
+      insuranceType: r.insuranceType, // GENERAL | TAKAFUL
       type: r.type,                 // MOTOR | TRAVEL
       packageCode: r.packageCode,   // null for MOTOR, else travel pkg code
       proposalId: r.proposalId,
