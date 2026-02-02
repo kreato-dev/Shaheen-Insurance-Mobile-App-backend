@@ -365,7 +365,7 @@ async function submitMotorClaimService({ userId, body, files }) {
           : null,
       });
     } catch (e) {
-        console.log('[NOTIF] CLAIM_SUBMITTED failed:', e?.message || e);
+      console.log('[NOTIF] CLAIM_SUBMITTED failed:', e?.message || e);
     }
 
     return {
@@ -456,6 +456,11 @@ async function getMyMotorClaimDetail({ userId, claimId }) {
       try { claim.proposal_snapshot_json = JSON.parse(claim.proposal_snapshot_json); } catch (_) { }
     }
 
+    // required_docs JSON come as string so parsing it as json
+    if (typeof claim.required_docs === 'string') {
+      try { claim.required_docs = JSON.parse(claim.required_docs); } catch (_) { }
+    }
+
     const [rawDocs] = await conn.execute(
       `SELECT id, doc_type, file_path, created_at FROM motor_claim_documents WHERE claim_id = ? ORDER BY id ASC`,
       [id]
@@ -477,9 +482,111 @@ async function getMyMotorClaimDetail({ userId, claimId }) {
   }
 }
 
+async function reuploadMotorClaimService({ userId, claimId, files }) {
+  const id = Number(claimId);
+  if (!id || Number.isNaN(id)) throw httpError(400, 'Invalid claimId');
+
+  const uploadedFields = Object.keys(files || {});
+  if (!uploadedFields.length) throw httpError(400, 'No files uploaded');
+
+  const conn = await getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [rows] = await conn.execute(
+      `SELECT * FROM motor_claims WHERE id = ? AND user_id = ? LIMIT 1 FOR UPDATE`,
+      [id, userId]
+    );
+
+    if (!rows.length) throw httpError(404, 'Claim not found');
+    const claim = rows[0];
+
+    if (claim.claim_status !== 'reupload_required') {
+      throw httpError(400, 'Reupload is not requested for this claim');
+    }
+
+    let requiredDocs = [];
+    if (typeof claim.required_docs === 'string') {
+      try { requiredDocs = JSON.parse(claim.required_docs); } catch (_) { }
+    } else if (Array.isArray(claim.required_docs)) {
+      requiredDocs = claim.required_docs;
+    }
+
+    const allowedSet = new Set();
+    if (Array.isArray(requiredDocs)) {
+      for (const item of requiredDocs) {
+        if (typeof item === 'string') allowedSet.add(item);
+        else if (item && typeof item === 'object' && item.doc_type) allowedSet.add(item.doc_type);
+      }
+    }
+
+    for (const field of uploadedFields) {
+      if (allowedSet.size > 0 && !allowedSet.has(field)) {
+        throw httpError(400, `Upload not requested for: ${field}`);
+      }
+    }
+
+    for (const field of uploadedFields) {
+      const file = files[field][0];
+      const filePath = toClaimUploadsRelativePath(file);
+
+      await conn.execute(
+        `INSERT INTO motor_claim_documents (claim_id, doc_type, file_path, created_at)
+         VALUES (?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE file_path = VALUES(file_path), created_at = NOW()`,
+        [id, field, filePath]
+      );
+    }
+
+    await conn.execute(
+      `UPDATE motor_claims 
+       SET claim_status = 'pending_review', updated_at = NOW() 
+       WHERE id = ?`,
+      [id]
+    );
+
+    const [uRows] = await conn.execute(`SELECT full_name FROM users WHERE id = ?`, [userId]);
+    const userName = uRows[0]?.full_name || 'User';
+
+    await conn.commit();
+
+    try {
+      const adminTo = getAdminRecipients();
+      fireAdmin(E.ADMIN_CLAIM_REUPLOAD_SUBMITTED, {
+        entity_type: 'claim',
+        entity_id: id,
+        data: {
+          claim_id: id,
+          fnol_no: claim.fnol_no,
+          user_id: userId,
+          user_name: userName,
+        },
+        email: adminTo ? templates.makeAdminClaimReuploadSubmittedEmail({
+          to: adminTo,
+          fnolNo: claim.fnol_no,
+          userName,
+          userId,
+          claimId: id,
+        }) : null
+      });
+    } catch (e) {
+      console.error('[NOTIF] ADMIN_CLAIM_REUPLOAD_SUBMITTED failed', e);
+    }
+
+    return { message: 'Reupload submitted successfully' };
+
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   getMotorClaimEntryPrefill,
   submitMotorClaimService,
   listMyMotorClaims,
   getMyMotorClaimDetail,
+  reuploadMotorClaimService,
 };

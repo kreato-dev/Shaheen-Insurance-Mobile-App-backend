@@ -3,6 +3,7 @@ const {
   submitMotorClaimService,
   listMyMotorClaims,
   getMyMotorClaimDetail,
+  reuploadMotorClaimService,
 } = require('./claim.motor.service');
 
 async function claimEntryPrefill(req, res, next) {
@@ -60,9 +61,27 @@ async function myMotorClaimDetail(req, res, next) {
   }
 }
 
+async function reuploadMotorClaim(req, res, next) {
+  try {
+    const userId = req.user?.id;
+    const { claimId } = req.params;
+
+    const result = await reuploadMotorClaimService({
+      userId,
+      claimId,
+      files: req.files,
+    });
+
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   claimEntryPrefill,
   submitMotorClaim,
   myMotorClaims,
   myMotorClaimDetail,
+  reuploadMotorClaim,
 };

@@ -15,4 +15,6 @@ router.post('/motor/', uploadClaimEvidence, controller.submitMotorClaim);
 router.get('/motor/', controller.myMotorClaims);
 router.get('/motor/:claimId', controller.myMotorClaimDetail);
 
+router.post('/motor/:claimId/reupload', uploadClaimEvidence, controller.reuploadMotorClaim);
+
 module.exports = router;

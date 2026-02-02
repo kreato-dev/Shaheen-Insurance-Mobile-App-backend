@@ -1738,6 +1738,43 @@
             }
           },
           "description": "Returns claim + documents. Download URL can be built by APP_BASE_URL + file_path."
+        },
+        {
+          "name": "Reupload Claim Evidence (Motor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "vehicle_front",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/claims/motor/{{claimId}}/reupload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "claims",
+                "motor",
+                "{{claimId}}",
+                "reupload"
+              ]
+            },
+            "description": "Re-upload documents for a claim with status 'reupload_required'. Only upload fields requested by admin."
+          }
         }
       ]
     },

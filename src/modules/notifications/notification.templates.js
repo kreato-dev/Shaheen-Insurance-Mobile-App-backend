@@ -254,6 +254,18 @@ function makeAdminNewMotorClaimEmail({
   return { to, subject, text, html };
 }
 
+function makeAdminClaimReuploadSubmittedEmail({ to, fnolNo, userName, userId, claimId }) {
+  const subject = `Claim Reupload Submitted — ${fnolNo}`;
+  const text = `User ${userName || userId} has re-uploaded documents for Claim ${fnolNo}.`;
+  const html = wrapHtml(
+    'Claim Reupload Submitted',
+    `<p>User <b>${userName || userId}</b> has re-uploaded documents for Claim <b>${fnolNo}</b>.</p>
+     <p><b>Claim ID:</b> ${claimId}</p>
+     <p>Please review the updated claim.</p>`
+  );
+  return { to, subject, text, html };
+}
+
 function makeClaimDecisionEmail({
   to,
   fullName,
@@ -432,4 +444,5 @@ module.exports = {
   makeSupportTicketReplyEmail,
   makeAdminSupportTicketCreatedEmail,
   makeAdminSupportTicketReplyEmail,
+  makeAdminClaimReuploadSubmittedEmail,
 };
