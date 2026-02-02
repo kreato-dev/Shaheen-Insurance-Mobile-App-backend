@@ -165,7 +165,7 @@ async function getUnifiedProposals(qp) {
     SELECT *
     FROM (${unionSQL}) t
     ${whereSql}
-    ORDER BY t.created_at DESC
+    ORDER BY t.updated_at DESC
     LIMIT ? OFFSET ?
   `;
 

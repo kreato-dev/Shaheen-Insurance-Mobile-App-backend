@@ -55,7 +55,8 @@ async function getMyProposalsFeedService(userId, opts = {}) {
         CONCAT(vm.name, ' ', vsm.name, ' ', mp.model_year) AS title,
         mp.registration_number AS subtitle,
         mp.premium AS premium,
-        mp.created_at AS createdAt
+        mp.created_at AS createdAt,
+        mp.updated_at AS updatedAt
       FROM motor_proposals mp
       LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
       LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
@@ -93,7 +94,8 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
       CONCAT(tp.tenure_days, ' days • ', tp.first_name, ' ', tp.last_name) AS subtitle,
 
       tp.final_premium AS premium,
-      tp.created_at AS createdAt
+      tp.created_at AS createdAt,
+      tp.updated_at AS updatedAt
 
     FROM ${tableName} tp
     INNER JOIN travel_plans pl ON pl.id = tp.plan_id
@@ -114,7 +116,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
   // Items
   const rows = await query(
     `SELECT * FROM (${unionSql}) AS x
-     ORDER BY x.createdAt DESC
+     ORDER BY x.updatedAt DESC
      LIMIT ? OFFSET ?`,
     [...params, limit, offset]
   );
@@ -138,6 +140,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
       subtitle: r.subtitle,
       premium: r.premium,
       createdAt: r.createdAt,
+      updatedAt: r.updatedAt,
     })),
   };
 }
