@@ -746,18 +746,16 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         email: null,
       });
 
-      // USER: (optional) in-app confirmation (if you want)
-      // Your provided spec doesn't require email for submit+unpaid, only payment reminder T+3 + expiry.
-      // If you want a basic in-app notif, uncomment:
-      /*
-      fireUser('PROPOSAL_SUBMITTED_UNPAID', {
+      // USER:
+      // basic in-app notif
+      fireUser(E.PROPOSAL_SUBMITTED_UNPAID, {
         user_id: userId,
         entity_type: 'proposal',
         entity_id: proposalId,
         data: { proposal_type: 'MOTOR', proposal_id: proposalId },
         email: null,
       });
-      */
+
     } catch (_) {
       // don’t block response if notifications fail
     }
@@ -1275,24 +1273,13 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
         },
         email:
           adminEmails.length > 0
-            ? {
-              to: adminEmails.join(','),
-              subject: `Reupload Submitted (MOTOR-${notifCtx.proposalId})`,
-              text: `User submitted requested reupload.\nProposal: MOTOR-${notifCtx.proposalId}\nUser: ${notifCtx.userName || notifCtx.userId}\nSaved: ${JSON.stringify(notifCtx.saved)}`,
-              html: `
-              <div style="font-family: Arial, sans-serif; line-height:1.6;">
-                <h2>Reupload Submitted</h2>
-                <p><b>Proposal:</b> MOTOR-${notifCtx.proposalId}</p>
-                <p><b>User:</b> ${notifCtx.userName || notifCtx.userId}</p>
-                <p><b>Uploaded:</b></p>
-                <pre style="background:#f6f6f6;padding:10px;border-radius:8px;">${JSON.stringify(
-                notifCtx.saved,
-                null,
-                2
-              )}</pre>
-              </div>
-            `,
-            }
+            ? templates.makeAdminReuploadSubmittedEmail({
+                to: adminEmails.join(','),
+                proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+                userName: notifCtx.userName,
+                userId: notifCtx.userId,
+                saved: notifCtx.saved,
+              })
             : null,
       });
     } catch (_) { }

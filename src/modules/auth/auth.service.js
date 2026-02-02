@@ -6,7 +6,7 @@ const { sendOtpEmail } = require('../../utils/mailer');
 const { createEmailOtp, verifyEmailOtp, validateEmailOtp } = require('./otp.service');
 
 const { fireUser } = require('../notifications/notification.service');
-const EVENTS = require('../notifications/notification.events');
+const E = require('../notifications/notification.events');
 const templates = require('../notifications/notification.templates');
 
 
@@ -178,7 +178,7 @@ async function verifyEmailOtpService({ email, otp }) {
         fullName: u.full_name,
       });
 
-      fireUser(EVENTS.USER_WELCOME_EMAIL, {
+      fireUser(E.USER_WELCOME_EMAIL, {
         user_id: u.id,
         entity_type: 'USER',
         entity_id: u.id,

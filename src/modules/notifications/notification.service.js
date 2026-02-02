@@ -7,14 +7,26 @@ const { sendPushToUser, sendPushToAdmins } = require('./fcm.service');
 
 function buildTitleMessage(event_key, payload) {
   switch (event_key) {
+    case 'PROPOSAL_SUBMITTED_UNPAID':
+      return { title: 'Proposal Submitted', message: 'Your proposal has been submitted. Please complete payment.' };
+
     case 'PROPOSAL_PAYMENT_REMINDER_TPLUS3':
       return { title: 'Payment Reminder', message: 'Complete payment to move your proposal to review.' };
+
+    case 'PROPOSAL_PAYMENT_CONFIRMED_REVIEW_PENDING':
+      return { title: 'Payment Confirmed', message: 'Payment received. Your proposal is now under review.' };
 
     case 'PROPOSAL_REJECTED_REFUND_INITIATED':
       return { title: 'Proposal Rejected', message: `Reason: ${payload.rejection_reason}. Refund initiated.` };
 
+    case 'PROPOSAL_REUPLOAD_REQUIRED':
+      return { title: 'Action Required', message: payload.reupload_notes ? `Notes: ${payload.reupload_notes}` : 'Please re-upload requested documents.' };
+
     case 'POLICY_ISSUED':
       return { title: 'Policy Issued', message: `Your policy ${payload.policy_no} has been issued.` };
+
+    case 'MOTOR_REG_NO_UPLOAD_REMINDER':
+      return { title: 'Upload Registration Number', message: 'Please upload your vehicle registration number.' };
 
     case 'CLAIM_SUBMITTED':
       return { title: 'Claim Submitted', message: `FNOL: ${payload.fnol_no || ''}` };
@@ -28,12 +40,27 @@ function buildTitleMessage(event_key, payload) {
     case 'CLAIM_REJECTED':
       return { title: 'Claim Rejected', message: payload.rejection_reason ? `Reason: ${payload.rejection_reason}` : 'Your claim was rejected.' };
 
+    case 'ADMIN_PROPOSAL_SUBMITTED_UNPAID':
+      return { title: 'New Proposal Submitted', message: `New ${payload.proposal_type} proposal #${payload.proposal_id} submitted (Unpaid).` };
+
+    case 'ADMIN_PROPOSAL_BECAME_PAID':
+      return { title: 'Proposal Paid', message: `Proposal #${payload.proposal_id} is paid. Ready for review.` };
+
     // Claims - admin
     case 'ADMIN_NEW_CLAIM':
       return { title: 'New Claim Submitted', message: `FNOL: ${payload.fnol_no || ''}` };
 
     case 'ADMIN_CLAIM_REUPLOAD_SUBMITTED':
       return { title: 'Claim Reupload Submitted', message: `Claim updated by user. FNOL: ${payload.fnol_no || ''}` };
+
+    case 'ADMIN_REFUND_ACTION_REQUIRED':
+      return { title: 'Refund Action Required', message: `Refund initiated for Proposal #${payload.proposal_id}. Please process.` };
+
+    case 'ADMIN_REUPLOAD_SUBMITTED':
+      return { title: 'Reupload Submitted', message: `User re-uploaded documents for Proposal #${payload.proposal_id}.` };
+
+    case 'ADMIN_MOTOR_REG_NO_UPLOADED':
+      return { title: 'Registration Number Uploaded', message: `User uploaded Reg No: ${payload.registration_number} for Proposal #${payload.proposal_id}.` };
 
     case 'RENEWAL_DOCUMENT_SENT':
       return { title: 'Renewal Document', message: 'Renewal document has been shared.' };
@@ -55,6 +82,24 @@ function buildTitleMessage(event_key, payload) {
       return {
         title: 'Refund Case Closed',
         message: 'Your refund case has been closed.',
+      };
+
+    case 'SUPPORT_TICKET_REPLY':
+      return {
+        title: 'New Support Reply',
+        message: `Reply on ticket #${payload.ticket_no}: ${payload.message_snippet}`,
+      };
+
+    case 'SUPPORT_TICKET_CREATED':
+      return { title: 'Ticket Created', message: `Ticket #${payload.ticket_no} created: ${payload.subject}` };
+
+    case 'ADMIN_SUPPORT_TICKET_CREATED':
+      return { title: 'New Support Ticket', message: `Ticket #${payload.ticket_no} created by User ${payload.user_id}.` };
+
+    case 'ADMIN_SUPPORT_TICKET_REPLY':
+      return {
+        title: 'New Support Reply',
+        message: `User ${payload.user_id} replied to #${payload.ticket_no}: ${payload.message_snippet}`,
       };
 
     default:

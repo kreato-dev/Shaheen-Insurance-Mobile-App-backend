@@ -3,6 +3,7 @@ const repo = require('./admin.support.repository');
 const { fireUser } = require('../../notifications/notification.service');
 const templates = require('../../notifications/notification.templates');
 const { logAdminAction } = require('../adminlogs/admin.logs.service');
+const E = require('../../notifications/notification.events');
 
 function httpError(status, msg) {
   const e = new Error(msg);
@@ -71,7 +72,7 @@ exports.adminReply = async (ticketId, adminId, message, files) => {
     );
     if (rows.length > 0) {
       const t = rows[0];
-      fireUser('SUPPORT_TICKET_REPLY', {
+      fireUser(E.SUPPORT_TICKET_REPLY, {
         user_id: t.user_id,
         entity_type: 'support_ticket',
         entity_id: ticketId,

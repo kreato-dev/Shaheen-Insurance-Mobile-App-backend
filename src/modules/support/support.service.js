@@ -2,6 +2,7 @@ const { query } = require('../../config/db');
 const repo = require('./support.repository');
 const { fireUser, fireAdmin } = require('../notifications/notification.service');
 const templates = require('../notifications/notification.templates');
+const E = require('../notifications/notification.events');
 
 function httpError(status, msg) {
   const e = new Error(msg);
@@ -38,7 +39,7 @@ exports.createTicket = async (userId, body, files) => {
     const [u] = await query('SELECT full_name, email FROM users WHERE id=?', [userId]);
     if (u) {
       // 1. Notify User (Confirmation)
-      fireUser('SUPPORT_TICKET_CREATED', {
+      fireUser(E.SUPPORT_TICKET_CREATED, {
         user_id: userId,
         entity_type: 'support_ticket',
         entity_id: ticket.id,
@@ -54,7 +55,7 @@ exports.createTicket = async (userId, body, files) => {
       const adminEmails = (process.env.ADMIN_ALERT_EMAILS || '').split(',').map(s => s.trim()).filter(Boolean);
 
       // 2. Notify Admin (Alert)
-      fireAdmin('ADMIN_SUPPORT_TICKET_CREATED', {
+      fireAdmin(E.ADMIN_SUPPORT_TICKET_CREATED, {
         entity_type: 'support_ticket',
         entity_id: ticket.id,
         data: { ticket_id: ticket.id, ticket_no: ticket.ticket_no, subject, user_id: userId },
@@ -132,7 +133,7 @@ exports.replyTicket = async (userId, ticketId, body, files) => {
     const adminEmails = (process.env.ADMIN_ALERT_EMAILS || '').split(',').map(s => s.trim()).filter(Boolean);
     const [u] = await query('SELECT email FROM users WHERE id=?', [userId]);
 
-    fireAdmin('ADMIN_SUPPORT_TICKET_REPLY', {
+    fireAdmin(E.ADMIN_SUPPORT_TICKET_REPLY, {
       entity_type: 'support_ticket',
       entity_id: ticketId,
       milestone: `reply_${msg.id}`,
