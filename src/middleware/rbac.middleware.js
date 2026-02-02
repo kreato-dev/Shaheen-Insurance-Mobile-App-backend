@@ -6,6 +6,7 @@ const ROLE_PERMS = {
     'NOTIFICATIONS:READ',
     'OVERVIEW:READ_MOTOR',
     'OVERVIEW:READ_TRAVEL',
+    'LOGS:VIEW',
   ],
   MOTOR_ADMIN: [
     'CLAIMS:READ_MOTOR',
@@ -22,8 +23,6 @@ const ROLE_PERMS = {
     'SUPPORT:READ',
     'SUPPORT:UPDATE',
     'USERS:READ',
-
-    'AUDIT:READ',
   ],
   TRAVEL_ADMIN: [
     // 'CLAIMS:READ_TRAVEL', // no module implemetation yet for travel claim
@@ -39,8 +38,6 @@ const ROLE_PERMS = {
     'SUPPORT:READ',
     'SUPPORT:UPDATE',
     'USERS:READ',
-
-    'AUDIT:READ',
   ],
   FINANCE_ADMIN: [
     'CLAIMS:READ_MOTOR',
@@ -51,9 +48,6 @@ const ROLE_PERMS = {
     'PROPOSALS:READ_MOTOR',
     'PROPOSALS:READ_TRAVEL',
     'REFUNDS:MANAGE',
-
-    'PAYMENTS:MANUAL',
-    'AUDIT:READ',
   ],
   SUPPORT_ADMIN: [
     'CLAIMS:READ_MOTOR',

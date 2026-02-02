@@ -26,6 +26,8 @@ function buildTravelSelect() {
 
       policy_status,
       policy_no,
+      v.policy_issued_at,
+      v.policy_expires_at,
       
       v.admin_last_action_by,
       v.admin_last_action_at,
@@ -47,6 +49,7 @@ function buildTravelSelect() {
       NULL AS submake_id,
       NULL AS model_year,
       NULL AS assembly,
+      NULL AS insurance_start_date,
 
       0 AS docs_count,
       0 AS vehicle_images_count

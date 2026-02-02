@@ -21,11 +21,14 @@ function buildMotorSelect() {
       p.paid_at,
 
       p.review_status,
+      p.insurance_start_date,
       p.submitted_at,
       p.expires_at,
 
       policy_status,
       policy_no,
+      p.policy_issued_at,
+      p.policy_expires_at,
 
       p.admin_last_action_by,
       p.admin_last_action_at,
