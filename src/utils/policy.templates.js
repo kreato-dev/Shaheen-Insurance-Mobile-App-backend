@@ -8,6 +8,27 @@ const formatDate = (date) => {
   const year = d.getFullYear();
   return `${day}/${month}/${year}`;
 };
+ // cover note number generator (M/TD/TH/TI/TS-YYYYMMDD-PROPOSAL_ID)
+const generateCoverNoteId = (type, packageCode, proposalId) => {
+  const d = new Date();
+  const dateStr = d.getFullYear() +
+    String(d.getMonth() + 1).padStart(2, '0') +
+    String(d.getDate()).padStart(2, '0');
+
+  let prefix = '';
+  if (type === 'MOTOR') {
+    prefix = 'M';
+  } else {
+    let sub = 'I'; 
+    const p = String(packageCode || '').toUpperCase();
+    if (p.includes('DOMESTIC')) sub = 'D';
+    else if (p.includes('HAJJ') || p.includes('UMRAH')) sub = 'H';
+    else if (p.includes('STUDENT')) sub = 'S';
+    else if (p.includes('INTERNATIONAL')) sub = 'I';
+    prefix = 'T' + sub;
+  }
+  return `${prefix}-${dateStr}-${proposalId}`;
+};
 
 const createMotorCoverNoteHtml = (data) => {
   const {
@@ -18,6 +39,7 @@ const createMotorCoverNoteHtml = (data) => {
     lifecycle = {}
   } = data;
 
+  const coverNoteNo = generateCoverNoteId('MOTOR', null, proposalId);
   const issueDate = formatDate(new Date());
   // Default validity 1 year from start date, or today if not set
   const startDate = lifecycle.insuranceStartDate ? new Date(lifecycle.insuranceStartDate) : new Date();
@@ -65,7 +87,7 @@ const createMotorCoverNoteHtml = (data) => {
           <div>(Schedule)</div>
         </div>
 
-        <div class="row"><span class="label">Cover Note No.</span> <span class="value">: ${proposalId}</span></div>
+        <div class="row"><span class="label">Cover Note No.</span> <span class="value">: ${coverNoteNo}</span></div>
         <div class="row"><span class="label">Business Class</span> <span class="value">: PRIVATE CAR (COMPREHENSIVE)</span></div>
         <div class="row"><span class="label">Insured Name</span> <span class="value">: ${insuredName}</span></div>
         <div class="row"><span class="label">Address</span> <span class="value">: ${insuredAddress}</span></div>
@@ -176,20 +198,21 @@ const createTravelCoverNoteHtml = (data) => {
     insuranceType
   } = data;
 
-  const issueDate = new Date().toLocaleDateString();
+  const coverNoteNo = generateCoverNoteId('TRAVEL', tripDetails.packageCode, proposalId);
+  const issueDate = formatDate(new Date());
   const insuredName = `${applicantInfo.firstName || ''} ${applicantInfo.lastName || ''}`.trim();
   const insuredAddress = `${applicantInfo.address || ''}${applicantInfo.cityName ? ', ' + applicantInfo.cityName : ''}`;
   
   const passport = applicantInfo.passportNumber || '-';
   const cnic = applicantInfo.cnic || '-';
   const mobile = applicantInfo.mobile || '-';
-  const dob = applicantInfo.dob ? new Date(applicantInfo.dob).toLocaleDateString() : '-';
+  const dob = formatDate(applicantInfo.dob);
   
   const planName = `${tripDetails.packageCode || ''} - ${tripDetails.productPlan || ''}`;
   const coverage = tripDetails.coverageType || '-';
   
-  const validFrom = tripDetails.startDate ? new Date(tripDetails.startDate).toLocaleDateString() : '-';
-  const validTo = tripDetails.endDate ? new Date(tripDetails.endDate).toLocaleDateString() : '-';
+  const validFrom = formatDate(tripDetails.startDate);
+  const validTo = formatDate(tripDetails.endDate);
   const tenure = tripDetails.tenureDays ? `${tripDetails.tenureDays} Days` : '-';
   const purpose = tripDetails.PurposeOfVisit || '-';
   
@@ -250,7 +273,7 @@ const createTravelCoverNoteHtml = (data) => {
           <div>(Schedule)</div>
         </div>
 
-        <div class="row"><span class="label">Cover Note No.</span> <span class="value">: ${proposalId}</span></div>
+        <div class="row"><span class="label">Cover Note No.</span> <span class="value">: ${coverNoteNo}</span></div>
         <div class="row"><span class="label">Business Class</span> <span class="value">: TRAVEL INSURANCE</span></div>
         <div class="row"><span class="label">Insured Name</span> <span class="value">: ${insuredName}</span></div>
         <div class="row"><span class="label">Address</span> <span class="value">: ${insuredAddress}</span></div>
