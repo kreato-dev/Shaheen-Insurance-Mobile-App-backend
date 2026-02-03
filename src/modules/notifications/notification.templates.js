@@ -43,14 +43,15 @@ function makeProposalUnpaidExpiredEmail({ to, fullName, proposalLabel }) {
   return { to, subject, text, html };
 }
 
-function makePaymentConfirmedReviewPendingEmail({ to, fullName, proposalLabel }) {
+function makePaymentConfirmedReviewPendingEmail({ to, fullName, proposalLabel, coverNoteUrl }) {
   const subject = 'Payment Confirmed — Pending Review';
   const text = `Hi ${fullName || ''}, payment received for (${proposalLabel}). Your proposal is now in pending review.`;
   const html = wrapHtml(
     'Payment Confirmed',
     `<p>Hi ${fullName || ''},</p>
      <p>Payment received for <b>${proposalLabel}</b>.</p>
-     <p>Your proposal is now in <b>Pending Review</b>.</p>`
+     <p>Your proposal is now in <b>Pending Review</b>.</p>
+     ${coverNoteUrl ? `<p><b>Cover Note:</b> <a href="${coverNoteUrl}">Download</a></p>` : ''}`
   );
   return { to, subject, text, html };
 }
@@ -69,7 +70,7 @@ function makeProposalRejectedRefundInitiatedEmail({ to, fullName, proposalLabel,
   return { to, subject, text, html };
 }
 
-function makePolicyIssuedEmail({ to, fullName, policyNo, policyExpiresAt, proposalLabel }) {
+function makePolicyIssuedEmail({ to, fullName, policyNo, policyExpiresAt, proposalLabel, coverNoteUrl, policyScheduleUrl }) {
   const subject = `Policy Issued: ${policyNo}`;
   const text = `Hi ${fullName || ''}, your policy ${policyNo} has been issued.\nProposal: ${proposalLabel || ''}\nExpires: ${policyExpiresAt || ''}`;
   const html = wrapHtml(
@@ -78,7 +79,9 @@ function makePolicyIssuedEmail({ to, fullName, policyNo, policyExpiresAt, propos
      <p>Your policy <b>${policyNo}</b> has been issued.</p>
      ${proposalLabel ? `<p><b>Proposal:</b> ${proposalLabel}</p>` : ''}
      ${policyExpiresAt ? `<p><b>Expires:</b> ${policyExpiresAt}</p>` : ''}
-     <p>Your policy schedule document is available in the app.</p>`
+     <p>Your policy schedule document is available in the app.</p>
+     ${coverNoteUrl ? `<p><b>Cover Note:</b> <a href="${coverNoteUrl}">Download</a></p>` : ''}
+     ${policyScheduleUrl ? `<p><b>Policy Schedule:</b> <a href="${policyScheduleUrl}">Download</a></p>` : ''}`
   );
   return { to, subject, text, html };
 }
@@ -185,13 +188,15 @@ function makeUserRefundStatusUpdatedEmail({
   };
 }
 
-function makeRenewalDocumentSentEmail({ to, fullName, policyNo }) {
+function makeRenewalDocumentSentEmail({ to, fullName, policyNo, renewalDocumentUrl, renewalNotes }) {
   const subject = 'Renewal Document Available';
   const text = `Hi ${fullName || ''}, renewal document for policy ${policyNo} is available.`;
   const html = wrapHtml(
     'Renewal Document Sent',
     `<p>Hi ${fullName || ''},</p>
-     <p>Your renewal document for policy <b>${policyNo}</b> is available.</p>`
+     <p>Your renewal document for policy <b>${policyNo}</b> is available.</p>
+     ${renewalNotes ? `<p><b>Notes:</b> ${renewalNotes}</p>` : ''}
+     ${renewalDocumentUrl ? `<p><b>Document:</b> <a href="${renewalDocumentUrl}">Download</a></p>` : ''}`
   );
   return { to, subject, text, html };
 }

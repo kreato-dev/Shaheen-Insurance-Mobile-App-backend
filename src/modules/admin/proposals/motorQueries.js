@@ -12,6 +12,10 @@ function buildMotorSelect() {
       u.mobile AS mobile,
       u.email AS email,
       p.cnic,
+      
+      NULL AS start_date,
+      NULL AS end_date,
+      NULL AS tenure_days,
 
       p.sum_insured,
       p.premium AS final_premium,
@@ -24,6 +28,13 @@ function buildMotorSelect() {
       p.insurance_start_date,
       p.submitted_at,
       p.expires_at,
+      
+      p.product_type,
+      p.registration_number,
+      p.make_id,
+      p.submake_id,
+      p.model_year,
+      p.assembly,
 
       policy_status,
       policy_no,
@@ -43,13 +54,6 @@ function buildMotorSelect() {
 
       p.created_at,
       p.updated_at,
-
-      p.product_type,
-      p.registration_number,
-      p.make_id,
-      p.submake_id,
-      p.model_year,
-      p.assembly,
 
       COALESCE(d.docs_count, 0) AS docs_count,
       COALESCE(i.vehicle_images_count, 0) AS vehicle_images_count

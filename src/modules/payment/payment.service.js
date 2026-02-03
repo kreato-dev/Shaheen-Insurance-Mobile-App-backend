@@ -490,6 +490,8 @@ async function markPaymentSuccessDev({ paymentId }) {
 
     await conn.commit();
 
+    const coverNoteUrl = coverNotePath ? `${APP_BASE_URL}/${coverNotePath}` : null;
+
     // ✅ AFTER COMMIT: fire notifications + emails
     if (notifCtx) {
       const proposalLabel =
@@ -515,6 +517,7 @@ async function markPaymentSuccessDev({ paymentId }) {
           to: notifCtx.userEmail,
           fullName: notifCtx.fullName,
           proposalLabel,
+          coverNoteUrl,
         }),
       });
 
@@ -542,8 +545,6 @@ async function markPaymentSuccessDev({ paymentId }) {
             : null,
       });
     }
-
-    const coverNoteUrl = coverNotePath ? `${APP_BASE_URL}/${coverNotePath}` : null;
 
     return { ok: true, paymentId: id, status: 'SUCCESS', coverNoteUrl };
   } catch (err) {

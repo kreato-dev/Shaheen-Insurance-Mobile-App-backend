@@ -13,6 +13,10 @@ function buildTravelSelect() {
       v.email,
       v.cnic,
 
+      v.start_date,
+      v.end_date,
+      v.tenure_days,
+
       NULL AS sum_insured,
       v.final_premium,
 
@@ -21,8 +25,16 @@ function buildTravelSelect() {
       v.paid_at,
 
       v.review_status,
+      NULL AS insurance_start_date,
       v.submitted_at,
       v.expires_at,
+
+      NULL AS product_type,
+      NULL AS registration_number,
+      NULL AS make_id,
+      NULL AS submake_id,
+      NULL AS model_year,
+      NULL AS assembly,
 
       policy_status,
       policy_no,
@@ -42,14 +54,6 @@ function buildTravelSelect() {
 
       v.created_at,
       v.updated_at,
-
-      NULL AS product_type,
-      NULL AS registration_number,
-      NULL AS make_id,
-      NULL AS submake_id,
-      NULL AS model_year,
-      NULL AS assembly,
-      NULL AS insurance_start_date,
 
       0 AS docs_count,
       0 AS vehicle_images_count

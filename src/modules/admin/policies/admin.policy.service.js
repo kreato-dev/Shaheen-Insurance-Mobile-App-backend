@@ -4,6 +4,8 @@ const E = require('../../notifications/notification.events');
 const templates = require('../../notifications/notification.templates');
 const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
+const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
+
 function httpError(status, message) {
     const err = new Error(message);
     err.status = status;
@@ -177,6 +179,9 @@ async function issuePolicyService({
             const userId = Number(proposal.user_id);
             const userEmail = proposal.user_email || null;
 
+            const coverNoteUrl = proposal.cover_note_path ? `${APP_BASE_URL}/${proposal.cover_note_path}` : null;
+            const policyScheduleUrl = schedulePath ? `${APP_BASE_URL}/${schedulePath}` : null;
+
             // 1) USER: Policy Issued
             const entityType = type === 'MOTOR' ? 'policy_MOTOR' : `policy_TRAVEL_${pkgCode}`;
             fireUser(E.POLICY_ISSUED, {
@@ -190,6 +195,8 @@ async function issuePolicyService({
                     policy_expires_at: endDate,
                     policy_schedule_path: schedulePath,
                     travel_package_code: type === 'TRAVEL' ? pkgCode : null,
+                    cover_note_url: coverNoteUrl,
+                    policy_schedule_url: policyScheduleUrl,
                 },
                 email: userEmail
                     ? templates.makePolicyIssuedEmail({
@@ -198,6 +205,8 @@ async function issuePolicyService({
                         policyNo: cleanPolicyNo,
                         policyExpiresAt: endDate,
                         proposalLabel: `${type}-${id}`,
+                        coverNoteUrl,
+                        policyScheduleUrl,
                     })
                     : null,
             });

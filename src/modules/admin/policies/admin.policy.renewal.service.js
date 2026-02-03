@@ -1,7 +1,6 @@
 const { getConnection } = require('../../../config/db');
 const {
   fireUser,
-  buildPublicFileUrl,
 } = require('../../notifications/notification.service');
 
 const E = require('../../notifications/notification.events');
@@ -10,6 +9,8 @@ const {
   makeRenewalDocumentSentEmail,
 } = require('../../notifications/notification.templates');
 const { logAdminAction } = require('../adminlogs/admin.logs.service');
+
+const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
 
 function httpError(status, message) {
   const err = new Error(message);
@@ -101,7 +102,7 @@ async function sendMotorRenewalDocService({ adminId, proposalId, renewalFile, re
     );
 
     const user = uRows?.[0] || {};
-    const renewalUrl = buildPublicFileUrl(renewalPath);
+    const renewalUrl = renewalPath ? `${APP_BASE_URL}/${renewalPath}` : null;
 
     fireUser(E.RENEWAL_DOCUMENT_SENT, {
       user_id: p.user_id,
