@@ -269,7 +269,7 @@ function normalizeCoverageCode(packageCode, coverageType) {
  */
 function normalizePlanCode(plan) {
   const s = String(plan || '').toLowerCase().trim();
-  if (s === 'basic') return 'BASIC';
+  // if (s === 'basic') return 'BASIC';
   if (s === 'silver') return 'SILVER';
   if (s === 'gold') return 'GOLD';
   if (s === 'platinum') return 'PLATINUM';
@@ -352,7 +352,7 @@ async function getPlanAndSlab({ packageCode, coverageCode, planCode, tenureDays,
  * Apply package rules:
  * - max age limits (Domestic 60, HUJ 69, International 80, Student 65)
  * - International loadings (66-70 => +100%, 71-75 => +150%, 76-80 => +200%)
- * - International multi-trip restriction: max 90 days per trip in those age bands
+ * - International multi-trip restriction: read from DB (if any)
  * Returns loadingPercent (e.g. 50 for 50% increase) and maxTripDaysApplied.
  */
 async function applyRulesAndLoading({ packageId, packageCode, age, isMultiTrip }) {
@@ -411,6 +411,7 @@ async function quoteTravelPremiumService(data) {
     tenureDays: tenureDaysInput,
     dob,
     isMultiTrip = false,
+    familyMembersCount = 0,
   } = data;
 
   if (!packageType || !coverageType || !productPlan) {
@@ -454,7 +455,13 @@ async function quoteTravelPremiumService(data) {
   });
 
   // 4. Base premium comes directly from the slab row
-  const basePremium = Number(slab.premium);
+  let basePremium = Number(slab.premium);
+
+  // Domestic Family: Premium = Slab Premium * (Applicant + Family Members)
+  if (packageCode === 'DOMESTIC' && coverageCode === 'FAMILY') {
+    const count = 1 + Math.max(0, Number(familyMembersCount) || 0);
+    basePremium = basePremium * count;
+  }
 
   // 5. Final premium = Base + (Base * Loading%)
   const finalPremium = Number((basePremium * (1 + loadingPercent / 100)).toFixed(2));
@@ -626,6 +633,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
     tenureDays,
     dob: applicantInfo.dob,
     isMultiTrip,
+    familyMembersCount: Array.isArray(familyMembers) ? familyMembers.length : 0,
   });
 
   // 3. Override End Date: The policy duration is strictly determined by the purchased slab's max days.
@@ -1438,12 +1446,12 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
         email:
           adminEmails.length > 0
             ? templates.makeAdminReuploadSubmittedEmail({
-                to: adminEmails.join(','),
-                proposalLabel: `${packageCode}-${proposalId}`,
-                userName: notifCtx?.userName,
-                userId: notifCtx?.userId || userId,
-                saved: notifCtx?.saved || saved,
-              })
+              to: adminEmails.join(','),
+              proposalLabel: `${packageCode}-${proposalId}`,
+              userName: notifCtx?.userName,
+              userId: notifCtx?.userId || userId,
+              saved: notifCtx?.saved || saved,
+            })
             : null,
       });
     } catch (_) {
@@ -1521,7 +1529,8 @@ async function listPlansService(packageCode, coverageCode) {
     `SELECT id, code, name, currency
      FROM travel_plans
      WHERE package_id = ? AND coverage_id = ?
-     ORDER BY FIELD(code,'BASIC','SILVER','GOLD','PLATINUM','DIAMOND'), id ASC`,
+     ORDER BY FIELD(code,'SILVER','GOLD','PLATINUM','DIAMOND'), id ASC`,
+    //  'BASIC', (removed plan)
     [packageId, covRows[0].id]
   );
 
