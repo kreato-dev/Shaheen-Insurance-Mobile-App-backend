@@ -124,7 +124,39 @@ async function sendOtpEmail({ to, otp, purpose, expiresMinutes }) {
   return sendEmail({ to, subject, text, html });
 }
 
+/**
+ * Admin initiated password reset email with embedded Link + OTP.
+ */
+async function sendUserPasswordResetLinkEmail({ to, name, otp, expiresMinutes }) {
+  const subject = 'Action Required: Reset Your Password - Shaheen Insurance';
+  
+  // Construct the URL (Adjust path '/reset-password' to match your frontend route)
+  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const link = `${baseUrl}/reset-password?email=${encodeURIComponent(to)}&otp=${otp}`;
+
+  const text = `Hello ${name},\n\nAn administrator has initiated a password reset for your account.\n\nClick here to reset: ${link}\n\nOr use OTP: ${otp}\n\nExpires in ${expiresMinutes} minutes.`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height:1.6; color: #333;">
+      <h2>Password Reset Request</h2>
+      <p>Hello <strong>${name}</strong>,</p>
+      <p>An administrator has initiated a password reset for your account.</p>
+      <p>Please click the button below to set a new password:</p>
+      <p>
+        <a href="${link}" style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Reset Password</a>
+      </p>
+      <p>Or use the following OTP manually:</p>
+      <div style="font-size: 24px; font-weight: bold; letter-spacing: 2px; margin: 10px 0;">${otp}</div>
+      <p>This link will expire in <b>${expiresMinutes} minutes</b>.</p>
+      <p style="font-size: 12px; color: #888; margin-top: 20px;">If the button doesn't work, copy this link: ${link}</p>
+    </div>
+  `;
+
+  return sendEmail({ to, subject, text, html });
+}
+
 module.exports = {
   sendEmail,
   sendOtpEmail,
+  sendUserPasswordResetLinkEmail,
 };

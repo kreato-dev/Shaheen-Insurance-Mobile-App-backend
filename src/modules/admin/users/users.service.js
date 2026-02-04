@@ -1,6 +1,6 @@
 const { query } = require('../../../config/db');
 const { createEmailOtp } = require('../../auth/otp.service');
-const { sendOtpEmail } = require('../../../utils/mailer');
+const { sendOtpEmail, sendUserPasswordResetLinkEmail } = require('../../../utils/mailer');
 const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 function httpError(status, message) {
@@ -159,10 +159,10 @@ async function initiateUserPasswordReset(userId, adminId) {
     expiresMinutes,
   });
 
-  await sendOtpEmail({
+  await sendUserPasswordResetLinkEmail({
     to: user.email,
+    name: user.full_name,
     otp,
-    purpose: 'forgot_password',
     expiresMinutes,
   });
 
