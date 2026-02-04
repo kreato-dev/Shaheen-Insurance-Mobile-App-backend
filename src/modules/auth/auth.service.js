@@ -36,7 +36,7 @@ function generateJwt(user) {
 
 function sanitizeUser(user) {
   if (!user) return null;
-  const { password_hash, failed_login_attempts, lock_until, ...rest } = user;
+  const { password_hash, failed_login_attempts, lock_until, is_locked_status, ...rest } = user;
   return rest;
 }
 
@@ -112,12 +112,12 @@ async function verifyEmailOtpService({ email, otp }) {
 
   // 1. Retrieve from temp_users
   const tempRows = await query(`SELECT * FROM temp_users WHERE email = ? LIMIT 1`, [email]);
-  
+
   if (tempRows.length === 0) {
     // Edge case: User might be already verified if they clicked twice, check main table
     const existing = await query(`SELECT id FROM users WHERE email = ? LIMIT 1`, [email]);
     if (existing.length > 0) return { message: 'Email already verified' };
-    
+
     throw httpError(400, 'Registration session expired or invalid. Please register again.');
   }
 
@@ -213,8 +213,11 @@ async function loginUser({ mobile, password }) {
     throw httpError(400, 'mobile and password are required');
   }
 
+  /*
+  * select user and calculate & lock_until > NOW()) AS is_locked_status(1 or 0)
+  */
   const rows = await query(
-    'SELECT * FROM users WHERE mobile = ? LIMIT 1',
+    'SELECT *, (lock_until > NOW()) as is_locked_status FROM users WHERE mobile = ? LIMIT 1',
     [mobile]
   );
 
@@ -225,15 +228,23 @@ async function loginUser({ mobile, password }) {
   const user = rows[0];
 
   // Check if account is locked
-  if (user.lock_until && new Date(user.lock_until) > new Date()) {
+  if (user.is_locked_status == 1) {
     throw httpError(429, 'Account is temporarily locked due to multiple failed login attempts. Please try again later.');
   }
 
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) {
-    // Increment failed attempts
-    const newAttempts = (user.failed_login_attempts || 0) + 1;
     
+    // Increment failed attempts
+    let currentAttempts = user.failed_login_attempts || 0;
+
+    // If account was previously locked but time expired (is_locked_status=0), reset counter
+    if (user.lock_until && user.is_locked_status == 0) {
+      currentAttempts = 0;
+    }
+
+    const newAttempts = currentAttempts + 1;
+
     if (newAttempts >= 5) {
       // Lock for 15 minutes
       await query(
@@ -243,7 +254,7 @@ async function loginUser({ mobile, password }) {
       throw httpError(429, 'Too many failed attempts. Account locked for 15 minutes.');
     } else {
       await query(
-        'UPDATE users SET failed_login_attempts = ? WHERE id = ?',
+        'UPDATE users SET failed_login_attempts = ?, lock_until = NULL WHERE id = ?',
         [newAttempts, user.id]
       );
       const remaining = 5 - newAttempts;
