@@ -410,7 +410,7 @@ async function quoteTravelPremiumService(data) {
     endDate,
     tenureDays: tenureDaysInput,
     dob,
-    isMultiTrip = false,
+    isMultiTrip: isMultiTripInput = false,
     familyMembersCount = 0,
   } = data;
 
@@ -430,6 +430,9 @@ async function quoteTravelPremiumService(data) {
   }
 
   if (tenureDays <= 0) throw httpError(400, 'tenureDays must be positive');
+
+  // Auto-enable multi-trip if tenure > 184 days
+  const isMultiTrip = tenureDays > 184 ? true : !!isMultiTripInput;
 
   const age = dob ? calculateAge(dob) : null;
 
