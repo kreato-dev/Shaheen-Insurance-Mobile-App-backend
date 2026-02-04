@@ -279,7 +279,7 @@
               "raw": "{\n  \"email\": \"test@example.com\",\n  \"purpose\": \"forgot_password\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/auth/resend-email-otp",
+              "raw": "{{baseUrl}}/api/auth/resend-forgot-password-otp",
               "host": [
                 "{{baseUrl}}"
               ],
