@@ -44,7 +44,7 @@ function buildTitleMessage(event_key, payload) {
       return { title: 'New Proposal Submitted', message: `New ${payload.proposal_type} proposal #${payload.proposal_id} submitted (Unpaid).` };
 
     case 'ADMIN_PROPOSAL_BECAME_PAID':
-      return { title: 'Proposal Paid', message: `Proposal #${payload.proposal_id} is paid. Ready for review.` };
+      return { title: 'Proposal Paid', message: `${payload.proposal_type} Proposal #${payload.proposal_id} is paid. Ready for review.` };
 
     // Claims - admin
     case 'ADMIN_NEW_CLAIM':
@@ -54,10 +54,10 @@ function buildTitleMessage(event_key, payload) {
       return { title: 'Claim Reupload Submitted', message: `Claim updated by user. FNOL: ${payload.fnol_no || ''}` };
 
     case 'ADMIN_REFUND_ACTION_REQUIRED':
-      return { title: 'Refund Action Required', message: `Refund initiated for Proposal #${payload.proposal_id}. Please process.` };
+      return { title: 'Refund Action Required', message: `Refund initiated for ${payload.proposal_type} Proposal #${payload.proposal_id}. Please process.` };
 
     case 'ADMIN_REUPLOAD_SUBMITTED':
-      return { title: 'Reupload Submitted', message: `User re-uploaded documents for Proposal #${payload.proposal_id}.` };
+      return { title: 'Reupload Submitted', message: `User re-uploaded documents for ${payload.proposal_type} Proposal #${payload.proposal_id}.` };
 
     case 'ADMIN_MOTOR_REG_NO_UPLOADED':
       return { title: 'Registration Number Uploaded', message: `User uploaded Reg No: ${payload.registration_number} for Proposal #${payload.proposal_id}.` };
