@@ -286,7 +286,7 @@
               "path": [
                 "api",
                 "auth",
-                "resend-email-otp"
+                "resend-forgot-password-otp"
               ]
             }
           }
