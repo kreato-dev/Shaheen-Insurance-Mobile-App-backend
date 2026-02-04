@@ -4,6 +4,7 @@ const { query } = require('../../config/db');
 const { fireUser, fireAdmin } = require('./notification.service');
 const E = require('./notification.events');
 const templates = require('./notification.templates');
+const { cleanupOldOtps } = require('../auth/otp.service');
 
 async function runPaymentReminderTPlus3() {
   // Motor
@@ -337,6 +338,32 @@ async function runMotorRegNoReminderWeekly() {
   }
 }
 
+async function runOtpCleanup() {
+  try {
+    await cleanupOldOtps();
+  } catch (err) {
+    console.error('[CRON] OTP cleanup failed:', err);
+  }
+}
+
+/*
+async function runAdminLogCleanup() {
+  try {
+    await query(`DELETE FROM admin_activity_logs WHERE created_at < (NOW() - INTERVAL 1 YEAR)`);
+  } catch (err) {
+    console.error('[CRON] Admin log cleanup failed:', err);
+  }
+}
+*/
+
+async function runTempUserCleanup() {
+  try {
+    await query(`DELETE FROM temp_users WHERE created_at < (NOW() - INTERVAL 1 DAY)`);
+  } catch (err) {
+    console.error('[CRON] Temp user cleanup failed:', err);
+  }
+}
+
 function registerNotificationCrons() {
   // 10 AM daily (Asia/Karachi server time)
   cron.schedule('0 10 * * *', runPaymentReminderTPlus3);
@@ -353,6 +380,15 @@ function registerNotificationCrons() {
 
   // weekly reg reminder (Mon 10:20)
   cron.schedule('20 10 * * 1', runMotorRegNoReminderWeekly);
+
+  // Daily OTP cleanup at 3:00 AM
+  cron.schedule('0 3 * * *', runOtpCleanup);
+
+  // Daily Admin Log cleanup at 3:30 AM
+  // cron.schedule('30 3 * * *', runAdminLogCleanup);
+
+  // Daily Temp User cleanup at 4:00 AM
+  cron.schedule('0 4 * * *', runTempUserCleanup);
 }
 
 module.exports = {

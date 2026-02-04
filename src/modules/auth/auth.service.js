@@ -36,7 +36,7 @@ function generateJwt(user) {
 
 function sanitizeUser(user) {
   if (!user) return null;
-  const { password_hash, ...rest } = user;
+  const { password_hash, failed_login_attempts, lock_until, ...rest } = user;
   return rest;
 }
 
@@ -51,65 +51,27 @@ async function registerUser({ fullName, email, mobile, password }) {
     throw httpError(400, 'All fields are required');
   }
 
-  // Check if mobile and email already exists
-  const existingRows1 = await query(
-    `SELECT id, email, mobile, email_verified
-    FROM users
-    WHERE mobile = ? AND email = ?
-    LIMIT 1`,
+  // 1. Check if user already exists in MAIN table
+  const existingUsers = await query(
+    `SELECT id FROM users WHERE mobile = ? OR email = ? LIMIT 1`,
     [mobile, email]
   );
-
-  // if (existingRows.length === 0) throw httpError(409, 'User with this mobile/email already exists');
-
-  if (existingRows1.length > 0) {
-    const existing = existingRows1[0];
-
-    // If user exists but email not verified -> resend OTP instead of blocking register
-    if (existing.email_verified === 0) {
-      const { otp } = await createEmailOtp({
-        email: existing.email,
-        mobile: existing.mobile,
-        purpose: 'email_verify',
-        expiresMinutes: 2,
-      });
-
-      await sendOtpEmail({
-        to: existing.email,
-        otp,
-        purpose: 'email_verify',
-        expiresMinutes: 2,
-      });
-
-      return {
-        message: 'Account already exists but email not verified. OTP resent to email.',
-        email: existing.email,
-        needsEmailVerification: true,
-      };
-    }
-
-    // Verified user -> real conflict
-    throw httpError(409, 'User with this mobile and email already exists');
+  if (existingUsers.length > 0) {
+    throw httpError(409, 'User with this mobile or email already exists');
   }
-
-  // Check if mobile or email already exists
-  const existingRows2 = await query(
-    `SELECT id, email, mobile, email_verified
-       FROM users
-    WHERE mobile = ? OR email = ?
-    LIMIT 1`,
-    [mobile, email]
-  );
-
-  if (existingRows2.length > 0) throw httpError(409, 'User with this mobile or email already exists');
 
   const passwordHash = await bcrypt.hash(password, 10);
 
-  // IMPORTANT:
-  // email_verified = 0 because we will verify using OTP
+  // 2. Insert or Update into TEMP table
+  // If user tries to register again before verifying, we update their details
   await query(
-    `INSERT INTO users (full_name, email, mobile, password_hash, status, email_verified, created_at, updated_at)
-     VALUES (?, ?, ?, ?, 'active', 0, NOW(), NOW())`,
+    `INSERT INTO temp_users (full_name, email, mobile, password_hash, created_at)
+     VALUES (?, ?, ?, ?, NOW())
+     ON DUPLICATE KEY UPDATE
+       full_name = VALUES(full_name),
+       mobile = VALUES(mobile),
+       password_hash = VALUES(password_hash),
+       created_at = NOW()`,
     [fullName, email, mobile, passwordHash]
   );
 
@@ -148,27 +110,33 @@ async function verifyEmailOtpService({ email, otp }) {
   // Verify OTP from DB
   await verifyEmailOtp({ email, otp, purpose: 'email_verify' });
 
-  // Mark verified
-  await query(
-    `UPDATE users
-        SET email_verified = 1,
-            email_verified_at = NOW(),
-            updated_at = NOW()
-      WHERE email = ?
-      LIMIT 1`,
-    [email]
+  // 1. Retrieve from temp_users
+  const tempRows = await query(`SELECT * FROM temp_users WHERE email = ? LIMIT 1`, [email]);
+  
+  if (tempRows.length === 0) {
+    // Edge case: User might be already verified if they clicked twice, check main table
+    const existing = await query(`SELECT id FROM users WHERE email = ? LIMIT 1`, [email]);
+    if (existing.length > 0) return { message: 'Email already verified' };
+    
+    throw httpError(400, 'Registration session expired or invalid. Please register again.');
+  }
+
+  const tempUser = tempRows[0];
+
+  // 2. Move to users table
+  const insertRes = await query(
+    `INSERT INTO users (full_name, email, mobile, password_hash, status, email_verified, email_verified_at, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'active', 1, NOW(), NOW(), NOW())`,
+    [tempUser.full_name, tempUser.email, tempUser.mobile, tempUser.password_hash]
   );
 
-  // ✅ Fetch user for welcome email + notification
-  const rows = await query(
-    `SELECT id, full_name, email
-       FROM users
-      WHERE email = ?
-      LIMIT 1`,
-    [email]
-  );
+  const newUserId = insertRes.insertId;
 
-  const u = rows?.[0];
+  // 3. Delete from temp_users
+  await query(`DELETE FROM temp_users WHERE email = ?`, [email]);
+
+  // ✅ Fetch user object for notification
+  const u = { id: newUserId, full_name: tempUser.full_name, email: tempUser.email };
 
   // ✅ Fire welcome email only once (send-log prevents duplicates)
   if (u?.id && u?.email) {
@@ -205,20 +173,23 @@ async function resendEmailOtpService({ email, purpose }) {
   const p = (purpose || 'email_verify').toLowerCase();
   if (!allowed.has(p)) throw httpError(400, 'purpose must be email_verify or forgot_password');
 
-  // Check if user exists
-  const u = await query('SELECT email_verified FROM users WHERE email = ? LIMIT 1', [email]);
-  if (!u.length) {
-    // For forgot_password, if user isn't exists it returns a success message immediately 
-    // (security best practice to prevent email enumeration) and does not send an OTP.
-    if (p === 'forgot_password') return { message: 'OTP resent successfully' };
-    throw httpError(404, 'User not found');
-  }
+  let mobile = null;
 
-  // Optional rule: if purpose=email_verify and user already verified, block resend
   if (p === 'email_verify') {
-    if (u[0].email_verified === 1) {
-      return { message: 'Email is already verified.' };
+    // Check temp_users first
+    const temp = await query('SELECT mobile FROM temp_users WHERE email = ? LIMIT 1', [email]);
+    if (temp.length > 0) {
+      mobile = temp[0].mobile;
+    } else {
+      // Check if already verified in main table
+      const u = await query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+      if (u.length > 0) return { message: 'Email is already verified.' };
+      throw httpError(404, 'Registration not found. Please register again.');
     }
+  } else {
+    // Forgot password: check main users table
+    const u = await query('SELECT id FROM users WHERE email = ? LIMIT 1', [email]);
+    if (!u.length) return { message: 'OTP resent successfully' }; // Silent fail for security and to prevent email enumeration
   }
 
   // const expiresMinutes = p === 'forgot_password' ? 10 : 5;
@@ -253,14 +224,41 @@ async function loginUser({ mobile, password }) {
 
   const user = rows[0];
 
+  // Check if account is locked
+  if (user.lock_until && new Date(user.lock_until) > new Date()) {
+    throw httpError(429, 'Account is temporarily locked due to multiple failed login attempts. Please try again later.');
+  }
+
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) {
-    throw httpError(401, 'Invalid mobile or password');
+    // Increment failed attempts
+    const newAttempts = (user.failed_login_attempts || 0) + 1;
+    
+    if (newAttempts >= 5) {
+      // Lock for 15 minutes
+      await query(
+        'UPDATE users SET failed_login_attempts = ?, lock_until = DATE_ADD(NOW(), INTERVAL 15 MINUTE) WHERE id = ?',
+        [newAttempts, user.id]
+      );
+      throw httpError(429, 'Too many failed attempts. Account locked for 15 minutes.');
+    } else {
+      await query(
+        'UPDATE users SET failed_login_attempts = ? WHERE id = ?',
+        [newAttempts, user.id]
+      );
+      const remaining = 5 - newAttempts;
+      throw httpError(401, `Invalid mobile or password. ${remaining} attempts remaining.`);
+    }
   }
 
   // force email verification before login:
   if (user.email_verified === 0) {
     throw httpError(403, 'Email is not verified. Please verify OTP first.');
+  }
+
+  // Reset failed attempts on successful login
+  if (user.failed_login_attempts > 0 || user.lock_until) {
+    await query('UPDATE users SET failed_login_attempts = 0, lock_until = NULL WHERE id = ?', [user.id]);
   }
 
   const token = generateJwt(user);

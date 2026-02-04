@@ -105,6 +105,8 @@ CREATE TABLE users (
   profile_picture VARCHAR(255) NULL,
   status ENUM('active','inactive') DEFAULT 'active',
   role ENUM('customer') NOT NULL DEFAULT 'customer',
+  failed_login_attempts INT DEFAULT 0,
+  lock_until DATETIME NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_users_mobile (mobile),
@@ -127,6 +129,18 @@ CREATE TABLE otp_codes (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX idx_otp_mobile (mobile),
   INDEX idx_otp_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2.0.1) Temporary Users (Registration Staging)
+CREATE TABLE temp_users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  full_name VARCHAR(150) NOT NULL,
+  email VARCHAR(150) NOT NULL,
+  mobile VARCHAR(30) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_temp_users_email (email),
+  UNIQUE KEY uq_temp_users_mobile (mobile)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 2.1) Admins (Dedicated Table - Security)

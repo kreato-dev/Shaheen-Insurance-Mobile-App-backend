@@ -123,8 +123,17 @@ async function validateEmailOtp({ email, otp, purpose }) {
   return true;
 }
 
+/**
+ * Cleanup old OTPs (cron job)
+ * Deletes OTPs expired more than 24 hours ago to keep table size manageable.
+ */
+async function cleanupOldOtps() {
+  await query(`DELETE FROM otp_codes WHERE expires_at < (NOW() - INTERVAL 1 DAY)`);
+}
+
 module.exports = {
   createEmailOtp,
   verifyEmailOtp,
   validateEmailOtp,
+  cleanupOldOtps,
 };

@@ -1,6 +1,6 @@
 const { query } = require('../../config/db');
 
-const APP_BASE_URL = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
+const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
 
 function buildUrl(path) {
   return path ? `${APP_BASE_URL}/${path.replace(/\\/g, '/')}` : null;
