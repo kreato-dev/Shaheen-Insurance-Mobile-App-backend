@@ -49,6 +49,7 @@ async function listUsers(qp) {
       u.mobile,
       u.cnic,
       u.status,
+      u.profile_picture,
       u.created_at,
       u.updated_at
     FROM users u
@@ -66,12 +67,20 @@ async function listUsers(qp) {
 
   const total = Number(countRows?.[0]?.total || 0);
 
+  // Map profile picture to full URL
+  const itemsWithUrl = items.map((u) => {
+    if (u.profile_picture && !u.profile_picture.startsWith('http')) {
+      u.profile_picture = `${APP_BASE_URL}/${u.profile_picture}`;
+    }
+    return u;
+  });
+
   return {
     page,
     limit,
     total,
     totalPages: Math.ceil(total / limit),
-    items,
+    items: itemsWithUrl,
   };
 }
 
