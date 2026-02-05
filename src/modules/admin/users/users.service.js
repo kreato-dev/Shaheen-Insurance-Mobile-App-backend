@@ -3,6 +3,8 @@ const { createEmailOtp } = require('../../auth/otp.service');
 const { sendOtpEmail, sendUserPasswordResetLinkEmail } = require('../../../utils/mailer');
 const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
+const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
+
 function httpError(status, message) {
   const e = new Error(message);
   e.status = status;
@@ -93,6 +95,7 @@ async function getUserById(userId) {
       u.dob,
       u.nationality,
       u.gender,
+      u.profile_picture,
       u.status,
       u.created_at,
       u.updated_at
@@ -104,7 +107,12 @@ async function getUserById(userId) {
   );
 
   if (!rows.length) throw httpError(404, 'User not found');
-  return { user: rows[0] };
+
+  const user = rows[0];
+  if (user.profile_picture && !user.profile_picture.startsWith('http')) {
+    user.profile_picture = `${APP_BASE_URL}/${user.profile_picture}`;
+  }
+  return user;
 }
 
 async function updateUserStatus(userId, status, adminId) {
