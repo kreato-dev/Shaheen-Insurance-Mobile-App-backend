@@ -132,7 +132,7 @@ async function sendUserPasswordResetLinkEmail({ to, name, otp, expiresMinutes })
   
   // Construct the URL (Adjust path '/reset-password' to match your frontend route)
   const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
-  const link = `${baseUrl}/reset-password?email=${encodeURIComponent(to)}&otp=${otp}`;
+  const link = `${baseUrl}/#/reset-password?email=${encodeURIComponent(to)}&otp=${otp}`;
 
   const text = `Hello ${name},\n\nAn administrator has initiated a password reset for your account.\n\nClick here to reset: ${link}\n\nOr use OTP: ${otp}\n\nExpires in ${expiresMinutes} minutes.`;
 
