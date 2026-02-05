@@ -120,8 +120,11 @@ async function fireUser(event_key, { user_id, entity_type, entity_id, milestone 
   });
 
   if (email) {
+    // to stop dupe email (prevent spam ) uncomment:
+    /*
     const already = await repo.hasSendLog({ audience: 'USER', event_key, entity_type, entity_id, milestone, channel: 'EMAIL' });
     if (already) return notifId;
+    */
 
     try {
       await sendEmail(email); // ✅ uses src/utils/mailer.js
@@ -157,9 +160,12 @@ async function fireAdmin(event_key, { admin_id = null, entity_type, entity_id, m
   });
 
   if (email) {
+    // to stop dupe email (prevent spam ) uncomment:
+    /*
     const already = await repo.hasSendLog({ audience: 'ADMIN', event_key, entity_type, entity_id, milestone, channel: 'EMAIL' });
     if (already) return notifId;
-
+    */
+   
     try {
       await sendEmail(email);
       await repo.insertSendLog({ notification_id: notifId, audience: 'ADMIN', event_key, entity_type, entity_id, milestone, status: 'SENT' });
