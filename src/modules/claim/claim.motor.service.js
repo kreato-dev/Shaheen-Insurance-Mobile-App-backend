@@ -175,7 +175,8 @@ async function submitMotorClaimService({ userId, body, files }) {
         SELECT
           mp.*,
           u.email AS user_email,
-          u.full_name AS user_name
+          u.full_name AS user_name,
+          u.mobile AS user_mobile
         FROM motor_proposals mp
         LEFT JOIN users u ON u.id = mp.user_id
         WHERE mp.id = ?
@@ -328,7 +329,7 @@ async function submitMotorClaimService({ userId, body, files }) {
         email: userEmail
           ? templates.makeClaimSubmittedEmail({
             to: userEmail,
-            fullName: p.full_name,
+            fullName: p.user_name,
             fnolNo,
             policyNo: p.policy_no,
           })
@@ -357,9 +358,9 @@ async function submitMotorClaimService({ userId, body, files }) {
             registrationNumber: p.registration_number,
             claimType,
             incidentDate,
-            userName: p.full_name,
-            userMobile: p.mobile,
-            userEmail: p.email,
+            userName: p.user_name,
+            userMobile: p.user_mobile,
+            userEmail: p.user_email,
             claimId,
           })
           : null,

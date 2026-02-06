@@ -448,9 +448,9 @@ async function getTravelProposalDetail(travelSubtype, proposalId) {
   const rawDocuments = await query(
     `SELECT id, doc_type, side, file_path, created_at
    FROM travel_documents
-   WHERE proposal_id = ?
+   WHERE proposal_id = ? AND package_code = ?
    ORDER BY created_at ASC`,
-    [id]
+    [id, t.travelType]
   );
 
   const documents = rawDocuments.map(doc => ({
@@ -656,6 +656,7 @@ async function reviewMotorProposal(
               fullName: notifCtx.userName,
               proposalLabel: `MOTOR-${notifCtx.proposalId}`,
               reuploadNotes: notifCtx.reuploadNotes,
+              requiredDocs: notifCtx.requiredDocs,
             })
             : null,
         });
@@ -877,6 +878,7 @@ async function reviewTravelProposal(
               fullName: notifCtx.userName,
               proposalLabel: `TRAVEL-${notifCtx.proposalId}`,
               reuploadNotes: notifCtx.reuploadNotes,
+              requiredDocs: notifCtx.requiredDocs,
             })
             : null,
         });

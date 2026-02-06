@@ -316,8 +316,21 @@ function makeClaimDecisionEmail({
   return { to, subject, text, html };
 }
 
-function makeProposalReuploadRequiredEmail({ to, fullName, proposalLabel, reuploadNotes }) {
+function makeProposalReuploadRequiredEmail({ to, fullName, proposalLabel, reuploadNotes, requiredDocs }) {
   const subject = `Action Required: Re-upload Documents (${proposalLabel})`;
+
+  const docsHtml = Array.isArray(requiredDocs) && requiredDocs.length
+    ? `<p><b>Required Documents:</b></p><ul>${requiredDocs.map(d => {
+        if (typeof d === 'string') return `<li>${d}</li>`;
+        if (d && typeof d === 'object') {
+          const name = d.doc_type || d.docType || 'Document';
+          const side = d.side ? ` (${d.side})` : '';
+          return `<li>${name}${side}</li>`;
+        }
+        return `<li>${d}</li>`;
+      }).join('')}</ul>`
+    : '';
+
   const text = `Admin requested document re-upload for your proposal.\nProposal: ${proposalLabel}\nNotes: ${reuploadNotes || 'N/A'}\n`;
   const html = wrapHtml(
     'Action Required: Re-upload Documents',
@@ -325,6 +338,7 @@ function makeProposalReuploadRequiredEmail({ to, fullName, proposalLabel, reuplo
      <p>Admin requested document re-upload for your proposal.</p>
      <p><b>Proposal:</b> ${proposalLabel}</p>
      <p><b>Notes:</b> ${reuploadNotes || 'N/A'}</p>
+     ${docsHtml}
      <p>Please open the app and re-upload the requested documents.</p>`
   );
   return { to, subject, text, html };
@@ -366,13 +380,17 @@ function makeAdminProposalPaidEmail({ to, proposalLabel }) {
 
 function makeAdminReuploadSubmittedEmail({ to, proposalLabel, userName, userId, saved }) {
   const subject = `Reupload Submitted (${proposalLabel})`;
-  const text = `User submitted requested reupload.\nProposal: ${proposalLabel}\nUser: ${userName || userId}\nSaved: ${JSON.stringify(saved)}`;
+
+  const savedList = Array.isArray(saved) && saved.length > 0
+    ? `<ul>${saved.map(s => `<li>${s}</li>`).join('')}</ul>`
+    : '<p>No files listed</p>';
+
+  const text = `User submitted requested reupload.\nProposal: ${proposalLabel}\nUser: ${userName || userId}\nSaved: ${Array.isArray(saved) ? saved.join(', ') : ''}`;
   const html = wrapHtml(
     'Reupload Submitted',
     `<p><b>Proposal:</b> ${proposalLabel}</p>
      <p><b>User:</b> ${userName || userId}</p>
-     <p><b>Uploaded:</b></p>
-     <pre style="background:#f6f6f6;padding:10px;border-radius:8px;">${JSON.stringify(saved, null, 2)}</pre>`
+     <p><b>Uploaded:</b></p>${savedList}`
   );
   return { to, subject, text, html };
 }
