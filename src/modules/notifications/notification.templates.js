@@ -293,7 +293,15 @@ function makeClaimDecisionEmail({
     (reuploadNotes ? `Notes: ${reuploadNotes}\n` : '');
 
   const docsHtml = Array.isArray(requiredDocs) && requiredDocs.length
-    ? `<p><b>Required Documents:</b></p><ul>${requiredDocs.map(d => `<li>${d}</li>`).join('')}</ul>`
+    ? `<p><b>Required Documents:</b></p><ul>${requiredDocs.map(d => {
+        if (typeof d === 'string') return `<li>${d}</li>`;
+        if (d && typeof d === 'object') {
+          const name = d.doc_type || d.docType || 'Document';
+          const side = d.side ? ` (${d.side})` : '';
+          return `<li>${name}${side}</li>`;
+        }
+        return `<li>${d}</li>`;
+      }).join('')}</ul>`
     : '';
 
   const html = wrapHtml(
