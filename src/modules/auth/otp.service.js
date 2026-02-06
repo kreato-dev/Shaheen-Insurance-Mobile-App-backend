@@ -34,7 +34,6 @@ async function createEmailOtp({mobile, email, purpose, expiresMinutes }) {
 
   // expire after N minutes
   const expiresAt = new Date(Date.now() + expiresMinutes * 60 * 1000);
-  const expiresAtSql = expiresAt.toISOString().slice(0, 19).replace('T', ' ');
 
   // Optional: invalidate previous unused OTPs for same email+purpose
   await query(
@@ -46,8 +45,8 @@ async function createEmailOtp({mobile, email, purpose, expiresMinutes }) {
 
   await query(
     `INSERT INTO otp_codes (mobile, email, otp, purpose, expires_at, created_at)
-     VALUES (?, ?, ?, ?, ?, NOW())`,
-    [mobileExists, email, otp, purpose, expiresAtSql]
+     VALUES (?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL ? MINUTE), NOW())`,
+    [mobileExists, email, otp, purpose, expiresMinutes]
   );
 
   return { otp, expiresAt };
