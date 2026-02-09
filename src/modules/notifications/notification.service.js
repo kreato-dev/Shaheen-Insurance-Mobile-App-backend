@@ -60,7 +60,7 @@ function buildTitleMessage(event_key, payload) {
       return { title: 'Reupload Submitted', message: `User re-uploaded documents for ${payload.proposal_type} Proposal #${payload.proposal_id}.` };
 
     case 'ADMIN_MOTOR_REG_NO_UPLOADED':
-      return { title: 'Registration Number Uploaded', message: `User uploaded Reg No: ${payload.registration_number} for Proposal #${payload.proposal_id}.` };
+      return { title: 'Registration Number Uploaded', message: `User uploaded Reg No: ${payload.registration_number} for MOTOR Proposal #${payload.proposal_id}.` };
 
     case 'RENEWAL_DOCUMENT_SENT':
       return { title: 'Renewal Document', message: 'Renewal document has been shared.' };

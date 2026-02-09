@@ -137,6 +137,8 @@ async function issuePolicyService({
         }
 
         // Optional: policy_no uniqueness within SAME table (recommended)
+        //uncomment:
+        /*
         const [dup] = await conn.execute(
             `SELECT id FROM ${tableName} WHERE policy_no = ? AND id <> ? LIMIT 1`,
             [cleanPolicyNo, id]
@@ -144,6 +146,7 @@ async function issuePolicyService({
         if (dup.length) {
             throw httpError(409, 'policy_no already exists');
         }
+        */
 
         // Update proposal row with issued policy
         await conn.execute(
