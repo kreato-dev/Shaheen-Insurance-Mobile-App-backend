@@ -25,6 +25,7 @@ const loginLimiter = rateLimit({
   message: { message: 'Too many login attempts, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  skipSuccessfulRequests: true, // Only count failed requests (status >= 400)
 });
 
 // Limit for sending OTPs (Forgot Password, Resend Password)
