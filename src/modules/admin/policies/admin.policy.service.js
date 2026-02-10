@@ -121,7 +121,7 @@ async function issuePolicyService({
             if (!startDate) throw httpError(400, 'insurance_start_date is missing in motor proposal');
 
             const [endRows] = await conn.execute(
-                `SELECT DATE_ADD(?, INTERVAL 1 YEAR) AS endDate`,
+                `SELECT DATE_SUB(DATE_ADD(?, INTERVAL 1 YEAR), INTERVAL 1 DAY) AS endDate`,
                 [startDate]
             );
             endDate = endRows?.[0]?.endDate;
