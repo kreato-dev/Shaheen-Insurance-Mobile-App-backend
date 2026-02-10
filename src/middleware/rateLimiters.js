@@ -3,7 +3,7 @@ const rateLimit = require('express-rate-limit');
 // Limit for sending OTPs (Register, Resend)
 const otpSendLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 3, // Limit each IP to 3 OTP send requests per windowMs
+  max: 4, // Limit each IP to 4 OTP send requests per windowMs
   message: { message: 'Too many OTP requests, please try again after 10 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -31,7 +31,7 @@ const loginLimiter = rateLimit({
 // Limit for sending OTPs (Forgot Password, Resend Password)
 const forgotPassSendLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 3, // Limit each IP to 10 requests for the forgot password flow per windowMs
+  max: 4, // Limit each IP to 4 requests for the forgot password flow per windowMs
   message: { message: 'Too many forgot password attempts, please try again after 10 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
