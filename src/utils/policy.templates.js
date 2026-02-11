@@ -67,7 +67,7 @@ const createMotorCoverNoteHtml = (data) => {
     <html>
       <head>
         <style>
-          body { font-family: Courier, monospace; font-size: 12px; color: #000; padding: 20px; }
+          body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 20px; }
           .header { text-align: center; font-weight: bold; margin-bottom: 20px; }
           .title { font-size: 18px; text-decoration: underline; margin-bottom: 5px; }
           .row { display: flex; margin-bottom: 6px; }
@@ -79,7 +79,7 @@ const createMotorCoverNoteHtml = (data) => {
           .premium-table { width: 100%; border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; margin-top: 10px; }
           .premium-table td { padding: 8px; }
           .amount-col { text-align: right; }
-          .footer-text { font-size: 10px; margin-top: 20px; line-height: 1.4; }
+          .footer-text { font-size: 11px; margin-top: 20px; line-height: 1.4; }
         </style>
       </head>
       <body>
@@ -327,7 +327,7 @@ const createTravelCoverNoteHtml = (data) => {
     <html>
       <head>
         <style>
-          body { font-family: Courier, monospace; font-size: 12px; color: #000; padding: 20px; }
+          body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 20px; }
           .header { text-align: center; font-weight: bold; margin-bottom: 20px; }
           .title { font-size: 18px; text-decoration: underline; margin-bottom: 5px; }
           .row { display: flex; margin-bottom: 6px; }
@@ -339,7 +339,8 @@ const createTravelCoverNoteHtml = (data) => {
           .premium-table { width: 100%; border-top: 1px solid #000; border-bottom: 1px solid #000; font-weight: bold; margin-top: 10px; }
           .premium-table td { padding: 8px; }
           .amount-col { text-align: right; }
-          .footer-text { font-size: 10px; margin-top: 20px; line-height: 1.4; }
+          .footer-text { font-size: 11px; margin-top: 20px; line-height: 1.4; }
+          .footer-text ul li { margin-bottom: 5px; }
         </style>
       </head>
       <body>

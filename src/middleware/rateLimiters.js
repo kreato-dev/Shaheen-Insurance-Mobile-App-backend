@@ -1,4 +1,4 @@
-const rateLimit = require('express-rate-limit');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 // Limit for sending OTPs (Register, Resend)
 const otpSendLimiter = rateLimit({
@@ -21,11 +21,14 @@ const otpVerifyLimiter = rateLimit({
 // Limit for login attempts (Brute-force protection)
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 login requests per windowMs
+  max: 5, // Limit each user (by mobile) to 5 failed login requests per windowMs
   message: { message: 'Too many login attempts, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true, // Only count failed requests (status >= 400)
+  keyGenerator: (req, res) => {
+    return req.body.mobile || ipKeyGenerator(req, res); // Use mobile number as key, fallback to IP
+  },
 });
 
 // Limit for sending OTPs (Forgot Password, Resend Password)
