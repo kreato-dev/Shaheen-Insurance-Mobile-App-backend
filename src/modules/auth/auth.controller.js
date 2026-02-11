@@ -62,7 +62,13 @@ async function login(req, res, next) {
       password,
     });
 
-    return res.json(result);
+    // If login is successful, reset the rate limit counter for this key.
+    if (req.rateLimit) {
+      req.rateLimit.resetKey();
+    }
+
+    // Return 200 OK with the user and token
+    return res.status(200).json(result);
   } catch (err) {
     next(err);
   }
