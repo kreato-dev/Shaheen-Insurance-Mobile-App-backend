@@ -1,5 +1,6 @@
 // src/modules/auth/auth.controller.js
 const authService = require('./auth.service');
+const { loginLimiter } = require('../../middleware/rateLimiters');
 
 // Register a new user
 async function register(req, res, next) {
@@ -63,9 +64,8 @@ async function login(req, res, next) {
     });
 
     // If login is successful, reset the rate limit counter for this key.
-    if (req.rateLimit) {
-      req.rateLimit.resetKey();
-    }
+    // For express-rate-limit v8+, we use the instance method directly.
+    loginLimiter.resetKey(mobile);
 
     // Return 200 OK with the user and token
     return res.status(200).json(result);
