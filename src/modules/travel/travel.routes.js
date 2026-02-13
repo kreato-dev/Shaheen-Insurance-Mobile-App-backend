@@ -4,6 +4,10 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const travelController = require('./travel.controller');
+//admin middleware(include for get plan api)
+const adminSession = require('../../middleware/adminSession.middleware');
+const requirePermission = require('../../middleware/rbac.middleware');
+const requireAdmin = require('../../middleware/requireAdmin.middleware');
 
 // travel.routes.js is inside src/modules/travel → go up 3 levels: travel → modules → src → root
 const projectRoot = path.join(__dirname, '..', '..', '..');
@@ -118,11 +122,11 @@ router.post(
 );
 
 
-// Catalog (no auth needed usually, but up to you)
-router.get('/catalog/packages', travelController.listPackages);
-router.get('/catalog/coverages', travelController.listCoverages);
-router.get('/catalog/plans', travelController.listPlans);
-router.get('/catalog/slabs', travelController.listSlabs);
+// Catalog (no auth needed usually, but add adimin auth just for this api, user auth mentioned in app.js)
+router.get('/catalog/packages',requireAdmin, adminSession(), requirePermission('PROPOSALS:READ_TRAVEL'), travelController.listPackages);
+router.get('/catalog/coverages',requireAdmin, adminSession(), requirePermission('PROPOSALS:READ_TRAVEL'), travelController.listCoverages);
+router.get('/catalog/plans',requireAdmin, adminSession(), requirePermission('PROPOSALS:READ_TRAVEL'), travelController.listPlans);
+router.get('/catalog/slabs',requireAdmin, adminSession(), requirePermission('PROPOSALS:READ_TRAVEL'), travelController.listSlabs);
 
 /*
 *Get travel proposal by id

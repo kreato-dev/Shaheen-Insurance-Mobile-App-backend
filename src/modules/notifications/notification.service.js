@@ -13,6 +13,9 @@ function buildTitleMessage(event_key, payload) {
     case 'PROPOSAL_PAYMENT_REMINDER_TPLUS3':
       return { title: 'Payment Reminder', message: 'Complete payment to move your proposal to review.' };
 
+    case 'PROPOSAL_UNPAID_EXPIRED':
+      return { title: 'Proposal Expired', message: `Your unpaid ${payload.proposal_type} proposal #${payload.proposal_id} has expired.` };
+
     case 'PROPOSAL_PAYMENT_CONFIRMED_REVIEW_PENDING':
       return { title: 'Payment Confirmed', message: 'Payment received. Your proposal is now under review.' };
 
@@ -24,6 +27,15 @@ function buildTitleMessage(event_key, payload) {
 
     case 'POLICY_ISSUED':
       return { title: 'Policy Issued', message: `Your policy ${payload.policy_no} has been issued.` };
+
+    case 'POLICY_EXPIRING_D30':
+    case 'POLICY_EXPIRING_D15':
+    case 'POLICY_EXPIRING_D5':
+    case 'POLICY_EXPIRING_D1':
+      return { title: 'Policy Expiring Soon', message: `Your ${payload.proposal_type} policy ${payload.policy_no} is expiring soon.` };
+
+    case 'POLICY_EXPIRED':
+      return { title: 'Policy Expired', message: `Your ${payload.proposal_type} policy ${payload.policy_no} has expired.` };
 
     case 'MOTOR_REG_NO_UPLOAD_REMINDER':
       return { title: 'Upload Registration Number', message: 'Please upload your vehicle registration number.' };
@@ -61,6 +73,15 @@ function buildTitleMessage(event_key, payload) {
 
     case 'ADMIN_MOTOR_REG_NO_UPLOADED':
       return { title: 'Registration Number Uploaded', message: `User uploaded Reg No: ${payload.registration_number} for MOTOR Proposal #${payload.proposal_id}.` };
+
+    case 'ADMIN_POLICY_EXPIRING_D30':
+    case 'ADMIN_POLICY_EXPIRING_D15':
+    case 'ADMIN_POLICY_EXPIRING_D5':
+    case 'ADMIN_POLICY_EXPIRING_D1':
+      return { title: 'Policy Expiring', message: `${payload.proposal_type} Policy ${payload.policy_no} is expiring soon.` };
+
+    case 'ADMIN_POLICY_EXPIRED':
+      return { title: 'Policy Expired', message: `Policy ${payload.policy_no} has expired.` };
 
     case 'RENEWAL_DOCUMENT_SENT':
       return { title: 'Renewal Document', message: 'Renewal document has been shared.' };
@@ -101,6 +122,9 @@ function buildTitleMessage(event_key, payload) {
         title: 'New Support Reply',
         message: `User ${payload.user_id} replied to #${payload.ticket_no}: ${payload.message_snippet}`,
       };
+
+    case 'USER_WELCOME_EMAIL':
+      return { title: 'Welcome', message: `Welcome to Shaheen Insurance, ${payload.full_name || ''}!` };
 
     default:
       return { title: 'Update', message: 'You have a new update.' };
@@ -165,7 +189,7 @@ async function fireAdmin(event_key, { admin_id = null, entity_type, entity_id, m
     const already = await repo.hasSendLog({ audience: 'ADMIN', event_key, entity_type, entity_id, milestone, channel: 'EMAIL' });
     if (already) return notifId;
     */
-   
+
     try {
       await sendEmail(email);
       await repo.insertSendLog({ notification_id: notifId, audience: 'ADMIN', event_key, entity_type, entity_id, milestone, status: 'SENT' });
