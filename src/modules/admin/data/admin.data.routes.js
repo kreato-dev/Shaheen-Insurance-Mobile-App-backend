@@ -32,6 +32,22 @@ router.get('/tracker-companies', dataController.getTrackerCompanies);
 // GET /api/data/travel-destinations?search=United
 router.get('/travel-destinations', dataController.getTravelDestinations);
 
+/* 
+* Travel Catalog (Pakage, Coverage, Plan and Price Slab) 
+*/
+
+// GET /api/data/travel/catalog/packages
+router.get('/travel/catalog/packages', dataController.listPackages);
+
+// GET /api/data/travel/catalog/coverages?package={{travelPackageCode}}
+router.get('/travel/catalog/coverages', dataController.listCoverages);
+
+// GET /api/data/travel/catalog/planspackage={{travelPackageCode}}&coverage={{travelCoverageCode}}
+router.get('/travel/catalog/plans', dataController.listPlans);
+
+// GET /api/data/travel/catalog/slabs?planId={{travelPlanId}}
+router.get('/travel/catalog/slabs', dataController.listSlabs);
+
 /*
  * ADMIN C-U-D Routes
  */

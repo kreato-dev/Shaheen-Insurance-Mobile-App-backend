@@ -404,6 +404,62 @@ async function deleteTrackerCompany(req, res, next) {
   }
 }
 
+/* =========================
+   Catalog controllers (Dropdown APIs)
+   ========================= */
+
+/**
+ * GET /api/data/travel/catalog/packages
+ */
+async function listPackages(req, res, next) {
+  try {
+    const rows = await service.listPackagesService();
+    return res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/data/travel/catalog/coverages?package=INTERNATIONAL
+ */
+async function listCoverages(req, res, next) {
+  try {
+    const packageCode = req.query.package;
+    const rows = await service.listCoveragesService(packageCode);
+    return res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/data/travel/catalog/plans?package=INTERNATIONAL&coverage=FAMILY
+ */
+async function listPlans(req, res, next) {
+  try {
+    const packageCode = req.query.package;
+    const coverageCode = req.query.coverage;
+    const rows = await service.listPlansService(packageCode, coverageCode);
+    return res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
+/**
+ * GET /api/data/travel/catalog/slabs?planId=123
+ */
+async function listSlabs(req, res, next) {
+  try {
+    const planId = req.query.planId;
+    const rows = await service.listSlabsService(planId);
+    return res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getCities,
   getCountries,
@@ -431,4 +487,8 @@ module.exports = {
   createTrackerCompany,
   updateTrackerCompany,
   deleteTrackerCompany,
+  listPackages,
+  listCoverages,
+  listPlans,
+  listSlabs,
 };

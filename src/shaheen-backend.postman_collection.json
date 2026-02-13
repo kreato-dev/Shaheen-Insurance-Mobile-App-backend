@@ -815,6 +815,173 @@
               ]
             }
           }
+        },
+        {
+          "name": "Travel Catalog",
+          "item": [
+            {
+              "name": "Catalog - Packages",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/travel/catalog/packages",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "travel",
+                    "catalog",
+                    "packages"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Catalog - Coverages (package=INTERNATIONAL)",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/travel/catalog/coverages?package={{travelPackageCode}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "travel",
+                    "catalog",
+                    "coverages"
+                  ],
+                  "query": [
+                    {
+                      "key": "package",
+                      "value": "{{travelPackageCode}}"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Catalog - Plans (package=INTERNATIONAL&coverage=INDIVIDUAL) (Sets travelPlanId)",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Plans ok', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "",
+                      "// Auto-pick GOLD plan id and store in env var travelPlanId",
+                      "try {",
+                      "  const rows = pm.response.json();",
+                      "  const gold = rows.find(r => (r.code || '').toUpperCase() === 'GOLD');",
+                      "  if (gold?.id) pm.environment.set('travelPlanId', String(gold.id));",
+                      "} catch (e) {}"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/travel/catalog/plans?package={{travelPackageCode}}&coverage={{travelCoverageCode}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "travel",
+                    "catalog",
+                    "plans"
+                  ],
+                  "query": [
+                    {
+                      "key": "package",
+                      "value": "{{travelPackageCode}}"
+                    },
+                    {
+                      "key": "coverage",
+                      "value": "{{travelCoverageCode}}"
+                    }
+                  ]
+                }
+              }
+            },
+            {
+              "name": "Catalog - Slabs (planId={{travelPlanId}})",
+              "request": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Authorization",
+                    "value": "Bearer {{authToken}}",
+                    "type": "text"
+                  },
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/data/travel/catalog/slabs?planId={{travelPlanId}}",
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "path": [
+                    "api",
+                    "data",
+                    "travel",
+                    "catalog",
+                    "slabs"
+                  ],
+                  "query": [
+                    {
+                      "key": "planId",
+                      "value": "{{travelPlanId}}"
+                    }
+                  ]
+                }
+              }
+            }
+          ]
         }
       ]
     },
@@ -1774,169 +1941,6 @@
               ]
             },
             "description": "Re-upload documents for a claim with status 'reupload_required'. Only upload fields requested by admin."
-          }
-        }
-      ]
-    },
-    {
-      "name": "Travel",
-      "item": [
-        {
-          "name": "Catalog - Packages",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/catalog/packages",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "catalog",
-                "packages"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Catalog - Coverages (package=INTERNATIONAL)",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/catalog/coverages?package={{travelPackageCode}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "catalog",
-                "coverages"
-              ],
-              "query": [
-                {
-                  "key": "package",
-                  "value": "{{travelPackageCode}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Catalog - Plans (package=INTERNATIONAL&coverage=INDIVIDUAL) (Sets travelPlanId)",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "type": "text/javascript",
-                "exec": [
-                  "pm.test('Plans ok', function () {",
-                  "  pm.response.to.have.status(200);",
-                  "});",
-                  "",
-                  "// Auto-pick GOLD plan id and store in env var travelPlanId",
-                  "try {",
-                  "  const rows = pm.response.json();",
-                  "  const gold = rows.find(r => (r.code || '').toUpperCase() === 'GOLD');",
-                  "  if (gold?.id) pm.environment.set('travelPlanId', String(gold.id));",
-                  "} catch (e) {}"
-                ]
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/catalog/plans?package={{travelPackageCode}}&coverage={{travelCoverageCode}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "catalog",
-                "plans"
-              ],
-              "query": [
-                {
-                  "key": "package",
-                  "value": "{{travelPackageCode}}"
-                },
-                {
-                  "key": "coverage",
-                  "value": "{{travelCoverageCode}}"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "Catalog - Slabs (planId={{travelPlanId}})",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{authToken}}",
-                "type": "text"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/api/travel/catalog/slabs?planId={{travelPlanId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "travel",
-                "catalog",
-                "slabs"
-              ],
-              "query": [
-                {
-                  "key": "planId",
-                  "value": "{{travelPlanId}}"
-                }
-              ]
-            }
           }
         }
       ]

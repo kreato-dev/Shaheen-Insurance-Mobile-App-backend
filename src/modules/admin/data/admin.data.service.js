@@ -232,6 +232,92 @@ async function deleteVehicleBodyType(id, adminId) {
     }
 }
 
+/* =========================================================
+   CATALOG (Dropdown APIs)
+   ========================================================= */
+
+/**
+ * GET /api/data/travel/catalog/packages
+ * Returns available travel packages (Domestic, International, etc.)
+ */
+async function listPackagesService() {
+  const rows = await query(`SELECT id, code, name FROM travel_packages ORDER BY id ASC`);
+  return rows;
+}
+
+/**
+ * GET /api/travel/catalog/coverages?package=INTERNATIONAL
+ * Returns coverages for a package (INDIVIDUAL/FAMILY, etc.)
+ */
+async function listCoveragesService(packageCode) {
+  if (!packageCode) throw httpError(400, 'package query param is required');
+
+  const pkgRows = await query(`SELECT id FROM travel_packages WHERE code = ? LIMIT 1`, [packageCode]);
+  if (!pkgRows.length) throw httpError(400, 'Invalid package');
+
+  const rows = await query(
+    `SELECT id, code, name
+     FROM travel_coverages
+     WHERE package_id = ?
+     ORDER BY id ASC`,
+    [pkgRows[0].id]
+  );
+  return rows;
+}
+
+/**
+ * GET /api/travel/catalog/plans?package=...&coverage=...
+ * Returns plans for a given package+coverage (Gold/Platinum etc.)
+ */
+async function listPlansService(packageCode, coverageCode) {
+  if (!packageCode) throw httpError(400, 'package query param is required');
+  if (!coverageCode) throw httpError(400, 'coverage query param is required');
+
+  const pkgRows = await query(`SELECT id FROM travel_packages WHERE code = ? LIMIT 1`, [packageCode]);
+  if (!pkgRows.length) throw httpError(400, 'Invalid package');
+  const packageId = pkgRows[0].id;
+
+  const covRows = await query(
+    `SELECT id FROM travel_coverages WHERE package_id = ? AND code = ? LIMIT 1`,
+    [packageId, coverageCode]
+  );
+  if (!covRows.length) throw httpError(400, 'Invalid coverage for this package');
+
+  const rows = await query(
+    `SELECT id, code, name, currency
+     FROM travel_plans
+     WHERE package_id = ? AND coverage_id = ?
+     ORDER BY FIELD(code,'SILVER','GOLD','PLATINUM','DIAMOND'), id ASC`,
+    //  'BASIC', (removed plan)
+    [packageId, covRows[0].id]
+  );
+
+  return rows;
+}
+
+/**
+ * GET /api/travel/catalog/slabs?planId=...
+ * Returns pricing slabs for a plan (min/max days + premium)
+ */
+async function listSlabsService(planId) {
+  if (!planId) throw httpError(400, 'planId query param is required');
+
+  const rows = await query(
+    `SELECT id, slab_label, min_days, max_days, is_multi_trip, max_trip_days, premium
+     FROM travel_plan_pricing_slabs
+     WHERE plan_id = ?
+     ORDER BY is_multi_trip ASC, min_days ASC`,
+    [planId]
+  );
+
+  if (!rows.length) {
+    // Not necessarily an error, but usually means planId is invalid
+    throw httpError(400, 'No slabs found for this planId');
+  }
+
+  return rows;
+}
+
 module.exports = {
     createCity,
     updateCity,
@@ -251,4 +337,8 @@ module.exports = {
     createTrackerCompany,
     updateTrackerCompany,
     deleteTrackerCompany,
+    listPackagesService,
+    listCoveragesService,
+    listPlansService,
+    listSlabsService,
 };

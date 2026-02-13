@@ -125,61 +125,7 @@ async function reuploadTravelAssets(req, res, next) {
 }
 
 
-/* =========================
-   Catalog controllers (Dropdown APIs)
-   ========================= */
 
-/**
- * GET /api/travel/catalog/packages
- */
-async function listPackages(req, res, next) {
-  try {
-    const rows = await listPackagesService();
-    return res.json(rows);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
- * GET /api/travel/catalog/coverages?package=INTERNATIONAL
- */
-async function listCoverages(req, res, next) {
-  try {
-    const packageCode = req.query.package;
-    const rows = await listCoveragesService(packageCode);
-    return res.json(rows);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
- * GET /api/travel/catalog/plans?package=INTERNATIONAL&coverage=FAMILY
- */
-async function listPlans(req, res, next) {
-  try {
-    const packageCode = req.query.package;
-    const coverageCode = req.query.coverage;
-    const rows = await listPlansService(packageCode, coverageCode);
-    return res.json(rows);
-  } catch (err) {
-    next(err);
-  }
-}
-
-/**
- * GET /api/travel/catalog/slabs?planId=123
- */
-async function listSlabs(req, res, next) {
-  try {
-    const planId = req.query.planId;
-    const rows = await listSlabsService(planId);
-    return res.json(rows);
-  } catch (err) {
-    next(err);
-  }
-}
 
 /**
  * GET /api/travel/my-proposals/:id?package=INTERNATIONAL
@@ -215,12 +161,6 @@ module.exports = {
   uploadTravelAssets,
   // reuploads
   reuploadTravelAssets,
-
-  // catalog
-  listPackages,
-  listCoverages,
-  listPlans,
-  listSlabs,
 
   //get proposals
   getMyProposalById,
