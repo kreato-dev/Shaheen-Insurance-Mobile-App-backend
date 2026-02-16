@@ -154,7 +154,7 @@ async function runPolicyExpiringMilestones(days, userEventKey, adminEventKey) {
       entity_type: 'policy_MOTOR',
       entity_id: r.id,
       milestone: `D${days}`,
-      data: { proposal_type: 'MOTOR', proposal_id: r.id, policy_no: r.policy_no, policy_expires_at: r.policy_expires_at },
+      data: { proposal_type: 'MOTOR', proposal_id: r.id, policy_no: r.policy_no, policy_expires_at: r.policy_expires_at, days_left: days },
       email: templates.makePolicyExpiringEmail({
         to: r.email,
         fullName: r.full_name,
@@ -168,7 +168,7 @@ async function runPolicyExpiringMilestones(days, userEventKey, adminEventKey) {
       entity_type: 'policy_MOTOR',
       entity_id: r.id,
       milestone: `D${days}`,
-      data: { proposal_type: 'MOTOR', proposal_id: r.id, policy_no: r.policy_no, policy_expires_at: r.policy_expires_at },
+      data: { proposal_type: 'MOTOR', proposal_id: r.id, policy_no: r.policy_no, policy_expires_at: r.policy_expires_at, days_left: days },
       email: null,
     });
   }
@@ -200,7 +200,7 @@ async function runPolicyExpiringMilestones(days, userEventKey, adminEventKey) {
         entity_type: `policy_TRAVEL_${t.subtype.toUpperCase()}`,
         entity_id: r.id,
         milestone: `D${days}`,
-        data: { proposal_type: 'TRAVEL', travel_subtype: t.subtype, proposal_id: r.id, policy_no: r.policy_no, policy_expires_at: r.policy_expires_at },
+        data: { proposal_type: 'TRAVEL', travel_subtype: t.subtype, proposal_id: r.id, policy_no: r.policy_no, policy_expires_at: r.policy_expires_at, days_left: days },
         email: templates.makePolicyExpiringEmail({
           to: r.email,
           fullName: r.full_name,
@@ -214,7 +214,7 @@ async function runPolicyExpiringMilestones(days, userEventKey, adminEventKey) {
         entity_type: `policy_TRAVEL_${t.subtype.toUpperCase()}`,
         entity_id: r.id,
         milestone: `D${days}`,
-        data: { proposal_type: 'TRAVEL', travel_subtype: t.subtype, proposal_id: r.id, policy_no: r.policy_no, policy_expires_at: r.policy_expires_at },
+        data: { proposal_type: 'TRAVEL', travel_subtype: t.subtype, proposal_id: r.id, policy_no: r.policy_no, policy_expires_at: r.policy_expires_at, days_left: days },
         email: null,
       });
     }

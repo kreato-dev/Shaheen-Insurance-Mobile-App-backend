@@ -32,7 +32,8 @@ function buildTitleMessage(event_key, payload) {
     case 'POLICY_EXPIRING_D15':
     case 'POLICY_EXPIRING_D5':
     case 'POLICY_EXPIRING_D1':
-      return { title: 'Policy Expiring Soon', message: `Your ${payload.proposal_type} policy ${payload.policy_no} is expiring soon.` };
+      const daysText = payload.days_left ? `in ${payload.days_left} day${payload.days_left == 1 ? '' : 's'}` : 'soon';
+      return { title: 'Policy Expiring Soon', message: `Your ${payload.proposal_type} policy ${payload.policy_no} is expiring ${daysText}.` };
 
     case 'POLICY_EXPIRED':
       return { title: 'Policy Expired', message: `Your ${payload.proposal_type} policy ${payload.policy_no} has expired.` };
@@ -78,7 +79,8 @@ function buildTitleMessage(event_key, payload) {
     case 'ADMIN_POLICY_EXPIRING_D15':
     case 'ADMIN_POLICY_EXPIRING_D5':
     case 'ADMIN_POLICY_EXPIRING_D1':
-      return { title: 'Policy Expiring', message: `${payload.proposal_type} Policy ${payload.policy_no} is expiring soon.` };
+      const adDaysText = payload.days_left ? `in ${payload.days_left} day${payload.days_left == 1 ? '' : 's'}` : 'soon';
+      return { title: 'Policy Expiring', message: `${payload.proposal_type} Policy ${payload.policy_no} is expiring ${adDaysText}.` };
 
     case 'ADMIN_POLICY_EXPIRED':
       return { title: 'Policy Expired', message: `Policy ${payload.policy_no} has expired.` };
