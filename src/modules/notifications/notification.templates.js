@@ -472,6 +472,28 @@ function makeAdminSupportTicketReplyEmail({ to, ticketId, userId, userEmail, mes
   return { to, subject, text, html };
 }
 
+function makeAdminCustomMessageEmail({ to, fullName, title, message }) {
+  const subject = title;
+  const text = `Hi ${fullName || ''},\n\n${message}`;
+  const html = wrapHtml(
+    title,
+    `<p>Hi ${fullName || ''},</p>
+     <p>${message.replace(/\n/g, '<br/>')}</p>`
+  );
+  return { to, subject, text, html };
+}
+
+function makeBirthdayWishEmail({ to, fullName }) {
+  const subject = 'Happy Birthday!';
+  const text = `Hi ${fullName || ''}, Shaheen Insurance wishes you a very happy birthday!`;
+  const html = wrapHtml(
+    'Happy Birthday! 🎂',
+    `<p>Hi ${fullName || ''},</p>
+     <p>The team at Shaheen Insurance wishes you a very happy birthday and a wonderful year ahead!</p>`
+  );
+  return { to, subject, text, html };
+}
+
 module.exports = {
   makeWelcomeEmail,
   makeProposalPaymentReminderEmail,
@@ -500,4 +522,6 @@ module.exports = {
   makeAdminSupportTicketCreatedEmail,
   makeAdminSupportTicketReplyEmail,
   makeAdminClaimReuploadSubmittedEmail,
+  makeAdminCustomMessageEmail,
+  makeBirthdayWishEmail,
 };

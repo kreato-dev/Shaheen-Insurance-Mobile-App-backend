@@ -32,4 +32,12 @@ router.patch(
     c.readAllAdmin
 );
 
+router.post(
+    '/send',
+    requireAdmin,
+    adminSession(),
+    requirePermission('NOTIFICATIONS:WRITE'),
+    c.sendCustomNotification
+);
+
 module.exports = router;

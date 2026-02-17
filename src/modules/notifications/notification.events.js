@@ -59,4 +59,10 @@ module.exports = {
 
   // Welcome
   USER_WELCOME_EMAIL: 'USER_WELCOME_EMAIL',
+
+  // Admin Custom
+  ADMIN_CUSTOM_MESSAGE: 'ADMIN_CUSTOM_MESSAGE',
+
+  // Birthday
+  USER_BIRTHDAY_WISH: 'USER_BIRTHDAY_WISH',
 };

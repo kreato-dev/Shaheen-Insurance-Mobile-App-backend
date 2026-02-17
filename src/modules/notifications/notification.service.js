@@ -131,6 +131,12 @@ function buildTitleMessage(event_key, payload) {
     case 'USER_WELCOME_EMAIL':
       return { title: 'Welcome', message: `Welcome to Shaheen Insurance, ${payload.full_name || ''}!` };
 
+    case 'ADMIN_CUSTOM_MESSAGE':
+      return { title: payload.custom_title, message: payload.custom_message };
+
+    case 'USER_BIRTHDAY_WISH':
+      return { title: 'Happy Birthday!', message: `Shaheen Insurance wishes you a very happy birthday, ${payload.full_name || ''}!` };
+
     default:
       return { title: 'Update', message: 'You have a new update.' };
   }

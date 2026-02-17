@@ -480,6 +480,30 @@
               ]
             }
           }
+        },
+        {
+          "name": "Send Custom Notification (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Hello User\",\n  \"message\": \"This is a custom message from admin.\",\n  \"userId\": 1,\n  \"sendToAll\": false,\n  \"data\": { \"promo\": \"XYZ\" }\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/notifications/send",
+            "description": "Send custom in-app notification to a specific user (userId) OR all users (sendToAll: true)."
+          }
         }
       ]
     },
@@ -1955,12 +1979,36 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "title", "value": "New Promo", "type": "text" },
-                { "key": "description", "value": "Get 50% off", "type": "text" },
-                { "key": "type", "value": "PROMO", "type": "text" },
-                { "key": "status", "value": "active", "type": "text" },
-                { "key": "sort_order", "value": "1", "type": "text" },
-                { "key": "image", "type": "file", "src": "" }
+                {
+                  "key": "title",
+                  "value": "New Promo",
+                  "type": "text"
+                },
+                {
+                  "key": "description",
+                  "value": "Get 50% off",
+                  "type": "text"
+                },
+                {
+                  "key": "type",
+                  "value": "PROMO",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "active",
+                  "type": "text"
+                },
+                {
+                  "key": "sort_order",
+                  "value": "1",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": ""
+                }
               ]
             },
             "url": "{{baseUrl}}/api/admin/content"
@@ -1979,9 +2027,21 @@
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "title", "value": "Updated Promo", "type": "text" },
-                { "key": "status", "value": "inactive", "type": "text" },
-                { "key": "image", "type": "file", "src": "" }
+                {
+                  "key": "title",
+                  "value": "Updated Promo",
+                  "type": "text"
+                },
+                {
+                  "key": "status",
+                  "value": "inactive",
+                  "type": "text"
+                },
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": ""
+                }
               ]
             },
             "url": "{{baseUrl}}/api/admin/content/{{bannerId}}"

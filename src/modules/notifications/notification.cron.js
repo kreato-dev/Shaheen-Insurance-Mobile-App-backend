@@ -338,6 +338,33 @@ async function runMotorRegNoReminderWeekly() {
   }
 }
 
+async function runBirthdayWishes() {
+  try {
+    // Find users whose birthday is today
+    const users = await query(`
+      SELECT id, email, full_name, dob
+      FROM users
+      WHERE status = 'active'
+        AND dob IS NOT NULL
+        AND MONTH(dob) = MONTH(CURDATE())
+        AND DAY(dob) = DAY(CURDATE())
+    `);
+
+    for (const user of users) {
+      await fireUser(E.USER_BIRTHDAY_WISH, {
+        user_id: user.id,
+        entity_type: 'user',
+        entity_id: user.id,
+        milestone: `BIRTHDAY_${new Date().getFullYear()}`, // To prevent re-sending if cron runs multiple times
+        data: { user_id: user.id, full_name: user.full_name },
+        email: user.email ? templates.makeBirthdayWishEmail({ to: user.email, fullName: user.full_name }) : null,
+      });
+    }
+  } catch (err) {
+    console.error('[CRON] Birthday wishes failed:', err);
+  }
+}
+
 async function runOtpCleanup() {
   try {
     await cleanupOldOtps();
@@ -380,6 +407,9 @@ function registerNotificationCrons() {
 
   // weekly reg reminder (Mon 10:20)
   cron.schedule('20 10 * * 1', runMotorRegNoReminderWeekly);
+
+  // Daily birthday wishes at 9:00 AM
+  cron.schedule('0 9 * * *', runBirthdayWishes);
 
   // Daily OTP cleanup at 3:00 AM
   cron.schedule('0 3 * * *', runOtpCleanup);
