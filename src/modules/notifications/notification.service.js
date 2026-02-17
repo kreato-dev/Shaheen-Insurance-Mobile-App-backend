@@ -59,6 +59,9 @@ function buildTitleMessage(event_key, payload) {
     case 'ADMIN_PROPOSAL_BECAME_PAID':
       return { title: 'Proposal Paid', message: `${payload.proposal_type} ${payload.travel_subtype || ''} Proposal #${payload.proposal_id} is paid. Ready for review.` };
 
+    case 'ADMIN_PROPOSAL_CUSTOM_VEHICLE':
+      return { title: 'Custom Vehicle Request', message: `User requested a vehicle not in list for Proposal #${payload.proposal_id}.` };
+
     // Claims - admin
     case 'ADMIN_NEW_CLAIM':
       return { title: 'New Claim Submitted', message: `FNOL: ${payload.fnol_no || ''}` };

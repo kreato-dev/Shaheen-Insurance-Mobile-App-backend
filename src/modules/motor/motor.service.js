@@ -803,6 +803,31 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         email: null,
       });
 
+      // ✅ NEW: If custom vehicle, notify admin to add it
+      if (!makeId) {
+        fireAdmin(E.ADMIN_PROPOSAL_CUSTOM_VEHICLE, {
+          entity_type: 'proposal_MOTOR',
+          entity_id: proposalId,
+          data: { proposal_type: 'MOTOR', proposal_id: proposalId, user_id: userId },
+          email: adminEmails.length > 0
+            ? templates.makeAdminCustomVehicleEmail({
+              to: adminEmails.join(','),
+              proposalLabel: `MOTOR-${proposalId}`,
+              userName: fullName,
+              userId,
+              vehicleDetails: {
+                make: customMake,
+                submake: customSubmake,
+                variant: customVariant,
+                engineCc: variantMeta.engineCc,
+                seating: variantMeta.seatingCapacity,
+                bodyTypeId: variantMeta.bodyTypeId,
+              },
+            })
+            : null,
+        });
+      }
+
       // USER:
       // basic in-app notif
       fireUser(E.PROPOSAL_SUBMITTED_UNPAID, {

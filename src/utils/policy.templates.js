@@ -143,7 +143,7 @@ const createMotorCoverNoteHtml = (data) => {
             <td class="amount-col">${fmt(bd.grossPremium)}</td>
           </tr>
           <!--
-          <!-- commented detailed premium breakdown -->
+          //commented part: detailed premium breakdown
           <tr>
             <td>Admin Surcharge (5%)</td>
             <td class="amount-col">Rs.</td>

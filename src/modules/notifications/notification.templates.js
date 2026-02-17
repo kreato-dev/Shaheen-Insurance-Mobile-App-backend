@@ -395,6 +395,29 @@ function makeAdminReuploadSubmittedEmail({ to, proposalLabel, userName, userId, 
   return { to, subject, text, html };
 }
 
+function makeAdminCustomVehicleEmail({ to, proposalLabel, userName, userId, vehicleDetails }) {
+  const subject = `Action Required: Add Custom Vehicle (${proposalLabel})`;
+  const text = `User submitted a proposal with a custom vehicle not in the list.\nProposal: ${proposalLabel}\nUser: ${userName} (${userId})\nVehicle: ${vehicleDetails.make} / ${vehicleDetails.submake} / ${vehicleDetails.variant}\nEngine: ${vehicleDetails.engineCc} CC\nSeating: ${vehicleDetails.seating}\nBody Type ID: ${vehicleDetails.bodyTypeId}`;
+
+  const html = wrapHtml(
+    'Custom Vehicle Request 🚗',
+    `<p>User <b>${userName}</b> (ID: ${userId}) submitted a proposal with a vehicle not in the dropdown list.</p>
+     <p><b>Proposal:</b> ${proposalLabel}</p>
+     <hr/>
+     <h3>Vehicle Details to Add:</h3>
+     <ul>
+       <li><b>Make:</b> ${vehicleDetails.make}</li>
+       <li><b>Submake:</b> ${vehicleDetails.submake}</li>
+       <li><b>Variant:</b> ${vehicleDetails.variant}</li>
+       <li><b>Engine Capacity:</b> ${vehicleDetails.engineCc} CC</li>
+       <li><b>Seating Capacity:</b> ${vehicleDetails.seating}</li>
+       <li><b>Body Type ID:</b> ${vehicleDetails.bodyTypeId}</li>
+     </ul>
+     <p>Please add this vehicle to the database if valid.</p>`
+  );
+  return { to, subject, text, html };
+}
+
 function makeSupportTicketCreatedEmail({ to, fullName, ticketId, ticketSubject }) {
   const subject = `Support Ticket Created: #${ticketId}`;
   const text = `Hi ${fullName || ''}, your support ticket #${ticketId} has been created.\nSubject: ${ticketSubject}`;
@@ -471,6 +494,7 @@ module.exports = {
   makeAdminMotorRegNoUploadedEmail,
   makeAdminProposalPaidEmail,
   makeAdminReuploadSubmittedEmail,
+  makeAdminCustomVehicleEmail,
   makeSupportTicketCreatedEmail,
   makeSupportTicketReplyEmail,
   makeAdminSupportTicketCreatedEmail,
