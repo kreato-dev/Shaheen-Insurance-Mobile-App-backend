@@ -252,8 +252,8 @@ CREATE TABLE motor_proposals (
   owner_relation ENUM('father', 'mother', 'brother', 'sister', 'spouse', 'son', 'daughter') NULL,
   engine_number VARCHAR(100) NOT NULL,
   chassis_number VARCHAR(100) NOT NULL,
-  make_id INT NOT NULL,
-  submake_id INT NOT NULL,
+  make_id INT NULL,
+  submake_id INT NULL,
   model_year INT NOT NULL,
   assembly ENUM('local','imported') NOT NULL,
   variant_id INT NULL,
@@ -335,10 +335,10 @@ CREATE TABLE motor_proposals (
     ON DELETE RESTRICT ON UPDATE CASCADE,
   CONSTRAINT fk_motor_proposals_make
     FOREIGN KEY (make_id) REFERENCES vehicle_makes(id)
-    ON DELETE RESTRICT ON UPDATE CASCADE,
+    ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_motor_proposals_submake
     FOREIGN KEY (submake_id) REFERENCES vehicle_submakes(id)
-    ON DELETE RESTRICT ON UPDATE CASCADE,
+    ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT fk_motor_proposals_variant
     FOREIGN KEY (variant_id) REFERENCES vehicle_variants(id)
     ON DELETE SET NULL ON UPDATE CASCADE,
@@ -349,6 +349,25 @@ CREATE TABLE motor_proposals (
   CONSTRAINT fk_motor_admin_last_action
     FOREIGN KEY (admin_last_action_by) REFERENCES admins(id)
     ON DELETE SET NULL ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE motor_proposal_custom_vehicles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  custom_make VARCHAR(100) NOT NULL,
+  custom_submake VARCHAR(100) NOT NULL,
+  custom_variant VARCHAR(100) NOT NULL,
+  engine_capacity INT NOT NULL,
+  seating_capacity INT NOT NULL,
+  body_type_id INT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_mpcv_proposal (proposal_id),
+  CONSTRAINT fk_mpcv_proposal
+    FOREIGN KEY (proposal_id) REFERENCES motor_proposals(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT fk_mpcv_body_type
+    FOREIGN KEY (body_type_id) REFERENCES vehicle_body_types(id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE motor_documents (

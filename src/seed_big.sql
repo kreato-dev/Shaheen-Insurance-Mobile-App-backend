@@ -411,7 +411,7 @@ INSERT INTO countries (id, name, region, created_at, updated_at) VALUES
 (191,'Yemen','Asia',NOW(),NOW()),
 (192,'Zambia','Africa',NOW(),NOW()),
 (193,'Zimbabwe','Africa',NOW(),NOW()),
-(194,'Holy See (Vatican City)','Europe',NOW(),NOW(),
+(194,'Holy See (Vatican City)','Europe',NOW(),NOW());
 -- (195,'State of Palestine','Asia',NOW(),NOW());
 ALTER TABLE countries AUTO_INCREMENT = 196;
 

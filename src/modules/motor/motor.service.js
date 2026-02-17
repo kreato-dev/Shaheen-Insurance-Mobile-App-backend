@@ -287,17 +287,29 @@ function validateVehicleDetails(vehicle) {
     'productType',
     'engineNumber',
     'chassisNumber',
-    'makeId',
-    'submakeId',
     'modelYear',
     'assembly',
-    'variantId',
     'colour',
   ];
   for (const field of required) {
     if (!vehicle[field]) {
       throw httpError(400, `vehicleDetails.${field} is required`);
     }
+  }
+
+  // Validate Standard vs Custom Vehicle
+  if (vehicle.makeId) {
+    // Standard Flow
+    if (!vehicle.submakeId) throw httpError(400, 'vehicleDetails.submakeId is required for standard vehicle');
+    if (!vehicle.variantId) throw httpError(400, 'vehicleDetails.variantId is required for standard vehicle');
+  } else {
+    // Custom Flow
+    if (!vehicle.customMake) throw httpError(400, 'vehicleDetails.customMake is required for custom vehicle');
+    if (!vehicle.customSubmake) throw httpError(400, 'vehicleDetails.customSubmake is required for custom vehicle');
+    if (!vehicle.customVariant) throw httpError(400, 'vehicleDetails.customVariant is required for custom vehicle');
+    if (!vehicle.engineCapacity) throw httpError(400, 'vehicleDetails.engineCapacity is required for custom vehicle');
+    if (!vehicle.seatingCapacity) throw httpError(400, 'vehicleDetails.seatingCapacity is required for custom vehicle');
+    if (!vehicle.bodyTypeId) throw httpError(400, 'vehicleDetails.bodyTypeId is required for custom vehicle');
   }
 
   const yearNum = Number(vehicle.modelYear);
@@ -493,7 +505,7 @@ async function getVariantMeta({ makeId, submakeId, variantId, modelYear }) {
 /**
  * Validate foreign keys exist (city, make, submake, tracker)
  */
-async function validateForeignKeys({ cityId, makeId, submakeId, variantId, modelYear, trackerCompanyId, }) {
+async function validateForeignKeys({ cityId, makeId, submakeId, variantId, modelYear, trackerCompanyId, bodyTypeId }) {
   if (cityId) {
     const city = await query('SELECT id FROM cities WHERE id = ? LIMIT 1', [cityId]);
     if (city.length === 0) {
@@ -501,30 +513,29 @@ async function validateForeignKeys({ cityId, makeId, submakeId, variantId, model
     }
   }
 
-  const make = await query('SELECT id FROM vehicle_makes WHERE id = ? LIMIT 1', [makeId]);
-  if (make.length === 0) {
-    throw httpError(400, 'Invalid makeId');
+  if (makeId) {
+    const make = await query('SELECT id FROM vehicle_makes WHERE id = ? LIMIT 1', [makeId]);
+    if (make.length === 0) throw httpError(400, 'Invalid makeId');
   }
 
-  const submake = await query(
-    'SELECT id FROM vehicle_submakes WHERE id = ? AND make_id = ? LIMIT 1',
-    [submakeId, makeId]
-  );
-  if (submake.length === 0) {
-    throw httpError(400, 'Invalid submakeId for given makeId');
+  if (makeId && submakeId) {
+    const submake = await query(
+      'SELECT id FROM vehicle_submakes WHERE id = ? AND make_id = ? LIMIT 1',
+      [submakeId, makeId]
+    );
+    if (submake.length === 0) throw httpError(400, 'Invalid submakeId for given makeId');
   }
 
   // NOTE: variant validity is now checked again in getVariantMeta() as well.
   // Keeping the old logic here because you asked not to remove old ones.
-  const variant = await query(
-    `SELECT id FROM vehicle_variants
-      WHERE id = ? AND make_id = ? AND submake_id = ? AND model_year = ?
-      LIMIT 1`,
-    [variantId, makeId, submakeId, modelYear]
-  );
-
-  if (variant.length === 0) {
-    throw httpError(400, 'Invalid variantId for given makeId/submakeId/modelYear');
+  if (makeId && submakeId && variantId) {
+    const variant = await query(
+      `SELECT id FROM vehicle_variants
+        WHERE id = ? AND make_id = ? AND submake_id = ? AND model_year = ?
+        LIMIT 1`,
+      [variantId, makeId, submakeId, modelYear]
+    );
+    if (variant.length === 0) throw httpError(400, 'Invalid variantId for given makeId/submakeId/modelYear');
   }
 
   if (trackerCompanyId) {
@@ -535,6 +546,11 @@ async function validateForeignKeys({ cityId, makeId, submakeId, variantId, model
     if (tracker.length === 0) {
       throw httpError(400, 'Invalid trackerCompanyId');
     }
+  }
+
+  if (bodyTypeId) {
+    const bt = await query('SELECT id FROM vehicle_body_types WHERE id = ? LIMIT 1', [bodyTypeId]);
+    if (bt.length === 0) throw httpError(400, 'Invalid bodyTypeId');
   }
 }
 
@@ -578,28 +594,45 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     ownerRelation,
     engineNumber,
     chassisNumber,
-    makeId,
-    submakeId,
+    makeId = null,
+    submakeId = null,
     modelYear,
     assembly,
-    variantId,
+    variantId = null,
     colour,
     trackerCompanyId = null,
     accessoriesValue,
     vehicleValue, // for premium calc
+    // Custom fields
+    customMake = null,
+    customSubmake = null,
+    customVariant = null,
+    engineCapacity = null,
+    seatingCapacity = null,
+    bodyTypeId = null,
   } = vehicleDetails;
 
   validateInsuranceStartDate(insuranceStartDate);
   validateVehicleDetails(vehicleDetails);
 
-  await validateForeignKeys({
-    cityId,
-    makeId,
-    submakeId,
-    modelYear,
-    variantId: vehicleDetails.variantId,
-    trackerCompanyId,
-  });
+  // Conditionally validate FKs
+  if (makeId) {
+    await validateForeignKeys({
+      cityId,
+      makeId,
+      submakeId,
+      modelYear,
+      variantId: vehicleDetails.variantId,
+      trackerCompanyId,
+    });
+  } else {
+    // For custom vehicle, only validate city, tracker, and body type
+    await validateForeignKeys({
+      cityId,
+      trackerCompanyId,
+      bodyTypeId,
+    });
+  }
 
   /* =========================================================
       ✅ NEW (Recommended):
@@ -609,12 +642,17 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
       - seatingCapacity
      ========================================================= */
 
-  const variantMeta = await getVariantMeta({
-    makeId,
-    submakeId,
-    variantId,
-    modelYear,
-  });
+  let variantMeta = {};
+  if (variantId) {
+    variantMeta = await getVariantMeta({ makeId, submakeId, variantId, modelYear });
+  } else {
+    // Custom vehicle meta from payload
+    variantMeta = {
+      engineCc: Number(engineCapacity),
+      seatingCapacity: Number(seatingCapacity),
+      bodyTypeId: Number(bodyTypeId),
+    };
+  }
 
   // calculate premium if vehicleValue provided
   let sumInsured = null;
@@ -720,7 +758,6 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
         colour,
         trackerCompanyId,
         accessoriesValue || 0,
-
         sumInsured,
         premium,
 
@@ -729,6 +766,19 @@ async function submitProposalService(userId, personalDetails, vehicleDetails) {
     );
 
     const proposalId = result.insertId;
+
+    // If custom vehicle, insert into the new table
+    if (!makeId) {
+      await conn.execute(
+        `INSERT INTO motor_proposal_custom_vehicles
+         (proposal_id, custom_make, custom_submake, custom_variant, engine_capacity, seating_capacity, body_type_id, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [
+          proposalId, customMake, customSubmake, customVariant,
+          variantMeta.engineCc, variantMeta.seatingCapacity, variantMeta.bodyTypeId
+        ]
+      );
+    }
 
     await conn.commit();
 
@@ -1345,17 +1395,17 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
     SELECT
       mp.*,
       c.name AS cityName,
-      vm.name AS makeName,
-      vsm.name AS submakeName,
+      COALESCE(vm.name, mpcv.custom_make) AS makeName,
+      COALESCE(vsm.name, mpcv.custom_submake) AS submakeName,
       tc.name AS trackerCompanyName,
 
-      vv.name AS variantName,
+      COALESCE(vv.name, mpcv.custom_variant) AS variantName,
 
       -- ✅ New: read these from vehicle_variants (Option A)
-      vv.body_type_id AS bodyTypeId,
-      vbt.name AS bodyTypeName,
-      vv.engine_cc AS engineCc,
-      vv.seating_capacity AS seatingCapacity,
+      COALESCE(vv.body_type_id, mpcv.body_type_id) AS bodyTypeId,
+      COALESCE(vbt.name, vbt_custom.name) AS bodyTypeName,
+      COALESCE(vv.engine_cc, mpcv.engine_capacity) AS engineCc,
+      COALESCE(vv.seating_capacity, mpcv.seating_capacity) AS seatingCapacity,
 
       a.id AS lastActionAdminId
     FROM motor_proposals mp
@@ -1369,6 +1419,10 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
     -- ✅ Body type join (via variant)
     LEFT JOIN vehicle_body_types vbt ON vbt.id = vv.body_type_id
+
+    -- ✅ Custom vehicle join
+    LEFT JOIN motor_proposal_custom_vehicles mpcv ON mpcv.proposal_id = mp.id
+    LEFT JOIN vehicle_body_types vbt_custom ON vbt_custom.id = mpcv.body_type_id
 
     LEFT JOIN admins a ON a.id = mp.admin_last_action_by
     WHERE mp.id = ? AND mp.user_id = ?
@@ -1443,9 +1497,9 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
   const renewalDocuments = rows.length
     ? {
-        docType: 'Renewal Document',
-        url: buildUrl(rows[0].renewal_document_path),
-      }
+      docType: 'Renewal Document',
+      url: buildUrl(rows[0].renewal_document_path),
+    }
     : null;
 
   const employmentProofRow = kycRows.find((r) => r.docType === 'EMPLOYMENT_PROOF');
@@ -1453,21 +1507,21 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
   const employmentProof = employmentProofRow
     ? {
-        docType: employmentProofRow.docType,
-        filePath: employmentProofRow.filePath,
-        url: buildUrl(employmentProofRow.filePath),
-        createdAt: employmentProofRow.createdAt,
-      }
+      docType: employmentProofRow.docType,
+      filePath: employmentProofRow.filePath,
+      url: buildUrl(employmentProofRow.filePath),
+      createdAt: employmentProofRow.createdAt,
+    }
     : null;
 
   const sourceOfIncomeProof = sourceOfIncomeProofRow
     ? {
-        docType: sourceOfIncomeProofRow.docType,
-        sourceOfIncome: sourceOfIncomeProofRow.sourceOfIncome,
-        filePath: sourceOfIncomeProofRow.filePath,
-        url: buildUrl(sourceOfIncomeProofRow.filePath),
-        createdAt: sourceOfIncomeProofRow.createdAt,
-      }
+      docType: sourceOfIncomeProofRow.docType,
+      sourceOfIncome: sourceOfIncomeProofRow.sourceOfIncome,
+      filePath: sourceOfIncomeProofRow.filePath,
+      url: buildUrl(sourceOfIncomeProofRow.filePath),
+      createdAt: sourceOfIncomeProofRow.createdAt,
+    }
     : null;
 
   // required docs JSON might come as string depending on mysql driver/settings

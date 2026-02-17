@@ -1101,6 +1101,54 @@
           }
         },
         {
+          "name": "Submit Proposal (Custom Vehicle)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "try {",
+                  "  const json = pm.response.json();",
+                  "  if (json && json.proposalId) {",
+                  "    pm.collectionVariables.set('motorProposalId', String(json.proposalId));",
+                  "  }",
+                  "} catch (e) {}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"personalDetails\": {\n    \"name\": \"Custom User\",\n    \"address\": \"DHA Phase 6\",\n    \"cityId\": 1,\n    \"latitude\": 24.8, \n    \"longitude\": 67.05,\n    \"cnic\": \"42101-9999999-9\",\n    \"cnicExpiry\": \"2030-12-31\",\n    \"dob\": \"1990-01-01\",\n    \"nationality\": \"Pakistani\",\n    \"gender\": \"male\",\n    \"occupation\": \"private_job\"\n  },\n  \"vehicleDetails\": {\n    \"insuranceType\": \"GENERAL\",\n    \"productType\": \"private\",\n    \"registrationNumber\": \"CUST-777\",\n    \"registrationProvince\": \"PUNJAB\",\n    \"appliedFor\": false,\n    \"isOwner\": true,\n    \"engineNumber\": \"CUSTENG777\",\n    \"chassisNumber\": \"CUSTCHS777\",\n    \"modelYear\": 2023,\n    \"assembly\": \"imported\",\n    \"colour\": \"Red\",\n    \"trackerCompanyId\": 1,\n    \"accessoriesValue\": 0,\n    \"vehicleValue\": 5000000,\n    \"insuranceStartDate\": \"2026-04-01\",\n    \"customMake\": \"Ford\",\n    \"customSubmake\": \"Mustang\",\n    \"customVariant\": \"GT 5.0\",\n    \"engineCapacity\": 5000,\n    \"seatingCapacity\": 4,\n    \"bodyTypeId\": 8\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/motor/submit-proposal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "motor",
+                "submit-proposal"
+              ]
+            }
+          }
+        },
+        {
           "name": "Upload CNIC (front + back) - step=cnic",
           "request": {
             "method": "POST",
