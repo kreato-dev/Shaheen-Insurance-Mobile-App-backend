@@ -103,12 +103,13 @@ router.post(
 
     if (step === 'kyc') {
       return upload.fields([
-        { name: 'employment_proof', maxCount: 1 }
+        { name: 'employment_proof', maxCount: 1 },
+        { name: 'source_of_income_proof', maxCount: 1 }
       ])(req, res, next);
     }
-    
+
     return next(Object.assign(new Error('Invalid step. Use: cnic, license, vehicle, regbook, kyc'), { status: 400 }));
-},
+  },
   motorController.uploadMotorAssets
 );
 
@@ -125,6 +126,7 @@ router.post(
       { name: 'regbook_front', maxCount: 1 },
       { name: 'regbook_back', maxCount: 1 },
       { name: 'employment_proof', maxCount: 1 },
+      { name: 'source_of_income_proof', maxCount: 1 },
 
       // vehicle images
       { name: 'front_side', maxCount: 1 },

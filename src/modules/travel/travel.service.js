@@ -26,7 +26,14 @@ const TRAVEL_FIELD_MAP = {
   ticket_image: { docType: 'TICKET', side: 'single' },
 
   employment_proof: { docType: 'EMPLOYMENT_PROOF', side: 'single' },
+  source_of_income_proof: { docType: 'SOURCE_OF_INCOME_PROOF', side: 'single' },
 };
+
+/**
+ * KYC document types that are stored in the kyc_documents table
+ * (as opposed to travel_documents)
+ */
+const KYC_DOC_TYPES = new Set(['EMPLOYMENT_PROOF', 'SOURCE_OF_INCOME_PROOF']);
 
 
 /**
@@ -137,6 +144,7 @@ async function replaceTravelKycDocument(
     docType,       // e.g. EMPLOYMENT_PROOF
     side,          // front | back | single
     newFilePath,
+    sourceOfIncomeText = null
   }
 ) {
   if (!packageCode) {
@@ -165,6 +173,7 @@ async function replaceTravelKycDocument(
         doc_type,
         side,
         file_path,
+        source_of_income,
         created_at,
         updated_at
      )
@@ -175,13 +184,15 @@ async function replaceTravelKycDocument(
         ?,
         ?,
         ?,
+        ?,
         NOW(),
         NOW()
      )
      ON DUPLICATE KEY UPDATE
        file_path = VALUES(file_path),
+       source_of_income = VALUES(source_of_income),
        updated_at = NOW()`,
-    [packageCode, proposalId, docType, side, newFilePath]
+    [packageCode, proposalId, docType, side, newFilePath, sourceOfIncomeText]
   );
 
   return oldPath;
@@ -1100,7 +1111,7 @@ async function submitProposalService(userId, tripDetails, applicantInfo, benefic
    Upload Travel Assets Service
    ========================================================= */
 
-async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput, step, files }) {
+async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput, step, files, body = {} }) {
   if (!userId) throw httpError(401, 'User is required');
   if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
   if (!packageCodeInput) throw httpError(400, 'packageCode is required');
@@ -1229,36 +1240,55 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
     // Save KYC docs in kyc_documents (not travel_documents)
     // Rule: optional for everyone, admin can ask later if needed
     if (stepLower === 'kyc') {
-      const hasProof = !!(files.employment_proof && files.employment_proof[0]);
+      const hasEmploymentProof = !!(files.employment_proof && files.employment_proof[0]);
+      const hasSourceOfIncomeProof = !!(files.source_of_income_proof && files.source_of_income_proof[0]);
 
-      if (!hasProof) {
-        throw httpError(400, 'employment_proof is required for kyc step');
+      if (!hasEmploymentProof && !hasSourceOfIncomeProof) {
+        throw httpError(400, 'employment_proof or source_of_income_proof file is required for kyc step');
       }
 
-      const newProofPath = toUploadsRelativePathTravel(files.employment_proof[0]);
+      const savedKycDocs = [];
 
-      // Replace existing KYC doc (unique key handles upsert)
-      const oldProofPath = await replaceTravelKycDocument(conn, {
-        proposalId,
-        packageCode, // 
-        docType: 'EMPLOYMENT_PROOF',
-        side: 'single',
-        newFilePath: newProofPath,
-      });
+      if (hasEmploymentProof) {
+        const newProofPath = toUploadsRelativePathTravel(files.employment_proof[0]);
 
-      if (oldProofPath && oldProofPath !== newProofPath) oldPathsToDelete.push(oldProofPath);
+        // Replace existing KYC doc (unique key handles upsert)
+        const oldProofPath = await replaceTravelKycDocument(conn, {
+          proposalId,
+          packageCode,
+          docType: 'EMPLOYMENT_PROOF',
+          side: 'single',
+          newFilePath: newProofPath,
+        });
+
+        if (oldProofPath && oldProofPath !== newProofPath) oldPathsToDelete.push(oldProofPath);
+        savedKycDocs.push('employment_proof');
+      }
+
+      if (hasSourceOfIncomeProof) {
+        const sourceOfIncomeText = body.source_of_income || null;
+        if (!sourceOfIncomeText) {
+          throw httpError(400, 'source_of_income text is required when uploading source_of_income_proof');
+        }
+        const newProofPath = toUploadsRelativePathTravel(files.source_of_income_proof[0]);
+        const oldProofPath = await replaceTravelKycDocument(conn, {
+          proposalId,
+          packageCode,
+          docType: 'SOURCE_OF_INCOME_PROOF',
+          side: 'single',
+          newFilePath: newProofPath,
+          sourceOfIncomeText,
+        });
+        if (oldProofPath && oldProofPath !== newProofPath) oldPathsToDelete.push(oldProofPath);
+        savedKycDocs.push('source_of_income_proof');
+      }
 
       await conn.commit();
 
       // delete old file after commit
       for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
-      return {
-        proposalId,
-        packageCode,
-        step: 'kyc',
-        saved: ['employment_proof'],
-      };
+      return { proposalId, packageCode, step: 'kyc', saved: savedKycDocs };
     }
 
     throw httpError(400, 'Invalid step. Use: identity, ticket');
@@ -1279,7 +1309,7 @@ async function uploadTravelAssetsService({ userId, proposalId, packageCodeInput,
 /* =========================================================
    Reupload Travel Assets Service
    ========================================================= */
-async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInput, files }) {
+async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInput, files, body = {} }) {
   if (!userId) throw httpError(401, 'User is required');
   if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
   if (!packageCodeInput) throw httpError(400, 'packageCode is required');
@@ -1368,20 +1398,27 @@ async function reuploadTravelAssetsService({ userId, proposalId, packageCodeInpu
       const newPath = toUploadsRelativePathTravel(file);
 
       // employment proof goes to kyc_documents (not travel_documents)
-      if (docType === 'EMPLOYMENT_PROOF') {
+      if (KYC_DOC_TYPES.has(docType)) {
+        let sourceOfIncomeText = null;
+        if (docType === 'SOURCE_OF_INCOME_PROOF') {
+          sourceOfIncomeText = body.source_of_income;
+          if (!sourceOfIncomeText) {
+            throw httpError(400, 'source_of_income text is required when re-uploading source_of_income_proof');
+          }
+        }
         const oldPath = await replaceTravelKycDocument(conn, {
           proposalId,
           packageCode,
           docType,
           side,
           newFilePath: newPath,
+          sourceOfIncomeText,
         });
 
         if (oldPath && oldPath !== newPath) oldPathsToDelete.push(oldPath);
         saved.push(field);
         continue;
       }
-
       // existing behavior for normal travel documents
       const oldPath = await replaceTravelDocument(conn, {
         packageCode,
@@ -1587,6 +1624,7 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     SELECT
       id,
       doc_type AS docType,
+      source_of_income AS sourceOfIncome,
       side,
       file_path AS filePath,
       created_at AS createdAt
@@ -1594,20 +1632,31 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
     WHERE proposal_type = 'TRAVEL'
       AND package_code = ?
       AND proposal_id = ?
-      AND doc_type = 'EMPLOYMENT_PROOF'
-      AND side = 'single'
+      AND doc_type IN ('EMPLOYMENT_PROOF', 'SOURCE_OF_INCOME_PROOF')
     ORDER BY id DESC
-    LIMIT 1
     `,
     [packageCode, id]
   );
 
-  const employmentProof = kycRows.length
+  const employmentProofRow = kycRows.find((r) => r.docType === 'EMPLOYMENT_PROOF');
+  const sourceOfIncomeProofRow = kycRows.find((r) => r.docType === 'SOURCE_OF_INCOME_PROOF');
+
+  const employmentProof = employmentProofRow
     ? {
-      docType: kycRows[0].docType,
-      filePath: kycRows[0].filePath,
-      url: buildUrl(kycRows[0].filePath),
-      createdAt: kycRows[0].createdAt,
+      docType: employmentProofRow.docType,
+      filePath: employmentProofRow.filePath,
+      url: buildUrl(employmentProofRow.filePath),
+      createdAt: employmentProofRow.createdAt,
+    }
+    : null;
+
+  const sourceOfIncomeProof = sourceOfIncomeProofRow
+    ? {
+      docType: sourceOfIncomeProofRow.docType,
+      sourceOfIncome: sourceOfIncomeProofRow.sourceOfIncome,
+      filePath: sourceOfIncomeProofRow.filePath,
+      url: buildUrl(sourceOfIncomeProofRow.filePath),
+      createdAt: sourceOfIncomeProofRow.createdAt,
     }
     : null;
 
@@ -1662,7 +1711,8 @@ async function getTravelProposalByIdForUser(userId, packageCodeInput, proposalId
 
     kyc: {
       occupation: p.occupation || null,
-      employmentProof, // ✅ { docType, filePath, url, createdAt } or null
+      employmentProof,
+      sourceOfIncomeProof,
     },
 
     createdAt: p.created_at,

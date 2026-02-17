@@ -23,7 +23,14 @@ const DOC_FIELD_MAP = {
   regbook_back: { docType: 'REGISTRATION_BOOK', side: 'back' },
 
   employment_proof: { docType: 'EMPLOYMENT_PROOF', side: 'single' },
+  source_of_income_proof: { docType: 'SOURCE_OF_INCOME_PROOF', side: 'single' },
 };
+
+/**
+ * KYC document types that are stored in the kyc_documents table
+ * (as opposed to motor_documents)
+ */
+const KYC_DOC_TYPES = new Set(['EMPLOYMENT_PROOF', 'SOURCE_OF_INCOME_PROOF']);
 
 const VEHICLE_IMAGE_FIELDS = new Set([
   'front_side', 'back_side', 'right_side', 'left_side',
@@ -926,7 +933,7 @@ async function replaceMotorVehicleImage(conn, proposalId, imageType, newFilePath
  * Recommended unique key:
  * UNIQUE(proposal_type, proposal_id, doc_type)
  */
-async function replaceKycDocument(conn, proposalType, proposalId, docType, side, newFilePath) {
+async function replaceKycDocument(conn, proposalType, proposalId, docType, side, newFilePath, sourceOfIncomeText = null) {
   const [rows] = await conn.execute(
     `SELECT file_path
      FROM kyc_documents
@@ -938,10 +945,10 @@ async function replaceKycDocument(conn, proposalType, proposalId, docType, side,
   const oldPath = rows.length ? rows[0].file_path : null;
 
   await conn.execute(
-    `INSERT INTO kyc_documents (proposal_type, proposal_id, doc_type, side, file_path, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, NOW(), NOW())
-     ON DUPLICATE KEY UPDATE file_path = VALUES(file_path), updated_at = NOW()`,
-    [proposalType, proposalId, docType, side, newFilePath]
+    `INSERT INTO kyc_documents (proposal_type, proposal_id, doc_type, side, file_path, source_of_income, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
+     ON DUPLICATE KEY UPDATE file_path = VALUES(file_path), source_of_income = VALUES(source_of_income), updated_at = NOW()`,
+    [proposalType, proposalId, docType, side, newFilePath, sourceOfIncomeText]
   );
 
   return oldPath;
@@ -957,7 +964,7 @@ async function replaceKycDocument(conn, proposalType, proposalId, docType, side,
  * Also deletes old files from storage after successful DB commit
  * If DB fails, deletes newly uploaded files to avoid junk in storage
  */
-async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
+async function uploadMotorAssetsService({ userId, proposalId, step, files, body = {} }) {
   if (!userId) throw httpError(401, 'User is required');
   if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
   if (!step) throw httpError(400, 'step is required');
@@ -1026,24 +1033,38 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
     // STEP X: KYC (EMPLOYMENT / VISITING CARD) OPTIONAL
     // step=kyc, field: employment_proof
     if (stepLower === 'kyc') {
-      const hasProof = !!(files.employment_proof && files.employment_proof[0]);
+      const hasEmploymentProof = !!(files.employment_proof && files.employment_proof[0]);
+      const hasSourceOfIncomeProof = !!(files.source_of_income_proof && files.source_of_income_proof[0]);
 
-      if (!hasProof) {
-        throw httpError(400, 'employment_proof file is required for kyc step');
+      if (!hasEmploymentProof && !hasSourceOfIncomeProof) {
+        throw httpError(400, 'employment_proof or source_of_income_proof file is required for kyc step');
       }
 
-      const newProofPath = toUploadsRelativePath(files.employment_proof[0]);
+      const savedKycDocs = [];
 
-      // save into kyc_documents
-      const oldProofPath = await replaceKycDocument(conn, 'MOTOR', proposalId, 'EMPLOYMENT_PROOF', 'single', newProofPath);
+      if (hasEmploymentProof) {
+        const newProofPath = toUploadsRelativePath(files.employment_proof[0]);
+        const oldProofPath = await replaceKycDocument(conn, 'MOTOR', proposalId, 'EMPLOYMENT_PROOF', 'single', newProofPath);
+        if (oldProofPath && oldProofPath !== newProofPath) oldPathsToDelete.push(oldProofPath);
+        savedKycDocs.push('employment_proof');
+      }
 
-      if (oldProofPath && oldProofPath !== newProofPath) oldPathsToDelete.push(oldProofPath);
+      if (hasSourceOfIncomeProof) {
+        const sourceOfIncomeText = body.source_of_income || null;
+        if (!sourceOfIncomeText) {
+          throw httpError(400, 'source_of_income text is required when uploading source_of_income_proof');
+        }
+        const newProofPath = toUploadsRelativePath(files.source_of_income_proof[0]);
+        const oldProofPath = await replaceKycDocument(conn, 'MOTOR', proposalId, 'SOURCE_OF_INCOME_PROOF', 'single', newProofPath, sourceOfIncomeText);
+        if (oldProofPath && oldProofPath !== newProofPath) oldPathsToDelete.push(oldProofPath);
+        savedKycDocs.push('source_of_income_proof');
+      }
 
       await conn.commit();
 
       for (const p of oldPathsToDelete) await deleteFileIfExists(p);
 
-      return { proposalId, step: 'kyc', saved: ['employment_proof'] };
+      return { proposalId, step: 'kyc', saved: savedKycDocs };
     }
 
     // STEP 3: VEHICLE IMAGES ONLY (NO regbook here)
@@ -1113,7 +1134,7 @@ async function uploadMotorAssetsService({ userId, proposalId, step, files }) {
 /**
  * Reupload assets:
  */
-async function reuploadMotorAssetsService({ userId, proposalId, files }) {
+async function reuploadMotorAssetsService({ userId, proposalId, files, body = {} }) {
   if (!userId) throw httpError(401, 'User is required');
   if (!proposalId || Number.isNaN(Number(proposalId))) throw httpError(400, 'Invalid proposalId');
 
@@ -1204,8 +1225,15 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
         let oldPath = null;
 
         // KYC doc goes to kyc_documents table
-        if (docType === 'EMPLOYMENT_PROOF') {
-          oldPath = await replaceKycDocument(conn, 'MOTOR', proposalId, docType, side, newPath);
+        if (KYC_DOC_TYPES.has(docType)) {
+          let sourceOfIncomeText = null;
+          if (docType === 'SOURCE_OF_INCOME_PROOF') {
+            sourceOfIncomeText = body.source_of_income; // from body
+            if (!sourceOfIncomeText) {
+              throw httpError(400, 'source_of_income text is required when re-uploading source_of_income_proof');
+            }
+          }
+          oldPath = await replaceKycDocument(conn, 'MOTOR', proposalId, docType, side, newPath, sourceOfIncomeText);
         } else {
           // normal motor docs go to motor_documents
           oldPath = await replaceMotorDocument(conn, proposalId, docType, side, newPath);
@@ -1274,12 +1302,12 @@ async function reuploadMotorAssetsService({ userId, proposalId, files }) {
         email:
           adminEmails.length > 0
             ? templates.makeAdminReuploadSubmittedEmail({
-                to: adminEmails.join(','),
-                proposalLabel: `MOTOR-${notifCtx.proposalId}`,
-                userName: notifCtx.userName,
-                userId: notifCtx.userId,
-                saved: notifCtx.saved,
-              })
+              to: adminEmails.join(','),
+              proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+              userName: notifCtx.userName,
+              userId: notifCtx.userId,
+              saved: notifCtx.saved,
+            })
             : null,
       });
     } catch (_) { }
@@ -1397,38 +1425,49 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
   const kycRows = await query(
     `
-  SELECT
-    id,
-    doc_type AS docType,
-    side,
-    file_path AS filePath,
-    created_at AS createdAt
-  FROM kyc_documents
-  WHERE proposal_type = 'MOTOR'
-    AND proposal_id = ?
-    AND doc_type = 'EMPLOYMENT_PROOF'
-    AND side = 'single'
-  ORDER BY id DESC
-  LIMIT 1
-  `,
+    SELECT
+      id,
+      doc_type AS docType,
+      source_of_income AS sourceOfIncome,
+      side,
+      file_path AS filePath,
+      created_at AS createdAt
+    FROM kyc_documents
+    WHERE proposal_type = 'MOTOR'
+      AND proposal_id = ?
+      AND doc_type IN ('EMPLOYMENT_PROOF', 'SOURCE_OF_INCOME_PROOF')
+    ORDER BY id DESC
+    `,
     [id]
   );
 
-
   const renewalDocuments = rows.length
     ? {
-      docType: "Renewal Document",
-      url: buildUrl(rows[0].renewal_document_path),
-    }
+        docType: 'Renewal Document',
+        url: buildUrl(rows[0].renewal_document_path),
+      }
     : null;
 
-  const employmentProof = kycRows.length
+  const employmentProofRow = kycRows.find((r) => r.docType === 'EMPLOYMENT_PROOF');
+  const sourceOfIncomeProofRow = kycRows.find((r) => r.docType === 'SOURCE_OF_INCOME_PROOF');
+
+  const employmentProof = employmentProofRow
     ? {
-      docType: kycRows[0].docType,
-      filePath: kycRows[0].filePath,
-      url: buildUrl(kycRows[0].filePath),
-      createdAt: kycRows[0].createdAt,
-    }
+        docType: employmentProofRow.docType,
+        filePath: employmentProofRow.filePath,
+        url: buildUrl(employmentProofRow.filePath),
+        createdAt: employmentProofRow.createdAt,
+      }
+    : null;
+
+  const sourceOfIncomeProof = sourceOfIncomeProofRow
+    ? {
+        docType: sourceOfIncomeProofRow.docType,
+        sourceOfIncome: sourceOfIncomeProofRow.sourceOfIncome,
+        filePath: sourceOfIncomeProofRow.filePath,
+        url: buildUrl(sourceOfIncomeProofRow.filePath),
+        createdAt: sourceOfIncomeProofRow.createdAt,
+      }
     : null;
 
   // required docs JSON might come as string depending on mysql driver/settings
@@ -1513,7 +1552,8 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
     kyc: {
       occupation: p.occupation || null,
-      employmentProof, // ✅ { docType, filePath, url, createdAt } or null
+      employmentProof,
+      sourceOfIncomeProof,
     },
 
     personalDetails: {
@@ -1695,12 +1735,12 @@ async function updateMotorRegistrationNumberService({ userId, proposalId, regist
         email:
           adminEmails.length > 0
             ? templates.makeAdminMotorRegNoUploadedEmail({
-                to: adminEmails.join(','),
-                proposalLabel: `MOTOR-${notifCtx.proposalId}`,
-                registrationNumber: notifCtx.regNo,
-                userName: notifCtx.userName,
-                userId: notifCtx.userId,
-              })
+              to: adminEmails.join(','),
+              proposalLabel: `MOTOR-${notifCtx.proposalId}`,
+              registrationNumber: notifCtx.regNo,
+              userName: notifCtx.userName,
+              userId: notifCtx.userId,
+            })
             : null,
       });
     }

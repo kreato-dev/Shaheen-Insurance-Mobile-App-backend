@@ -79,6 +79,7 @@ async function uploadTravelAssets(req, res, next) {
     const packageCodeInput = req.params.packageCode;
     const step = String(req.query.step || '').toLowerCase();
     const files = req.files || {};
+    const body = req.body || {};
 
     const result = await uploadTravelAssetsService({
       userId,
@@ -86,6 +87,7 @@ async function uploadTravelAssets(req, res, next) {
       packageCodeInput,
       step,
       files,
+      body,
     });
 
     return res.json({
@@ -106,12 +108,14 @@ async function reuploadTravelAssets(req, res, next) {
     const proposalId = Number(req.params.proposalId);
     const packageCodeInput = req.params.packageCode;
     const files = req.files || {};
+    const body = req.body || {};
 
     const result = await reuploadTravelAssetsService({
       userId,
       proposalId,
       packageCodeInput,
       files,
+      body,
     });
 
     return res.json({

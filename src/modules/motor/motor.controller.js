@@ -65,9 +65,9 @@ async function submitProposal(req, res, next) {
         })
       );
     }
-    
+
     const result = await submitProposalService(
-      userId, 
+      userId,
       personalDetails,
       vehicleDetails,
     );
@@ -91,12 +91,14 @@ async function uploadMotorAssets(req, res, next) {
     // multer.fields => req.files is an object
     // { cnic_front: [..], cnic_back: [..] }
     const files = req.files || {};
+    const body = req.body || {};
 
     const result = await uploadMotorAssetsService({
       userId,
       proposalId,
       step,
       files,
+      body,
     });
 
     return res.json({
@@ -114,11 +116,13 @@ async function reuploadMotorAssets(req, res, next) {
     const userId = req.user.id;
     const proposalId = Number(req.params.proposalId);
     const files = req.files || {};
+    const body = req.body || {};
 
     const result = await reuploadMotorAssetsService({
       userId,
       proposalId,
       files,
+      body,
     });
 
     return res.json({

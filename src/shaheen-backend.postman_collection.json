@@ -1315,7 +1315,7 @@
           }
         },
         {
-          "name": "Upload KYC Documents - step=kyc",
+          "name": "Upload KYC (Employment or Source of Income) - step=kyc",
           "request": {
             "method": "POST",
             "header": [
@@ -1331,6 +1331,18 @@
                 {
                   "key": "employment_proof",
                   "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "source_of_income_proof",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "source_of_income",
+                  "value": "Pocket Money",
+                  "description": "Required if source_of_income_proof is provided",
+                  "type": "text",
                   "src": ""
                 }
               ]
@@ -2157,7 +2169,7 @@
           }
         },
         {
-          "name": "Upload KYC Documents - step=kyc",
+          "name": "Upload KYC (Employment or Source of Income) - step=kyc",
           "request": {
             "method": "POST",
             "header": [
@@ -2173,6 +2185,18 @@
                 {
                   "key": "employment_proof",
                   "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "source_of_income_proof",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "source_of_income",
+                  "value": "Pocket Money",
+                  "description": "Required if source_of_income_proof is provided",
+                  "type": "text",
                   "src": ""
                 }
               ]
@@ -2196,7 +2220,7 @@
                 }
               ]
             },
-            "description": "Ticket picture is optional."
+            "description": "KYC documents are optional overall, but if this endpoint is called, at least one proof is required."
           }
         }
       ]
@@ -2292,6 +2316,18 @@
                   "key": "employment_proof",
                   "type": "file",
                   "src": ""
+                },
+                {
+                  "key": "source_of_income_proof",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "source_of_income",
+                  "value": "Freelancing",
+                  "description": "Required if source_of_income_proof is re-uploaded",
+                  "type": "text",
+                  "src": ""
                 }
               ]
             },
@@ -2347,6 +2383,18 @@
                 {
                   "key": "employment_proof",
                   "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "source_of_income_proof",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "source_of_income",
+                  "value": "Freelancing",
+                  "description": "Required if source_of_income_proof is re-uploaded",
+                  "type": "text",
                   "src": ""
                 }
               ]

@@ -89,6 +89,7 @@ router.post(
     if (step === 'kyc') {
       return upload.fields([
         { name: 'employment_proof', maxCount: 1 },
+        { name: 'source_of_income_proof', maxCount: 1 },
       ])(req, res, next);
     }
 
@@ -112,6 +113,7 @@ router.post(
       { name: 'passport_image', maxCount: 1 },
       { name: 'ticket_image', maxCount: 1 },
       { name: 'employment_proof', maxCount: 1 },
+      { name: 'source_of_income_proof', maxCount: 1 },
     ])(req, res, next);
   },
   travelController.reuploadTravelAssets
