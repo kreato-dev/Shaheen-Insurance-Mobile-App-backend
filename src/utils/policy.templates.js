@@ -142,6 +142,8 @@ const createMotorCoverNoteHtml = (data) => {
             <td class="amount-col">Rs.</td>
             <td class="amount-col">${fmt(bd.grossPremium)}</td>
           </tr>
+          <!--
+          <!-- commented detailed premium breakdown -->
           <tr>
             <td>Admin Surcharge (5%)</td>
             <td class="amount-col">Rs.</td>
@@ -167,8 +169,9 @@ const createMotorCoverNoteHtml = (data) => {
             <td class="amount-col">Rs.</td>
             <td class="amount-col">${fmt(bd.stampDuty)}</td>
           </tr>
+          -->
           <tr style="border-top: 2px solid #000;">
-            <td><strong>Net Premium</strong></td>
+            <td><strong>Total Premium</strong></td>
             <td class="amount-col"><strong>Rs.</strong></td>
             <td class="amount-col"><strong>${fmt(pricing.premium)}</strong></td>
           </tr>
@@ -400,7 +403,7 @@ const createTravelCoverNoteHtml = (data) => {
         
         <table class="premium-table">
           <tr style="border-top: 2px solid #000;">
-            <td><strong>Net Premium</strong></td>
+            <td><strong>Total Premium</strong></td>
             <td class="amount-col"><strong>PKR</strong></td>
             <td class="amount-col"><strong>${premium}</strong></td>
           </tr>
