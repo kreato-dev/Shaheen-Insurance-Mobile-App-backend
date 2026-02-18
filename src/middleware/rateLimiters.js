@@ -7,6 +7,9 @@ const otpSendLimiter = rateLimit({
   message: { message: 'Too many OTP requests, please try again after 10 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req, res) => {
+    return req.body.email || ipKeyGenerator(req, res); // Use email as key, fallback to IP
+  },
 });
 
 // Limit for verifying OTPs (Brute-force protection)
@@ -16,6 +19,9 @@ const otpVerifyLimiter = rateLimit({
   message: { message: 'Too many verification attempts, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req, res) => {
+    return req.body.email || ipKeyGenerator(req, res); // Use email as key, fallback to IP
+  },
 });
 
 // Limit for login attempts (Brute-force protection)
@@ -38,6 +44,9 @@ const forgotPassSendLimiter = rateLimit({
   message: { message: 'Too many forgot password attempts, please try again after 10 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req, res) => {
+    return req.body.email || ipKeyGenerator(req, res); // Use mobile number as key, fallback to IP
+  },
 });
 
 // Limit for verifying OTPs (Brute-force protection)
@@ -47,6 +56,9 @@ const forgotPassVerifyLimiter = rateLimit({
   message: { message: 'Too many verification attempts, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req, res) => {
+    return req.body.email || ipKeyGenerator(req, res); // Use mobile number as key, fallback to IP
+  },
 });
 
 module.exports = { otpSendLimiter, otpVerifyLimiter, loginLimiter, forgotPassSendLimiter, forgotPassVerifyLimiter };

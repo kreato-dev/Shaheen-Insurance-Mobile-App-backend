@@ -31,7 +31,7 @@ router.post('/resend-forgot-password-otp', forgotPassSendLimiter, authController
 router.post('/forgot-password/verify', forgotPassVerifyLimiter, authController.verifyForgotPasswordOtp);
 
 // POST /api/auth/forgot-password/reset (Step 2: Reset Password)
-router.post('/forgot-password/reset', forgotPassVerifyLimiter, authController.resetPasswordWithOtp);
+router.post('/forgot-password/reset', authController.resetPasswordWithOtp);
 
 // POST /api/auth/fcm-token (Protected: Auth middleware required since router is public)
 router.post('/fcm-token', authMiddleware, authController.saveFcmToken);
