@@ -1155,7 +1155,7 @@
           "description": "Admin view of a Motor claim including FNOL ref and evidence urls."
         },
         {
-          "name": "Review Claim (Motor) - Approve",
+          "name": "Review Claim (Motor) - Paid",
           "request": {
             "method": "PATCH",
             "header": [
@@ -1185,10 +1185,47 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"action\": \"approve\"\n}"
+              "raw": "{\n  \"action\": \"paid\",\n  \"paymentReference\": \"BANK-TXN-999\"\n}"
             }
           },
-          "description": "Approve a claim (sets review_status=approved)."
+          "description": "Mark claim as paid (sets claim_status=paid)."
+        },
+        {
+          "name": "Upload Payment Evidence (Motor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "evidence",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/claims/motor/{{claimId}}/payment-evidence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "claims",
+                "motor",
+                "{{claimId}}",
+                "payment-evidence"
+              ]
+            }
+          },
+          "description": "Upload payment evidence (PDF/JPG/PNG) for a paid claim."
         },
         {
           "name": "Review Claim (Motor) - Reject",
@@ -1261,6 +1298,41 @@
             }
           },
           "description": "Marks claim as reupload_required and sets required_docs for user reupload flow (Phase-2 style)."
+        },
+        {
+          "name": "Assign Surveyor (Motor)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{adminToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/claims/motor/{{claimId}}/assign-surveyor",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "claims",
+                "motor",
+                "{{claimId}}",
+                "assign-surveyor"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"surveyorName\": \"John Doe\",\n  \"surveyorCompany\": \"XYZ Surveyors\",\n  \"surveyorContact\": \"03001234567\"\n}"
+            }
+          },
+          "description": "Assigns a surveyor to the claim and updates status to 'assigned_to_surveyor'."
         }
       ]
     },

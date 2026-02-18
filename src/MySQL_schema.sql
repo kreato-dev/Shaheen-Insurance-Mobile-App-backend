@@ -151,7 +151,7 @@ CREATE TABLE admins (
   mobile VARCHAR(30) NULL,
   password_hash VARCHAR(255) NOT NULL,
 
-  role ENUM('CEO','SUPER_ADMIN','MOTOR_ADMIN','TRAVEL_ADMIN','FINANCE_ADMIN','SUPPORT_ADMIN')
+  role ENUM('CEO','SUPER_ADMIN','MOTOR_ADMIN','TRAVEL_ADMIN','CLAIM_ADMIN','FINANCE_ADMIN','SUPPORT_ADMIN')
     NOT NULL DEFAULT 'SUPPORT_ADMIN',
 
   status ENUM('active','inactive') DEFAULT 'active',
@@ -1124,7 +1124,8 @@ CREATE TABLE motor_claims (
     'submitted',
     'pending_review',
     'reupload_required',
-    'approved',
+    'assigned_to_surveyor',
+    'paid',
     'rejected',
     'closed'
   ) NOT NULL DEFAULT 'pending_review',
@@ -1146,12 +1147,16 @@ CREATE TABLE motor_claims (
   police_report_lodged TINYINT(1) NOT NULL DEFAULT 0,
 
   claim_description TEXT NOT NULL,
+  voice_note_path VARCHAR(255) NULL,
 
   reupload_notes TEXT NULL,
   required_docs JSON NULL,
   rejection_reason TEXT NULL,
 
   proposal_snapshot_json JSON NULL,
+
+  payment_reference VARCHAR(100) NULL,
+  payment_evidence_path VARCHAR(255) NULL,
 
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -1187,6 +1192,22 @@ CREATE TABLE motor_claim_documents (
     FOREIGN KEY (claim_id) REFERENCES motor_claims(id)
     ON DELETE CASCADE
 );
+
+CREATE TABLE motor_claim_survey_details (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  claim_id BIGINT NOT NULL,
+  surveyor_name VARCHAR(150) NOT NULL,
+  surveyor_company VARCHAR(150) NOT NULL,
+  surveyor_contact_number VARCHAR(50) NOT NULL,
+  assigned_by INT NOT NULL,
+  assigned_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  UNIQUE KEY uq_claim_survey (claim_id),
+  CONSTRAINT fk_survey_claim FOREIGN KEY (claim_id) REFERENCES motor_claims(id) ON DELETE CASCADE,
+  CONSTRAINT fk_survey_admin FOREIGN KEY (assigned_by) REFERENCES admins(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 9) KYC document table (scalable so can add salary slip, bank statement etc.)
 CREATE TABLE kyc_documents (

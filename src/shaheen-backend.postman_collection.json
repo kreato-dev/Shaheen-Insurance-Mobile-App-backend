@@ -1889,6 +1889,11 @@
                   "key": "police_report",
                   "type": "file",
                   "src": ""
+                },
+                {
+                  "key": "voice_note",
+                  "type": "file",
+                  "src": ""
                 }
               ]
             },

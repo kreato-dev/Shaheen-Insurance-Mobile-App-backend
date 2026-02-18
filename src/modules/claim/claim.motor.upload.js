@@ -25,19 +25,23 @@ function fileFilter(req, file, cb) {
     file.mimetype === 'application/pdf' ||
     file.mimetype === 'image/jpeg' ||
     file.mimetype === 'image/png' ||
+    file.mimetype.startsWith('audio/') ||
     name.endsWith('.pdf') ||
     name.endsWith('.jpg') ||
     name.endsWith('.jpeg') ||
-    name.endsWith('.png');
+    name.endsWith('.png') ||
+    name.endsWith('.mp3') ||
+    name.endsWith('.wav') ||
+    name.endsWith('.m4a');
 
-  if (!ok) return cb(new Error('Only PDF/JPG/PNG files are allowed.'));
+  if (!ok) return cb(new Error('Only PDF/JPG/PNG or Audio files are allowed.'));
   cb(null, true);
 }
 
 const uploadClaimEvidence = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024, files: 6 },
+  limits: { fileSize: 10 * 1024 * 1024, files: 7 },
 }).fields([
   { name: 'vehicle_front', maxCount: 1 },
   { name: 'vehicle_back', maxCount: 1 },
@@ -45,6 +49,7 @@ const uploadClaimEvidence = multer({
   { name: 'vehicle_right', maxCount: 1 },
   { name: 'vehicle_damaged', maxCount: 1 },
   { name: 'police_report', maxCount: 1 }, // optional
+  { name: 'voice_note', maxCount: 1 }, // optional
 ]);
 
 module.exports = { uploadClaimEvidence, UPLOAD_DIR };

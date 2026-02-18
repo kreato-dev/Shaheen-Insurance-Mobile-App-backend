@@ -2,6 +2,8 @@ const {
   adminListMotorClaims,
   adminGetMotorClaimDetail,
   adminReviewMotorClaim,
+  assignSurveyor,
+  uploadPaymentEvidenceService,
 } = require('./admin.claim.motor.service');
 
 async function listClaims(req, res, next) {
@@ -40,4 +42,28 @@ async function reviewClaim(req, res, next) {
   }
 }
 
-module.exports = { listClaims, claimDetail, reviewClaim };
+async function assignSurveyorController(req, res, next) {
+  try {
+    const adminId = req.admin?.id || null;
+    const { claimId } = req.params;
+    const result = await assignSurveyor({ adminId, claimId, body: req.body });
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function uploadEvidence(req, res, next) {
+  try {
+    const adminId = req.admin?.id || null;
+    const { claimId } = req.params;
+    const file = req.file;
+
+    const result = await uploadPaymentEvidenceService({ adminId, claimId, file });
+    return res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { listClaims, claimDetail, reviewClaim, assignSurveyorController, uploadEvidence };

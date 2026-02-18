@@ -279,18 +279,37 @@ function makeClaimDecisionEmail({
   rejectionReason = null,
   reuploadNotes = null,
   requiredDocs = null,
+  paymentReference = null,
+  paymentEvidenceUrl = null,
 }) {
   const pretty =
-    status === 'approved' ? 'Approved ✅' :
+    status === 'paid' ? 'Paid/Settled ✅' :
       status === 'rejected' ? 'Rejected ❌' :
         status === 'reupload_required' ? 'Reupload Required 📄' :
-          'Updated';
+          status === 'assigned_to_surveyor' ? 'Surveyor Assigned 🕵️' :
+            'Updated';
 
   const subject = `Claim Update — ${pretty}`;
+
+  let extraText = '';
+  let extraHtml = '';
+
+  if (status === 'paid') {
+    if (paymentReference) {
+      extraText += `Payment Ref: ${paymentReference}\n`;
+      extraHtml += `<p><b>Payment Reference:</b> ${paymentReference}</p>`;
+    }
+    if (paymentEvidenceUrl) {
+      extraText += `Evidence: ${paymentEvidenceUrl}\n`;
+      extraHtml += `<p><b>Payment Evidence:</b> <a href="${paymentEvidenceUrl}">View Evidence</a></p>`;
+    }
+  }
+
   const text =
     `Hi ${fullName || ''}, your claim (${fnolNo}) status is now: ${status}.\n` +
     (rejectionReason ? `Reason: ${rejectionReason}\n` : '') +
-    (reuploadNotes ? `Notes: ${reuploadNotes}\n` : '');
+    (reuploadNotes ? `Notes: ${reuploadNotes}\n` : '') +
+    extraText;
 
   const docsHtml = Array.isArray(requiredDocs) && requiredDocs.length
     ? `<p><b>Required Documents:</b></p><ul>${requiredDocs.map(d => {
@@ -310,6 +329,7 @@ function makeClaimDecisionEmail({
      <p>Your claim <b>${fnolNo}</b> status is now: <b>${pretty}</b></p>
      ${rejectionReason ? `<p><b>Reason:</b> ${rejectionReason}</p>` : ''}
      ${reuploadNotes ? `<p><b>Notes:</b> ${reuploadNotes}</p>` : ''}
+     ${extraHtml}
      ${docsHtml}`
   );
 

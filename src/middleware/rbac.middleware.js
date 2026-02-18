@@ -42,6 +42,17 @@ const ROLE_PERMS = {
     'SUPPORT:UPDATE',
     'USERS:READ',
   ],
+  CLAIM_ADMIN: [
+    'CLAIMS:READ_MOTOR',
+    'CLAIMS:REVIEW_MOTOR',
+    'NOTIFICATIONS:READ',
+    'NOTIFICATIONS:WRITE',
+    'OVERVIEW:READ_MOTOR',
+    'PROPOSALS:READ_MOTOR',
+    'SUPPORT:READ',
+    'SUPPORT:UPDATE',
+    'USERS:READ',
+  ],
   FINANCE_ADMIN: [
     'CLAIMS:READ_MOTOR',
     // 'CLAIMS:READ_TRAVEL', // no module implemetation yet for travel claim

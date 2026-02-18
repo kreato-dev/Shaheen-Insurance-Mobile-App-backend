@@ -160,6 +160,12 @@ async function submitMotorClaimService({ userId, body, files }) {
   const claimDescription = String(body.claim_description || '').trim();
   if (!claimDescription) throw httpError(400, 'claim_description is required');
 
+  // Handle voice note (optional)
+  let voiceNotePath = null;
+  if (files.voice_note && files.voice_note[0]) {
+    voiceNotePath = toClaimUploadsRelativePath(files.voice_note[0]);
+  }
+
   // Mandatory evidence check
   for (const k of REQUIRED_DOCS) {
     if (!files?.[k]?.[0]) throw httpError(400, `Missing mandatory upload: ${k}`);
@@ -247,6 +253,7 @@ async function submitMotorClaimService({ userId, body, files }) {
        city_id, location_text, latitude, longitude,
        vehicle_drivable, police_report_lodged,
        claim_description,
+       voice_note_path,
        proposal_snapshot_json,
        created_at, updated_at)
       VALUES
@@ -255,7 +262,7 @@ async function submitMotorClaimService({ userId, body, files }) {
        ?, ?,
        ?, ?, ?, ?,
        ?, ?,
-       ?,
+       ?, ?,
        ?,
        NOW(), NOW())
       `,
@@ -273,6 +280,7 @@ async function submitMotorClaimService({ userId, body, files }) {
         vehicleDrivable,
         policeReportLodged,
         claimDescription,
+        voiceNotePath,
         JSON.stringify(snapshot),
       ]
     );
@@ -474,9 +482,22 @@ async function getMyMotorClaimDetail({ userId, claimId }) {
       file_url: `${APP_BASE_URL}/${doc.file_path}`,
     }));
 
+    if (claim.voice_note_path) {
+      claim.voice_note_url = `${APP_BASE_URL}/${claim.voice_note_path}`;
+    }
+
+    const [surveyorRows] = await conn.execute(
+      `SELECT surveyor_name, surveyor_company, surveyor_contact_number, assigned_at
+       FROM motor_claim_survey_details
+       WHERE claim_id = ?
+       LIMIT 1`,
+      [id]
+    );
+
     return {
       claim,
       documents: docs,
+      surveyor: surveyorRows[0] || null,
     };
   } finally {
     conn.release();

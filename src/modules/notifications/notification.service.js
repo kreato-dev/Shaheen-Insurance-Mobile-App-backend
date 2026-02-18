@@ -47,8 +47,11 @@ function buildTitleMessage(event_key, payload) {
     case 'CLAIM_REUPLOAD_REQUIRED':
       return { title: 'Claim Reupload Required', message: payload.reupload_notes ? `Notes: ${payload.reupload_notes}` : 'Please reupload required documents.' };
 
-    case 'CLAIM_APPROVED':
-      return { title: 'Claim Approved', message: `FNOL: ${payload.fnol_no || ''}` };
+    case 'CLAIM_ASSIGNED_TO_SURVEYOR':
+      return { title: 'Surveyor Assigned', message: `A surveyor has been assigned to your claim ${payload.fnol_no || ''}.` };
+
+    case 'CLAIM_PAID':
+      return { title: 'Claim Paid', message: `Your claim ${payload.fnol_no || ''} has been paid/settled.` };
 
     case 'CLAIM_REJECTED':
       return { title: 'Claim Rejected', message: payload.rejection_reason ? `Reason: ${payload.rejection_reason}` : 'Your claim was rejected.' };
