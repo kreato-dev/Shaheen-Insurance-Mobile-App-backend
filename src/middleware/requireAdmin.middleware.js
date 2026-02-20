@@ -16,6 +16,9 @@ module.exports = async function requireAdmin(req, res, next) {
 
     let payload;
     try {
+      if (!process.env.ADMIN_JWT_SECRET) {
+        throw new Error("ADMIN_JWT_SECRET is missing");
+      }
       payload = jwt.verify(token, process.env.ADMIN_JWT_SECRET);
     } catch (e) {
       throw httpError(401, 'Invalid token');

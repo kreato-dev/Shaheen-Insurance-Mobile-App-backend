@@ -1,6 +1,5 @@
 // src/middleware/auth.js
 const jwt = require('jsonwebtoken');
-const { query } = require('../config/db');
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization || '';
@@ -11,7 +10,10 @@ function authMiddleware(req, res, next) {
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'changeme');
+    if (!process.env.JWT_SECRET) {
+      throw new Error("JWT_SECRET is missing");
+    }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.user = { id: decoded.id, mobile: decoded.mobile, email: decoded.email };
     next();
   } catch (err) {
@@ -20,4 +22,4 @@ function authMiddleware(req, res, next) {
 }
 
 module.exports =
-{authMiddleware};
+  { authMiddleware };

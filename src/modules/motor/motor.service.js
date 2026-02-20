@@ -1462,7 +1462,7 @@ async function getMotorProposalByIdForUser(userId, proposalId) {
 
   // ✅ Must match your static route: app.use('/uploads', express.static(...))
   // Stored paths are like: "uploads/motor/xxx.png"
-  const baseUrl = process.env.PUBLIC_BASE_URL || 'http://localhost:4000';
+  const baseUrl = process.env.APP_BASE_URL || 'http://localhost:4000';
   const buildUrl = (filePath) => (filePath ? `${baseUrl}/${String(filePath).replace(/^\//, '')}` : null);
 
   // Vehicle images

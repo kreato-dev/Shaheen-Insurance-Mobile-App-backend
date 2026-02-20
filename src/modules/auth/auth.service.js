@@ -10,8 +10,8 @@ const E = require('../notifications/notification.events');
 const templates = require('../notifications/notification.templates');
 
 
-const JWT_SECRET = process.env.JWT_SECRET || 'changeme';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN;
 
 // Small helper to create HTTP-friendly errors
 function httpError(status, message) {

@@ -3,7 +3,7 @@ const { query } = require('../config/db');
 
 module.exports = function adminSessionMiddleware(opts = {}) {
   const inactivityMinutes = Number(
-    opts.inactivityMinutes || process.env.ADMIN_INACTIVITY_MINUTES || 30
+    opts.inactivityMinutes || process.env.ADMIN_INACTIVITY_MINUTES
   );
   const inactivityMs = inactivityMinutes * 60 * 1000;
 
