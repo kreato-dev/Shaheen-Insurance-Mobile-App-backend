@@ -289,12 +289,12 @@ async function getMotorProposalDetail(proposalId) {
       u.mobile AS user_mobile,
       
       -- vehicle info
-      vm.name AS makeName,
-      vsm.name AS submakeName,
-      vv.name AS variantName,
-      vbt.name AS bodyTypeName,
-      vv.engine_cc AS engineCc,
-      vv.seating_capacity AS seatingCapacity,
+      COALESCE(vm.name, pcv.custom_make) AS makeName,
+      COALESCE(vsm.name, pcv.custom_submake) AS submakeName,
+      COALESCE(vv.name, pcv.custom_variant) AS variantName,
+      COALESCE(vbt.name, vbt_custom.name) AS bodyTypeName,
+      COALESCE(vv.engine_cc, pcv.engine_capacity) AS engineCc,
+      COALESCE(vv.seating_capacity, pcv.seating_capacity) AS seatingCapacity,
       tc.name AS trackerCompanyName
 
     FROM motor_proposals p
@@ -305,6 +305,11 @@ async function getMotorProposalDetail(proposalId) {
     LEFT JOIN vehicle_submakes vsm ON vsm.id = p.submake_id
     LEFT JOIN vehicle_variants vv ON vv.id = p.variant_id
     LEFT JOIN vehicle_body_types vbt ON vbt.id = vv.body_type_id
+
+    -- Custom vehicle join
+    LEFT JOIN motor_proposal_custom_vehicles pcv ON pcv.proposal_id = p.id
+    LEFT JOIN vehicle_body_types vbt_custom ON vbt_custom.id = pcv.body_type_id
+
     LEFT JOIN tracker_companies tc ON tc.id = p.tracker_company_id
     WHERE p.id = ?
     LIMIT 1

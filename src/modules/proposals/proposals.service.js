@@ -52,7 +52,12 @@ async function getMyProposalsFeedService(userId, opts = {}) {
         mp.payment_status AS payment_status,
         mp.paid_at AS paid_at,
 
-        CONCAT(vm.name, ' ', vsm.name, ' ', mp.model_year) AS title,
+        CONCAT(
+          COALESCE(vm.name, mpcv.custom_make),
+          ' ',
+          COALESCE(vsm.name, mpcv.custom_submake),
+          ' ',
+          mp.model_year) AS title,
         mp.registration_number AS subtitle,
         mp.premium AS premium,
         mp.created_at AS createdAt,
@@ -60,6 +65,9 @@ async function getMyProposalsFeedService(userId, opts = {}) {
       FROM motor_proposals mp
       LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
       LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
+
+      -- Custom vehicle join
+      LEFT JOIN motor_proposal_custom_vehicles mpcv ON mpcv.proposal_id = mp.id
       ${where}
     `);
   }
@@ -67,16 +75,16 @@ async function getMyProposalsFeedService(userId, opts = {}) {
   // --------------------------
   // TRAVEL (4 tables)
   // --------------------------
-for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
-  let where = `WHERE tp.user_id = ?`;
-  params.push(userId);
+  for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
+    let where = `WHERE tp.user_id = ?`;
+    params.push(userId);
 
-  if (statusFilter) {
-    where += ` AND tp.submission_status = ?`;
-    params.push(statusFilter);
-  }
+    if (statusFilter) {
+      where += ` AND tp.submission_status = ?`;
+      params.push(statusFilter);
+    }
 
-  unions.push(`
+    unions.push(`
     SELECT
       tp.insurance_type AS insuranceType,
       'TRAVEL' AS type,
@@ -101,7 +109,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
     INNER JOIN travel_plans pl ON pl.id = tp.plan_id
     ${where}
   `);
-}
+  }
 
 
   const unionSql = unions.join(' UNION ALL ');
@@ -135,7 +143,7 @@ for (const [pkgCode, tableName] of Object.entries(TRAVEL_TABLES)) {
       review_status: r.review_status,
       payment_status: r.payment_status,
       paid_at: r.paid_at,
-      
+
       title: r.title,
       subtitle: r.subtitle,
       premium: r.premium,
