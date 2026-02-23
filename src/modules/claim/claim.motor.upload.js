@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     const original = (file.originalname || '').toLowerCase();
     const ext = path.extname(original) || '';
-    const allowed = new Set(['.pdf', '.jpg', '.jpeg', '.png']);
+    const allowed = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.mp3', '.wav', '.m4a']);
     const safeExt = allowed.has(ext) ? ext : '.jpg';
     cb(null, `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1e9)}${safeExt}`);
   },
