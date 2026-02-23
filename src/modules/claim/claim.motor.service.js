@@ -76,16 +76,25 @@ async function getMotorClaimEntryPrefill({ userId, proposalId }) {
         mp.insurance_start_date,
         mp.policy_expires_at,
         mp.name AS insured_name,
-       -- mp.mobile AS contact_number,
-       -- mp.email AS email_address,
         mp.registration_number,
         mp.engine_number,
         mp.chassis_number,
         mp.make_id,
         mp.submake_id,
         mp.variant_id,
-        mp.model_year
+        mp.model_year,
+
+        COALESCE(vm.name, mpcv.custom_make) AS makeName,
+        COALESCE(vsm.name, mpcv.custom_submake) AS submakeName,
+        COALESCE(vv.name, mpcv.custom_variant) AS variantName
+        
       FROM motor_proposals mp
+
+      LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
+      LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
+      LEFT JOIN vehicle_variants vv ON vv.id = mp.variant_id
+      LEFT JOIN motor_proposal_custom_vehicles mpcv ON mpcv.proposal_id = mp.id
+
       WHERE mp.id = ?
       LIMIT 1
       `,
@@ -105,14 +114,15 @@ async function getMotorClaimEntryPrefill({ userId, proposalId }) {
       proposalId: p.proposal_id,
       policyNo: p.policy_no,
       insuredName: p.insured_name,
-      contactNumber: p.contact_number,
-      emailAddress: p.email_address,
       vehicleRegistrationNumber: p.registration_number,
       engineNumber: p.engine_number,
       chassisNumber: p.chassis_number,
-      makeId: p.make_id,
-      submakeId: p.submake_id,
-      variantId: p.variant_id,
+      makeId: p.make_id ?? null,
+      makeName: p.makeName,
+      submakeId: p.submake_id ?? null,
+      submakeName: p.submakeName,
+      variantId: p.variant_id ?? null,
+      variantName: p.variantName,
       modelYear: p.model_year,
       coverageStartDate: p.insurance_start_date,
       coverageEndDate: p.policy_expires_at,
@@ -180,11 +190,21 @@ async function submitMotorClaimService({ userId, body, files }) {
       `
         SELECT
           mp.*,
+          COALESCE(vm.name, mpcv.custom_make) AS makeName,
+          COALESCE(vsm.name, mpcv.custom_submake) AS submakeName,
+          COALESCE(vv.name, mpcv.custom_variant) AS variantName,
+
           u.email AS user_email,
           u.full_name AS user_name,
           u.mobile AS user_mobile
         FROM motor_proposals mp
+
         LEFT JOIN users u ON u.id = mp.user_id
+        LEFT JOIN vehicle_makes vm ON vm.id = mp.make_id
+        LEFT JOIN vehicle_submakes vsm ON vsm.id = mp.submake_id
+        LEFT JOIN vehicle_variants vv ON vv.id = mp.variant_id
+        LEFT JOIN motor_proposal_custom_vehicles mpcv ON mpcv.proposal_id = mp.id
+        
         WHERE mp.id = ?
         LIMIT 1
         FOR UPDATE
@@ -236,8 +256,11 @@ async function submitMotorClaimService({ userId, body, files }) {
       engine_number: p.engine_number ?? null,
       chassis_number: p.chassis_number ?? null,
       make_id: p.make_id ?? null,
+      makeName: p.makeName ?? null,
       submake_id: p.submake_id ?? null,
+      submakeName: p.submakeName ?? null,
       variant_id: p.variant_id ?? null,
+      variantName: p.variantName ?? null,
       model_year: p.model_year ?? null,
       coverage_start: p.insurance_start_date ?? null,
       coverage_end: p.policy_expires_at ?? null,
