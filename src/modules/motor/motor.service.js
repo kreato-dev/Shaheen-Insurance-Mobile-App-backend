@@ -89,8 +89,9 @@ function normalizeOccupation(occupation) {
   const allowed = new Set([
     'PRIVATE_JOB',
     'GOVERNMENT_JOB',
-    'SELF_EMPLOYED',
+    'SELF_EMPLOYED/BUSINESS',
     'UNEMPLOYED',
+    'AGRICULTURALIST/LANDLORD',
     'HOUSEWIFE',
     'RETIRED',
     'STUDENT',
@@ -112,7 +113,7 @@ function validateKycDetails(kyc) {
   if (!occupationNormalized) {
     throw httpError(
       400,
-      'kycDetails.occupation is required and must be one of: PRIVATE_JOB, GOVERNMENT_JOB, SELF_EMPLOYED, UNEMPLOYED, HOUSEWIFE, RETIRED, STUDENT'
+      'kycDetails.occupation is required and must be one of: PRIVATE_JOB, GOVERNMENT_JOB, SELF_EMPLOYED/BUSINESS, UNEMPLOYED, AGRICULTURALIST/LANDLORD,HOUSEWIFE, HOUSEWIFE, RETIRED, STUDENT'
     );
   }
 
