@@ -504,11 +504,45 @@ async function quoteTravelPremiumService(data) {
 /* -----------------------------
    Submit validations
 ------------------------------ */
+function normalizeOccupation(occupation) {
+  // Accept: "Private Job", "private_job", "PRIVATE_JOB", "private job"
+  const raw = String(occupation || '').trim();
+  if (!raw) return null;
+
+  const key = raw
+    .toUpperCase()
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '_');
+
+  const allowed = new Set([
+    'PRIVATE_JOB',
+    'GOVERNMENT_JOB',
+    'SELF_EMPLOYED/BUSINESS',
+    'UNEMPLOYED',
+    'AGRICULTURALIST/LANDLORD',
+    'HOUSEWIFE',
+    'RETIRED',
+    'STUDENT',
+  ]);
+
+  if (!allowed.has(key)) return null;
+  return key;
+}
+
 function validateApplicantInfo(applicantInfo) {
   const required = ['firstName', 'lastName', 'address', 'cityId', 'cnic', 'mobile', 'email', 'dob', 'occupation'];
   for (const field of required) {
     if (!applicantInfo?.[field]) throw httpError(400, `applicantInfo.${field} is required`);
   }
+
+  const normalized = normalizeOccupation(applicantInfo.occupation);
+  if (!normalized) {
+    throw httpError(
+      400,
+      'applicantInfo.occupation must be one of: PRIVATE_JOB, GOVERNMENT_JOB, SELF_EMPLOYED/BUSINESS, UNEMPLOYED, AGRICULTURALIST/LANDLORD, HOUSEWIFE, RETIRED, STUDENT'
+    );
+  }
+  applicantInfo.occupation = normalized;
 
   const dob = new Date(applicantInfo.dob);
   if (Number.isNaN(dob.getTime())) throw httpError(400, 'applicantInfo.dob is invalid date');
