@@ -222,7 +222,7 @@ async function submitMotorClaimService({ userId, body, files }) {
     const [existingClaims] = await conn.execute(
       `SELECT id FROM motor_claims 
        WHERE motor_proposal_id = ? 
-       AND claim_status IN ('submitted', 'pending_review', 'reupload_required')
+       AND claim_status IN ('submitted', 'pending_review', 'reupload_required', 'assigned_to_surveyor')
        LIMIT 1`,
       [motorProposalId]
     );
