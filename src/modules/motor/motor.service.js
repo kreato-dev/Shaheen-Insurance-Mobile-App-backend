@@ -393,9 +393,11 @@ function validateVehicleDetails(vehicle) {
     }
 
     // Keep it flexible but not garbage
+/*
     if (regNoRaw.length < 4) {
       throw httpError(400, 'vehicleDetails.registrationNumber looks invalid');
     }
+*/
 
     // Normalize formatting
     vehicle.registrationNumber = regNoRaw.toUpperCase();
