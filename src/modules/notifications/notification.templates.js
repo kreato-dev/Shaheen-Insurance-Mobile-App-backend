@@ -175,9 +175,8 @@ function makeUserRefundStatusUpdatedEmail({
           <tr><td><b>Amount</b></td><td>${refundAmount ?? '-'}</td></tr>
           <tr><td><b>Reference</b></td><td>${refundReference ?? '-'}</td></tr>
           <tr><td><b>Remarks</b></td><td>${refundRemarks ?? '-'}</td></tr>
-          <tr><td><b>Evidence</b></td><td>${
-            refundEvidenceUrl ? `<a href="${refundEvidenceUrl}" target="_blank">View Evidence</a>` : '-'
-          }</td></tr>
+          <tr><td><b>Evidence</b></td><td>${refundEvidenceUrl ? `<a href="${refundEvidenceUrl}" target="_blank">View Evidence</a>` : '-'
+      }</td></tr>
         </table>
 
         <p style="margin-top:12px">
@@ -313,14 +312,14 @@ function makeClaimDecisionEmail({
 
   const docsHtml = Array.isArray(requiredDocs) && requiredDocs.length
     ? `<p><b>Required Documents:</b></p><ul>${requiredDocs.map(d => {
-        if (typeof d === 'string') return `<li>${d}</li>`;
-        if (d && typeof d === 'object') {
-          const name = d.doc_type || d.docType || 'Document';
-          const side = d.side ? ` (${d.side})` : '';
-          return `<li>${name}${side}</li>`;
-        }
-        return `<li>${d}</li>`;
-      }).join('')}</ul>`
+      if (typeof d === 'string') return `<li>${d}</li>`;
+      if (d && typeof d === 'object') {
+        const name = d.doc_type || d.docType || 'Document';
+        const side = d.side ? ` (${d.side})` : '';
+        return `<li>${name}${side}</li>`;
+      }
+      return `<li>${d}</li>`;
+    }).join('')}</ul>`
     : '';
 
   const html = wrapHtml(
@@ -341,14 +340,14 @@ function makeProposalReuploadRequiredEmail({ to, fullName, proposalLabel, reuplo
 
   const docsHtml = Array.isArray(requiredDocs) && requiredDocs.length
     ? `<p><b>Required Documents:</b></p><ul>${requiredDocs.map(d => {
-        if (typeof d === 'string') return `<li>${d}</li>`;
-        if (d && typeof d === 'object') {
-          const name = d.doc_type || d.docType || 'Document';
-          const side = d.side ? ` (${d.side})` : '';
-          return `<li>${name}${side}</li>`;
-        }
-        return `<li>${d}</li>`;
-      }).join('')}</ul>`
+      if (typeof d === 'string') return `<li>${d}</li>`;
+      if (d && typeof d === 'object') {
+        const name = d.doc_type || d.docType || 'Document';
+        const side = d.side ? ` (${d.side})` : '';
+        return `<li>${name}${side}</li>`;
+      }
+      return `<li>${d}</li>`;
+    }).join('')}</ul>`
     : '';
 
   const text = `Admin requested document re-upload for your proposal.\nProposal: ${proposalLabel}\nNotes: ${reuploadNotes || 'N/A'}\n`;
@@ -514,6 +513,67 @@ function makeBirthdayWishEmail({ to, fullName }) {
   return { to, subject, text, html };
 }
 
+/**
+ * OTP email template: shared for register + forgot password.
+ * Moved from mailer.js
+ */
+function makeOtpEmail({ to, otp, purpose, expiresMinutes }) {
+  const purposeLabel =
+    purpose === 'email_verify'
+      ? 'Email Verification'
+      : purpose === 'forgot_password'
+        ? 'Password Reset'
+        : 'OTP';
+
+  const subject = `Shaheen Insurance - ${purposeLabel} OTP`;
+
+  const text = `Your OTP is ${otp}. It will expire in ${expiresMinutes} minutes. If you did not request this, ignore this email.`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height:1.5;">
+      <h2>${purposeLabel}</h2>
+      <p>Your OTP is:</p>
+      <div style="font-size:24px; font-weight:bold; letter-spacing:4px;">${otp}</div>
+      <p>This OTP will expire in <b>${expiresMinutes} minutes</b>.</p>
+      <p>If you did not request this, you can safely ignore this email.</p>
+    </div>
+  `;
+
+  return { to, subject, text, html };
+}
+
+/**
+ * Admin initiated password reset email with embedded Link + OTP.
+ * Moved from mailer.js
+ */
+function makeUserPasswordResetLinkEmail({ to, name, otp, expiresMinutes }) {
+  const subject = 'Action Required: Reset Your Password - Shaheen Insurance';
+
+  // Construct the URL (Adjust path '/reset-password' to match your frontend route)
+  const baseUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const link = `${baseUrl}/#/reset-password?email=${encodeURIComponent(to)}&otp=${otp}`;
+
+  const text = `Hello ${name},\n\nAn administrator has initiated a password reset for your account.\n\nClick here to reset: ${link}\n\nOr use OTP: ${otp}\n\nExpires in ${expiresMinutes} minutes.`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; line-height:1.6; color: #333;">
+      <h2>Password Reset Request</h2>
+      <p>Hello <strong>${name}</strong>,</p>
+      <p>An administrator has initiated a password reset for your account.</p>
+      <p>Please click the button below to set a new password:</p>
+      <p>
+        <a href="${link}" style="display: inline-block; background-color: #007bff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Reset Password</a>
+      </p>
+      <p>Or use the following OTP manually:</p>
+      <div style="font-size: 24px; font-weight: bold; letter-spacing: 2px; margin: 10px 0;">${otp}</div>
+      <p>This link will expire in <b>${expiresMinutes} minutes</b>.</p>
+      <p style="font-size: 12px; color: #888; margin-top: 20px;">If the button doesn't work, copy this link: ${link}</p>
+    </div>
+  `;
+
+  return { to, subject, text, html };
+}
+
 module.exports = {
   makeWelcomeEmail,
   makeProposalPaymentReminderEmail,
@@ -544,4 +604,6 @@ module.exports = {
   makeAdminClaimReuploadSubmittedEmail,
   makeAdminCustomMessageEmail,
   makeBirthdayWishEmail,
+  makeOtpEmail,
+  makeUserPasswordResetLinkEmail,
 };

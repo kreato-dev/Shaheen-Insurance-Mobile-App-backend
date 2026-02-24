@@ -2,7 +2,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { query } = require('../../config/db');
-const { sendOtpEmail } = require('../../utils/mailer');
+const { sendEmail } = require('../../utils/mailer');
 const { createEmailOtp, verifyEmailOtp, validateEmailOtp } = require('./otp.service');
 
 const { fireUser } = require('../notifications/notification.service');
@@ -84,12 +84,12 @@ async function registerUser({ fullName, email, mobile, password }) {
     expiresMinutes: 2,
   });
 
-  await sendOtpEmail({
+  await sendEmail(templates.makeOtpEmail({
     to: email,
     otp,
     purpose: 'email_verify',
     expiresMinutes: 2,
-  });
+  }));
 
   // We don't auto-login here because email is not verified yet.
   // Frontend should call /verify-email-otp then login.
@@ -198,7 +198,7 @@ async function resendEmailOtpService({ email, purpose }) {
   const { otp } = await createEmailOtp({ email, purpose: p, expiresMinutes: 2 });
 
   // Send it via SMTP (provider swappable)
-  await sendOtpEmail({ to: email, otp, purpose: p, expiresMinutes: 2 });
+  await sendEmail(templates.makeOtpEmail({ to: email, otp, purpose: p, expiresMinutes: 2 }));
 
   return { message: 'OTP resent successfully' };
 }
@@ -310,12 +310,12 @@ async function sendForgotPasswordOtp({ email }) {
     expiresMinutes: 2,
   });
 
-  await sendOtpEmail({
+  await sendEmail(templates.makeOtpEmail({
     to: email,
     otp,
     purpose: 'forgot_password',
     expiresMinutes: 2,
-  });
+  }));
 
   return { message: 'If an account exists, OTP has been sent to email.' };
 }

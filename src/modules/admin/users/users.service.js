@@ -1,6 +1,7 @@
 const { query } = require('../../../config/db');
 const { createEmailOtp } = require('../../auth/otp.service');
-const { sendOtpEmail, sendUserPasswordResetLinkEmail } = require('../../../utils/mailer');
+const { sendEmail } = require('../../../utils/mailer');
+const templates = require('../../notifications/notification.templates');
 const { logAdminAction } = require('../adminlogs/admin.logs.service');
 
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:4000';
@@ -176,12 +177,12 @@ async function initiateUserPasswordReset(userId, adminId) {
     expiresMinutes,
   });
 
-  await sendUserPasswordResetLinkEmail({
+  await sendEmail(templates.makeUserPasswordResetLinkEmail({
     to: user.email,
     name: user.full_name,
     otp,
     expiresMinutes,
-  });
+  }));
 
   await logAdminAction({
     adminId,
